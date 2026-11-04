@@ -1,0 +1,38 @@
+# Tests de l'image pme-api:dev avec container-structure-test (https://github.com/GoogleContainerTools/container-structure-test)
+#   container-structure-test test --image pme-api:dev --config tests/image/api.yaml
+schemaVersion: "2.0.0"
+
+commandTests:
+  - name: "l'application ne tourne pas en root (uid 1000)"
+    command: "id"
+    args: ["-u"]
+    expectedOutput: ["^1000"]
+  - name: "Node 22 est present"
+    command: "node"
+    args: ["--version"]
+    expectedOutput: ["^v22\\."]
+
+fileExistenceTests:
+  - name: "l'application compilee est presente"
+    path: "/app/dist/main.js"
+    shouldExist: true
+  - name: "les sources TypeScript ne sont pas livrees"
+    path: "/app/src"
+    shouldExist: false
+  - name: "aucun outil de developpement dans l'image (typescript)"
+    path: "/app/node_modules/typescript"
+    shouldExist: false
+  - name: "aucun outil de test dans l'image (jest)"
+    path: "/app/node_modules/jest"
+    shouldExist: false
+  - name: "aucun secret copie dans l'image (.env)"
+    path: "/app/.env"
+    shouldExist: false
+
+metadataTest:
+  exposedPorts: ["3000"]
+  workdir: "/app"
+  cmd: ["node", "dist/main.js"]
+  envVars:
+    - key: "NODE_ENV"
+      value: "production"

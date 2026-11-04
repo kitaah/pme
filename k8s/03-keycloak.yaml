@@ -1,0 +1,82 @@
+# Keycloak 24 en mode dev, joint depuis le poste par "kubectl port-forward" en HTTP simple.
+# Le realm `pme` (roles membre / moderateur, clients pme-web et pme-cli, utilisateurs de demonstration)
+# est importe au demarrage depuis le ConfigMap `keycloak-realm` (config/realm-pme.json).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  labels:
+    app: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:24.0.0
+          args:
+            - start-dev
+            - --import-realm
+            - --db=postgres
+            - --db-url=jdbc:postgresql://postgres:5432/keycloak
+            # Keycloak est joint depuis le poste par "kubectl port-forward" sur
+            # http://localhost:8081. --hostname-url fige l'URL publique : l'emetteur (iss)
+            # des jetons vaut toujours http://localhost:8081/realms/pme, quel que soit le
+            # chemin emprunte pour atteindre Keycloak. L'API peut donc lire les cles par
+            # l'adresse interne du service sans que l'emetteur change.
+            - --hostname-url=http://localhost:8081
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KEYCLOAK_ADMIN
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: keycloak-admin-username }
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: keycloak-admin-password }
+            - name: KC_DB_USERNAME
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: db-username }
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: db-password }
+            # Limite le heap JVM (voir projet Spring : jusqu'a 800Mi observes sans limite)
+            - name: JAVA_OPTS_APPEND
+              value: "-Xmx384m"
+          resources:
+            requests: { cpu: 150m, memory: 384Mi }
+            limits: { cpu: 1000m, memory: 768Mi }
+          volumeMounts:
+            - name: realm
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
+          # /realms/pme repond une fois le realm importe : la sonde valide donc aussi l'import
+          startupProbe:
+            httpGet: { path: /realms/pme, port: 8080 }
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /realms/pme, port: 8080 }
+            periodSeconds: 10
+      volumes:
+        - name: realm
+          configMap:
+            name: keycloak-realm
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

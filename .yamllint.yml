@@ -1,0 +1,12 @@
+# Lint YAML : manifestes Kubernetes, realm, CI, tests d'image.
+extends: default
+ignore: |
+  node_modules/
+  **/node_modules/
+rules:
+  line-length: { max: 160, level: warning }
+  document-start: disable
+  braces: { min-spaces-inside: 0, max-spaces-inside: 1 }
+  truthy: { allowed-values: ['true', 'false'], check-keys: false }
+  comments: { min-spaces-from-content: 1 }
+  indentation: { spaces: 2, indent-sequences: consistent }

@@ -1,0 +1,8 @@
+# Detection de secrets (gitleaks) : regles par defaut + faux positifs connus du POC
+# (mots de passe de demonstration du realm Keycloak, injectes ensuite par "make secrets").
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Valeurs de demonstration sans valeur reelle"
+paths = ['''\.env\.example$''', '''k8s/config/realm-pme\.json$''']

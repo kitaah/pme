@@ -1,0 +1,112 @@
+/*
+ * Tailwind CSS v4 : pas de fichier tailwind.config.js, tout se declare ici.
+ * Le plugin @tailwindcss/vite (voir vite.config.ts) compile cette feuille et
+ * detecte automatiquement les classes utilisees dans les fichiers du projet.
+ *
+ * Convention du projet :
+ *   - la mise en page et les cas particuliers s'ecrivent en classes utilitaires, dans le JSX ;
+ *   - seuls les elements repetes au moins trois fois (carte, champ de formulaire, bouton,
+ *     pastille, message) sont extraits en classes de composant ci-dessous, pour eviter de
+ *     recopier vingt utilitaires sur chaque <input> ;
+ *   - les variantes dependant d'une donnee (statut d'annonce) sont des chaines completes
+ *     declarees dans le composant : Tailwind lit le code source en texte, une classe
+ *     construite dynamiquement (`text-${couleur}`) ne serait jamais generee.
+ *
+ * ACCESSIBILITE : cette palette est verifiee automatiquement par src/theme.test.ts, qui lit
+ * les jetons ci-dessous et controle chaque association reellement utilisee dans l'interface
+ * (WCAG 2.1 criteres 1.4.3 et 1.4.11, RGAA 4 criteres 3.2 et 3.3). Toute couleur modifiee ici
+ * fait echouer les tests si elle descend sous le seuil. Voir docs/QUALITE.md.
+ */
+@import 'tailwindcss';
+
+@theme {
+  /* ---- Surfaces : theme clair, du fond de page au creux des champs ---- */
+  --color-page: #faf8f5;
+  --color-panel: #ffffff;
+  --color-inset: #f3efe9;
+
+  /* ---- Bordures : deux roles distincts ----
+     WCAG 1.4.11 n'exige 3:1 que pour ce qui est NECESSAIRE a l'identification d'un composant.
+     --color-control borde les champs et les boutons : il doit atteindre ce seuil (4.8:1 ici).
+     --color-line ne sert qu'a separer visuellement des blocs deja identifiables par leur
+     fond (cartes, elements de liste) : purement decoratif, hors exigence. */
+  --color-control: #78716c;
+  --color-line: #e7e2db;
+
+  /* ---- Textes ---- */
+  --color-ink: #1c1917;
+  --color-ink-muted: #57534e;
+  --color-ink-faint: #6b6560;
+
+  /* ---- Accent : rouge profond, identite du site.
+     Sur fond clair, la meme nuance convient en texte (7.3:1 sur blanc) et en aplat
+     avec du texte blanc (7.3:1) : un seul jeton suffit, contrairement a un theme sombre. */
+  --color-blood: #a4262c;
+  --color-blood-dark: #8c1f24;
+
+  /* ---- Etats d'une annonce ---- */
+  --color-moss: #1e6b3f;
+  --color-ember: #8a5300;
+
+  /* ---- Indicateur de focus (WCAG 2.4.7) : bleu, seule teinte qui tranche
+     a la fois sur le fond creme, le blanc des cartes et le rouge des boutons ---- */
+  --color-focus: #1d4ed8;
+
+  /* Titres en serif : rappel des affiches de films d'epouvante */
+  --font-display: Georgia, 'Times New Roman', serif;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-page text-ink antialiased;
+  }
+
+  h1,
+  h2 {
+    @apply font-display;
+  }
+
+  /* Anneau de focus unique pour tout le site, au moins 3:1 sur les trois surfaces */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-focus;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg border border-line bg-panel p-5 shadow-sm;
+  }
+
+  .card-title {
+    @apply mb-3 flex items-center gap-2 text-lg;
+  }
+
+  .label {
+    @apply mt-3 mb-1 block text-sm text-ink-muted;
+  }
+
+  .field {
+    @apply w-full rounded-md border border-control bg-inset px-3 py-2 text-ink transition-colors placeholder:text-ink-faint focus:border-blood;
+  }
+
+  .btn {
+    @apply mt-4 rounded-md bg-blood px-4 py-2 font-semibold text-white transition-colors hover:bg-blood-dark disabled:cursor-wait disabled:opacity-60 disabled:hover:bg-blood;
+  }
+
+  .btn-ghost {
+    @apply rounded-md p-1 text-ink-muted underline transition-colors hover:text-ink;
+  }
+
+  /* Pastille : role, statut d'annonce. La couleur vient du composant. */
+  .pill {
+    @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  .notice {
+    @apply mt-4 rounded-md border-l-4 px-3 py-2 text-sm;
+  }
+}

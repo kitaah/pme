@@ -1,0 +1,84 @@
+# Service de moderation : consomme `listing.submitted` (RabbitMQ) et expose la file de moderation en HTTP.
+# Base de donnees dediee (`moderation`) : aucune lecture dans la base de l'API.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pme-moderation
+  labels:
+    app: pme-moderation
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pme-moderation
+  template:
+    metadata:
+      labels:
+        app: pme-moderation
+    spec:
+      # Desactive l'injection automatique par Kubernetes des variables d'environnement
+      # "liens Docker" d'un Service (ex. RABBITMQ_PORT=tcp://<ip>:5672) : son nom entre en
+      # collision avec la variable du meme nom que l'application attend (un entier simple).
+      enableServiceLinks: false
+      containers:
+        - name: moderation
+          image: pme-moderation:dev
+          imagePullPolicy: IfNotPresent # image construite dans Minikube (make image-moderation)
+          ports:
+            - containerPort: 3001
+          env:
+            - name: PORT
+              value: "3001"
+            - name: DB_HOST
+              value: postgres
+            - name: DB_NAME
+              value: moderation
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: db-username }
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: db-password }
+            - name: RABBITMQ_HOST
+              value: rabbitmq
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: rabbitmq-username }
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: rabbitmq-password }
+            - name: KEYCLOAK_ISSUER
+              value: http://localhost:8081/realms/pme
+            - name: KEYCLOAK_JWKS_URI
+              value: http://keycloak:8080/realms/pme/protocol/openid-connect/certs
+            - name: KEYCLOAK_ALLOWED_CLIENTS
+              value: pme-web,pme-cli
+            - name: SWAGGER_ENABLED
+              value: "false"
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+          # Le service declare la file d'echec avant d'ecouter : il peut attendre RabbitMQ
+          # jusqu'a 60 s au premier demarrage. La startupProbe laisse ce temps (5 s x 36 = 180 s)
+          # et suspend la livenessProbe jusqu'a son succes ; sans elle, kubelet tue le pod a ~60 s.
+          startupProbe:
+            httpGet: { path: /api/health/liveness, port: 3001 }
+            periodSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet: { path: /api/health/readiness, port: 3001 }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /api/health/liveness, port: 3001 }
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pme-moderation
+spec:
+  selector:
+    app: pme-moderation
+  ports:
+    - port: 3001
+      targetPort: 3001

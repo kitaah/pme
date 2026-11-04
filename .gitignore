@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+*.log
+.env
+.idea/
+.vscode/
+*.tsbuildinfo
+# Fichiers de travail de sonar-scanner (make sonar) et cache de la CI
+.scannerwork/
+.sonar/

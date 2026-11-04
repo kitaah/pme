@@ -1,0 +1,33 @@
+# `kubectl apply -k k8s/` (ou `make deploy`). Le secret `pme-secrets` n'est PAS ici : `make secrets` le cree.
+# Les ConfigMaps sont generes avec un suffixe de hash : modifier le realm ou la config du front
+# declenche automatiquement un redemarrage des pods concernes.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: pme
+resources:
+  - namespace.yaml
+  - 01-postgres.yaml
+  - 02-rabbitmq.yaml
+  - 03-keycloak.yaml
+  - 04-api.yaml
+  - 05-moderation.yaml
+  - 06-frontend.yaml
+  - 07-adminer.yaml
+configMapGenerator:
+  - name: postgres-init
+    files:
+      - init-databases.sh=config/postgres-init.sh
+  - name: keycloak-realm
+    files:
+      - realm-pme.json=config/realm-pme.json
+  - name: frontend-config
+    files:
+      - config.js=config/frontend-config.js
+# Point d'entree pour la future chaine CI/CD : `kustomize edit set image pme-api=<registre>/pme-api:<sha>`
+images:
+  - name: pme-api
+    newTag: dev
+  - name: pme-moderation
+    newTag: dev
+  - name: pme-frontend
+    newTag: dev

@@ -1,0 +1,162 @@
+# BROUILLON de chaine CI/CD (GitLab CI) - non execute a ce jour.
+# Objectif : montrer ou s'inserent les controles de qualite logicielle (voir docs/QUALITE.md).
+# Les commandes sont celles du Makefile, deja validees en local (make quality, make test).
+stages: [quality, test, integration, build, scan, perf]
+
+default:
+  image: node:22-alpine
+  cache:
+    key: { files: [api/package-lock.json, moderation-service/package-lock.json, frontend/package-lock.json] }
+    paths: [.npm]
+
+variables:
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
+  # Noms et tag des images : identiques a ceux du Makefile, de k8s/kustomization.yaml
+  # et de tests/image/*.yaml, sinon les tests d'image ne trouvent rien a tester.
+  IMAGE_TAG: "ci-$CI_COMMIT_SHORT_SHA"
+
+# Les images node:*-alpine ne contiennent pas make : sans cet ajout, tout job qui
+# appelle une cible du Makefile echoue sur "make: not found".
+.node-job: &node-job
+  before_script:
+    - apk add --no-cache make
+    - for d in api moderation-service frontend; do (cd $d && npm ci); done
+
+.docker-job: &docker-job
+  image: docker:27
+  services: [docker:27-dind]
+  variables: { DOCKER_HOST: "tcp://docker:2375", DOCKER_TLS_CERTDIR: "" }
+
+# ---------- 1. Qualite statique (rapide, sans Docker) : bloque la fusion ----------
+lint-code: # ESLint (complexite cyclomatique <= 10, cognitive <= 15) + tsc strict
+  stage: quality
+  <<: *node-job
+  script: [make lint]
+
+format:
+  stage: quality
+  <<: *node-job
+  script: [make format-check]
+
+lint-yaml:
+  stage: quality
+  image: cytopia/yamllint:latest
+  script: [yamllint -c .yamllint.yml k8s tests .gitlab-ci.yml .yamllint.yml]
+
+lint-dockerfile:
+  stage: quality
+  image: { name: hadolint/hadolint:v2.12.0-alpine, entrypoint: [""] }
+  script: [hadolint --config .hadolint.yaml api/Dockerfile moderation-service/Dockerfile frontend/Dockerfile]
+
+lint-k8s: # kustomize build + schemas Kubernetes
+  stage: quality
+  image: { name: ghcr.io/yannh/kubeconform:latest-alpine, entrypoint: [""] }
+  before_script: [apk add --no-cache kustomize]
+  script: [kustomize build k8s | kubeconform -strict -summary -ignore-missing-schemas -]
+
+secrets-scan:
+  stage: quality
+  image: { name: zricethezav/gitleaks:v8.21.2, entrypoint: [""] }
+  script: [gitleaks detect --no-git --source . -c .gitleaks.toml --redact]
+
+dependency-audit: # echec si CRITICAL ; HIGH visibles dans le rapport
+  stage: quality
+  <<: *node-job
+  script: [make audit]
+
+# ---------- 2. Tests unitaires + couverture (seuils minimaux) ----------
+unit-tests:
+  stage: test
+  <<: *node-job
+  script: [make coverage]
+  coverage: '/Lines\s*:\s*(\d+\.?\d*)%/'
+  artifacts:
+    when: always
+    paths: [api/coverage/, moderation-service/coverage/, frontend/coverage/]
+    expire_in: 1 week
+
+# Analyse Sonar : lit les rapports de couverture, attend la porte qualite (sonar.qualitygate.wait).
+sonar:
+  stage: test
+  image: { name: sonarsource/sonar-scanner-cli:11, entrypoint: [""] }
+  needs: [unit-tests]
+  variables:
+    GIT_DEPTH: "0" # historique complet pour le "nouveau code"
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar" # cache de l'analyseur entre deux pipelines
+  cache: { key: "${CI_JOB_NAME}", paths: [.sonar/cache] }
+  script: [sonar-scanner] # SONAR_TOKEN et SONAR_HOST_URL (https://sonarcloud.io) : variables CI/CD
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+  allow_failure: true
+
+# ---------- 3. Tests d'integration (PostgreSQL / RabbitMQ reels via Testcontainers) ----------
+integration-tests:
+  stage: integration
+  services: [docker:27-dind]
+  variables: { DOCKER_HOST: "tcp://docker:2375", DOCKER_TLS_CERTDIR: "" }
+  <<: *node-job
+  script: [make test-integration]
+
+# ---------- 4. Images : construction puis tests de structure ----------
+build-images:
+  stage: build
+  <<: *docker-job
+  script:
+    - docker build -t pme-api:$IMAGE_TAG api
+    - docker build -t pme-moderation:$IMAGE_TAG moderation-service
+    - docker build -t pme-frontend:$IMAGE_TAG frontend
+    - docker save pme-api:$IMAGE_TAG pme-moderation:$IMAGE_TAG pme-frontend:$IMAGE_TAG -o images.tar
+  artifacts: { paths: [images.tar], expire_in: 1 hour }
+
+# container-structure-test a besoin du demon Docker : on recharge l'archive produite
+# par build-images, puis on rejoue les memes configurations que "make image-test".
+image-structure:
+  stage: build
+  needs: [build-images]
+  <<: *docker-job
+  before_script:
+    - apk add --no-cache curl
+    - curl -sSfLo /usr/local/bin/cst
+      https://storage.googleapis.com/container-structure-test/v1.19.3/container-structure-test-linux-amd64
+    - chmod +x /usr/local/bin/cst
+  script:
+    - docker load -i images.tar
+    - cst test --image pme-api:$IMAGE_TAG --config tests/image/api.yaml
+    - cst test --image pme-moderation:$IMAGE_TAG --config tests/image/moderation.yaml
+    - cst test --image pme-frontend:$IMAGE_TAG --config tests/image/frontend.yaml
+
+# ---------- 5. Securite des images et du depot ----------
+trivy-fs:
+  stage: scan
+  image: { name: aquasec/trivy:0.71.2, entrypoint: [""] }
+  script:
+    - trivy fs --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 .
+  allow_failure: true
+
+# Une image par appel : "trivy image --input" ne scanne pas une archive multi-images.
+trivy-images:
+  stage: scan
+  needs: [build-images]
+  <<: *docker-job
+  before_script:
+    - docker load -i images.tar
+  script:
+    - for img in pme-api pme-moderation pme-frontend; do
+      docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.71.2
+      image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 $img:$IMAGE_TAG || exit 1;
+      done
+
+# ---------- 6. Performance (k6) : sur un environnement deploye ----------
+# Declenchement manuel tant qu'aucune etape de deploiement n'existe dans ce pipeline :
+# les scenarios visent une application en service, pas le runner. APP_URL et KEYCLOAK_URL
+# sont a definir en variables CI/CD, sinon k6 retombe sur le domaine local du poste.
+perf-k6:
+  stage: perf
+  image: { name: grafana/k6:1.4.0, entrypoint: [""] }
+  script:
+    - k6 run -e APP_URL=$APP_URL -e KEYCLOAK_URL=$KEYCLOAK_URL tests/performance/load.js
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual
+      allow_failure: true

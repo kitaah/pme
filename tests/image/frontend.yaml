@@ -1,0 +1,27 @@
+# Tests de l'image pme-frontend:dev avec container-structure-test
+#   container-structure-test test --image pme-frontend:dev --config tests/image/frontend.yaml
+schemaVersion: "2.0.0"
+
+commandTests:
+  - name: "nginx ne tourne pas en root (uid 101)"
+    command: "id"
+    args: ["-u"]
+    expectedOutput: ["^101"]
+  - name: "la configuration nginx est valide"
+    command: "nginx"
+    args: ["-t"]
+    expectedError: ["syntax is ok"]
+
+fileExistenceTests:
+  - name: "l'application compilee est servie"
+    path: "/usr/share/nginx/html/index.html"
+    shouldExist: true
+  - name: "la configuration d'execution est presente (remplacee par le ConfigMap en cluster)"
+    path: "/usr/share/nginx/html/config.js"
+    shouldExist: true
+  - name: "aucun code source dans l'image"
+    path: "/usr/share/nginx/html/src"
+    shouldExist: false
+
+metadataTest:
+  exposedPorts: ["8080"]

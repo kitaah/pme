@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pme-frontend
+  labels:
+    app: pme-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pme-frontend
+  template:
+    metadata:
+      labels:
+        app: pme-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: pme-frontend:dev
+          imagePullPolicy: IfNotPresent # image construite dans Minikube (make image-frontend)
+          ports:
+            - containerPort: 8080
+          resources:
+            requests: { cpu: 25m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 64Mi }
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/nginx/html/config.js
+              subPath: config.js
+              readOnly: true
+          readinessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: frontend-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pme-frontend
+spec:
+  selector:
+    app: pme-frontend
+  ports:
+    - port: 8080
+      targetPort: 8080

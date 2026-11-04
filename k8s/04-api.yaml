@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pme-api
+  labels:
+    app: pme-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pme-api
+  template:
+    metadata:
+      labels:
+        app: pme-api
+    spec:
+      # Desactive l'injection automatique par Kubernetes des variables d'environnement
+      # "liens Docker" d'un Service (ex. RABBITMQ_PORT=tcp://<ip>:5672) : son nom entre en
+      # collision avec la variable du meme nom que l'application attend (un entier simple).
+      enableServiceLinks: false
+      containers:
+        - name: api
+          image: pme-api:dev
+          imagePullPolicy: IfNotPresent # image construite dans Minikube (make image-api)
+          ports:
+            - containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+            - name: DB_HOST
+              value: postgres
+            - name: DB_NAME
+              value: pme
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: db-username }
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: db-password }
+            - name: RABBITMQ_HOST
+              value: rabbitmq
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: rabbitmq-username }
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: rabbitmq-password }
+            # `iss` = URL publique vue par le navigateur ; les cles sont lues via le service interne
+            - name: KEYCLOAK_ISSUER
+              value: http://localhost:8081/realms/pme
+            - name: KEYCLOAK_JWKS_URI
+              value: http://keycloak:8080/realms/pme/protocol/openid-connect/certs
+            - name: KEYCLOAK_ALLOWED_CLIENTS
+              value: pme-web,pme-cli
+            - name: SWAGGER_ENABLED
+              value: "true"
+            # requetes par minute et par IP ; relevee temporairement par `make perf-prepare`
+            - name: THROTTLE_LIMIT
+              value: "200"
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+          # L'API retente la connexion a PostgreSQL jusqu'a 30 s avant d'ecouter : meme
+          # protection que pour le service de moderation, la liveness n'entre en jeu qu'apres.
+          startupProbe:
+            httpGet: { path: /api/health/liveness, port: 3000 }
+            periodSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet: { path: /api/health/readiness, port: 3000 }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /api/health/liveness, port: 3000 }
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pme-api
+spec:
+  selector:
+    app: pme-api
+  ports:
+    - port: 3000
+      targetPort: 3000

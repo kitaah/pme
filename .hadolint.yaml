@@ -1,0 +1,2 @@
+# Lint Dockerfile (hadolint). Echec a partir du niveau "warning".
+failure-threshold: warning

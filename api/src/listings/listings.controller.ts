@@ -1,0 +1,47 @@
+import { BadRequestException, Body, Controller, Get, HttpCode, Post, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { AuthenticatedUser, ROLE_MEMBER } from '../auth/authenticated-user';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { CreateListingDto } from './create-listing.dto';
+import { ListingsService } from './listings.service';
+
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 100;
+
+/**
+ * `?limit=` absent OU vide vaut la valeur par defaut : un front qui construit son URL avec un
+ * parametre non renseigne ne doit pas recevoir un 400. Toute autre valeur non entiere est refusee.
+ */
+function parseLimit(raw?: string): number {
+  if (raw === undefined || raw.trim() === '') return DEFAULT_LIMIT;
+  const value = Number(raw);
+  if (!Number.isInteger(value)) {
+    throw new BadRequestException('Le paramètre « limit » doit être un nombre entier.');
+  }
+  return Math.min(Math.max(value, 1), MAX_LIMIT);
+}
+
+@ApiTags('annonces')
+@ApiBearerAuth()
+@UseGuards(RolesGuard)
+@Roles(ROLE_MEMBER)
+@Controller('v1/listings')
+export class ListingsController {
+  constructor(private readonly service: ListingsService) {}
+
+  @Post()
+  @HttpCode(201)
+  @ApiOperation({ summary: 'Propose une annonce de troc (statut initial : en attente de modération)' })
+  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateListingDto) {
+    return this.service.submit(user, dto);
+  }
+
+  @Get('mine')
+  @ApiOperation({ summary: "Liste mes annonces, les plus récentes d'abord" })
+  @ApiQuery({ name: 'limit', required: false, description: "Nombre maximal d'annonces (1 à 100, 50 par défaut)" })
+  mine(@CurrentUser() user: AuthenticatedUser, @Query('limit') limit?: string) {
+    return this.service.findByOwner(user, parseLimit(limit));
+  }
+}

@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+package-lock.json
+api
+moderation-service
+frontend
+# Les tableaux Markdown sont tenus a la main : Prettier les reformate en colonnes a
+# largeur fixe, ce qui rend la source illisible sans rien changer au rendu.
+*.md
+docs/
+k8s/config/realm-pme.json

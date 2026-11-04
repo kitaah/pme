@@ -1,0 +1,46 @@
+# Adminer : interface web d'administration de PostgreSQL, pour inspecter les 3 bases
+# (pme, moderation, keycloak) sans ligne de commande. Outil de developpement/demo uniquement :
+# pas d'authentification propre (Adminer se connecte avec les identifiants Postgres saisis
+# a l'ecran de connexion), donc jamais expose hors du port-forward local.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adminer
+  labels:
+    app: adminer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: adminer
+  template:
+    metadata:
+      labels:
+        app: adminer
+    spec:
+      containers:
+        - name: adminer
+          image: adminer:4.8.1
+          ports:
+            - containerPort: 8080
+          env:
+            # Pre-remplit le champ "Serveur" de l'ecran de connexion avec le nom du Service Postgres.
+            - name: ADMINER_DEFAULT_SERVER
+              value: postgres
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 200m, memory: 128Mi }
+          readinessProbe:
+            httpGet: { path: /, port: 8080 }
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: adminer
+spec:
+  selector:
+    app: adminer
+  ports:
+    - port: 8080
+      targetPort: 8080
