@@ -11,7 +11,7 @@
         port-forward stop-forward dev-api dev-moderation dev-frontend \
         smoke token queues db-listings db-moderation \
         demo-stop-moderation demo-start-moderation demo-kill-api \
-        open-app open-keycloak open-rabbitmq open-adminer open-swagger \
+        open-app open-keycloak open-rabbitmq open-adminer \
         docs-serve docs-check docs-image docs-run docs-image-test
 
 # NS sert aux commandes kubectl. Il n'est PAS propage aux manifestes : le namespace est
@@ -34,7 +34,6 @@ APP_URL := http://localhost:$(FRONT_PORT)
 KEYCLOAK_URL := http://localhost:$(KEYCLOAK_PORT)
 RABBITMQ_URL := http://localhost:$(RABBITMQ_UI_PORT)
 ADMINER_URL := http://localhost:$(ADMINER_PORT)
-SWAGGER_URL := $(APP_URL)/api/docs
 
 # Charge .env s'il existe (POSTGRES_*, RABBITMQ_*, KEYCLOAK_ADMIN*)
 -include .env
@@ -85,7 +84,7 @@ help:
 	@echo "    make docs-run                 - Sert l'image : http://localhost:$(DOCS_IMAGE_PORT)"
 	@echo "    make docs-image-test          - Tests de l'image (container-structure-test + Trivy)"
 	@echo ""
-	@echo "  Ouvrir : make open-app | open-keycloak | open-rabbitmq | open-adminer | open-swagger"
+	@echo "  Ouvrir : make open-app | open-keycloak | open-rabbitmq | open-adminer"
 
 # ---- Cluster Minikube ----
 
@@ -209,7 +208,6 @@ port-forward:
 	@echo "Keycloak      : $(KEYCLOAK_URL)"
 	@echo "RabbitMQ      : $(RABBITMQ_URL)"
 	@echo "Adminer       : $(ADMINER_URL) (serveur pre-rempli : postgres)"
-	@echo "Swagger       : $(SWAGGER_URL)"
 	@echo "'make stop-forward' pour tout arreter."
 
 stop-forward:
@@ -377,6 +375,3 @@ open-rabbitmq:
 
 open-adminer:
 	@xdg-open "$(ADMINER_URL)" 2>/dev/null || open "$(ADMINER_URL)" 2>/dev/null || echo "Ouvrir : $(ADMINER_URL)"
-
-open-swagger:
-	@xdg-open "$(SWAGGER_URL)" 2>/dev/null || open "$(SWAGGER_URL)" 2>/dev/null || echo "Ouvrir : $(SWAGGER_URL)"

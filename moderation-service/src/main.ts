@@ -2,7 +2,6 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions } from '@nestjs/microservices';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { loadConfiguration } from './config/configuration';
@@ -26,17 +25,6 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   app.connectMicroservice<MicroserviceOptions>(rabbitConsumerOptions(config.rabbit));
-
-  if (config.swaggerEnabled) {
-    SwaggerModule.setup(
-      'api/docs',
-      app,
-      SwaggerModule.createDocument(
-        app,
-        new DocumentBuilder().setTitle('Service de modération').setVersion('0.1').addBearerAuth().build(),
-      ),
-    );
-  }
 
   await app.startAllMicroservices();
   await app.listen(config.port, '0.0.0.0');

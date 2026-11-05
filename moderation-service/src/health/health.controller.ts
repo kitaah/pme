@@ -1,5 +1,4 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
-import { ApiExcludeController } from '@nestjs/swagger';
 import { DataSource } from 'typeorm';
 
 /**
@@ -7,7 +6,6 @@ import { DataSource } from 'typeorm';
  * Pas de @Public() ni de @SkipThrottle() ici : ce service n'a pas de garde globale a
  * court-circuiter (voir JwtAuthGuard), ces decorateurs n'auraient aucun effet.
  */
-@ApiExcludeController()
 @Controller('health')
 export class HealthController {
   constructor(private readonly dataSource: DataSource) {}
