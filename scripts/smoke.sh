@@ -3,8 +3,8 @@
 # Usage : make smoke   (ou APP_URL=... KEYCLOAK_URL=... ./scripts/smoke.sh)
 set -uo pipefail
 
-APP_URL="${APP_URL:-http://localhost:8080}"
-KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8081}"
+APP_URL="${APP_URL:-http://pme.localhost}"
+KEYCLOAK_URL="${KEYCLOAK_URL:-http://keycloak.localhost}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 failures=0
 

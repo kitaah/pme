@@ -1,4 +1,4 @@
-# Keycloak 24 en mode dev, joint depuis le poste par "kubectl port-forward" en HTTP simple.
+# Keycloak 24 en mode dev, joint par l'ingress (k8s/08-ingress.yaml) sur http://keycloak.localhost, en HTTP simple.
 # Le realm `pme` (roles membre / moderateur, clients pme-web et pme-cli, utilisateurs de demonstration)
 # est importe au demarrage depuis le ConfigMap `keycloak-realm` (config/realm-pme.json).
 apiVersion: apps/v1
@@ -25,12 +25,15 @@ spec:
             - --import-realm
             - --db=postgres
             - --db-url=jdbc:postgresql://postgres:5432/keycloak
-            # Keycloak est joint depuis le poste par "kubectl port-forward" sur
-            # http://localhost:8081. --hostname-url fige l'URL publique : l'emetteur (iss)
-            # des jetons vaut toujours http://localhost:8081/realms/pme, quel que soit le
-            # chemin emprunte pour atteindre Keycloak. L'API peut donc lire les cles par
-            # l'adresse interne du service sans que l'emetteur change.
-            - --hostname-url=http://localhost:8081
+            # Keycloak est joint par l'ingress sur http://keycloak.localhost. --hostname-url fige
+            # l'URL publique : l'emetteur (iss) des jetons vaut toujours
+            # http://keycloak.localhost/realms/pme, quel que soit le chemin emprunte pour atteindre
+            # Keycloak. L'API peut donc lire les cles par l'adresse interne du service sans que
+            # l'emetteur change.
+            - --hostname-url=http://keycloak.localhost
+            # Keycloak est derriere un proxy (ingress-nginx) qui termine le HTTP : il lit les
+            # en-tetes X-Forwarded-* au lieu de les ignorer.
+            - --proxy=edge
           ports:
             - containerPort: 8080
           env:

@@ -29,6 +29,7 @@ nav:
   - Outils:
       - Adminer: outils/adminer.md
       - Grafana: outils/grafana.md
+      - Ingress-nginx: outils/ingress-nginx.md
       - Keycloak: outils/keycloak.md
       - Minikube: outils/minikube.md
       - MkDocs: outils/mkdocs.md

@@ -5,7 +5,7 @@
 .PHONY: help install test test-integration image-test \
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
         perf perf-prepare perf-reset perf-load perf-decoupling \
-        minikube-up minikube-down \
+        minikube-up minikube-down ingress tunnel hosts \
         secrets image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         pods logs logs-api logs-moderation logs-keycloak \
         port-forward stop-forward api moderation frontend \
@@ -20,25 +20,29 @@ NS ?= pme
 MINIKUBE_MEMORY ?= 4096
 MINIKUBE_CPUS ?= 2
 
-# Tout passe par "kubectl port-forward" en HTTP simple : ni ingress, ni certificat,
-# ni entree dans /etc/hosts. Ces ports sont aussi ceux ecrits dans le realm Keycloak
-# (URL de retour) et dans k8s/config/frontend-config.js : les changer ici ne suffit pas.
-FRONT_PORT ?= 8080
-KEYCLOAK_PORT ?= 8081
+# Les interfaces web passent par l'ingress (HTTP simple, pas de certificat), sous des noms d'hote .localhost
+# (contexte securise pour les navigateurs, meme en HTTP : requis par keycloak-js).
+# Pour les joindre depuis l'ordinateur : "make tunnel" (redirige le port 80 vers l'ingress), puis la ligne /etc/hosts de "make hosts".
+# Ces noms sont aussi ecrits dans k8s/08-ingress.yaml, k8s/03-keycloak.yaml (hostname-url), k8s/04-api.yaml et
+# k8s/05-moderation.yaml (emetteur), k8s/10-grafana.yaml, k8s/config/realm-pme.json (URL de retour) et
+# k8s/config/frontend-config.js : les changer ici ne suffit pas.
+# NATS et PostgreSQL restent joints par "kubectl port-forward" (voir make port-forward, qui lance aussi l'ingress).
+APP_HOST ?= pme.localhost
+KEYCLOAK_HOST ?= keycloak.localhost
+ADMINER_HOST ?= adminer.localhost
+GRAFANA_HOST ?= grafana.localhost
+PROMETHEUS_HOST ?= prometheus.localhost
 NATS_MONITOR_PORT ?= 8222
-ADMINER_PORT ?= 8082
-PROMETHEUS_PORT ?= 9090
-# 3002 et non 3000 : en developpement local, make api (3000) et make moderation (3001) occupent ces ports.
-GRAFANA_PORT ?= 3002
 DOCS_PORT ?= 8005
 DOCS_IMAGE_PORT ?= 8083
 
-APP_URL := http://localhost:$(FRONT_PORT)
-KEYCLOAK_URL := http://localhost:$(KEYCLOAK_PORT)
+APP_URL := http://$(APP_HOST)
+KEYCLOAK_URL := http://$(KEYCLOAK_HOST)
 NATS_URL := http://localhost:$(NATS_MONITOR_PORT)
-ADMINER_URL := http://localhost:$(ADMINER_PORT)
-PROMETHEUS_URL := http://localhost:$(PROMETHEUS_PORT)
-GRAFANA_URL := http://localhost:$(GRAFANA_PORT)
+ADMINER_URL := http://$(ADMINER_HOST)
+PROMETHEUS_URL := http://$(PROMETHEUS_HOST)
+GRAFANA_URL := http://$(GRAFANA_HOST)
+HOSTS := $(APP_HOST) $(KEYCLOAK_HOST) $(ADMINER_HOST) $(GRAFANA_HOST) $(PROMETHEUS_HOST)
 
 # Charge .env s'il existe (POSTGRES_*, NATS_*, KEYCLOAK_ADMIN*)
 -include .env
@@ -50,11 +54,14 @@ help:
 	@echo "  Cluster"
 	@echo "    make minikube-up              - Demarre Minikube"
 	@echo "    make minikube-down            - Arrete Minikube"
+	@echo "    make ingress                  - Active l'ingress (addon Minikube) et attend qu'il soit pret"
+	@echo "    make tunnel                   - Redirige le port 80 vers l'ingress (cluster cree sans --ports, macOS, Windows ; laisser ouvert, mot de passe demande)"
+	@echo "    make hosts                    - Affiche la ligne a ajouter dans /etc/hosts pour les noms .localhost"
 	@echo ""
 	@echo "  Deploiement"
 	@echo "    make secrets                  - Cree le Secret pme-secrets depuis .env"
 	@echo "    make image                    - Construit les 3 images dans Minikube"
-	@echo "    make deploy                   - secrets + kubectl apply -k k8s/ (Postgres, NATS, Keycloak, API, moderation, front)"
+	@echo "    make deploy                   - secrets + kubectl apply -k k8s/ (Postgres, NATS, Keycloak, API, moderation, front, ingress)"
 	@echo "    make redeploy                 - image + redemarrage des 3 deployments (apres une modification du code)"
 	@echo "    make undeploy                 - Supprime le namespace (donnees comprises)"
 	@echo "    make create-grafana-db        - Cree la base grafana dans un PostgreSQL existant (make reset la cree d'office)"
@@ -74,7 +81,7 @@ help:
 	@echo ""
 	@echo "  Developpement local"
 	@echo "    make install                  - npm ci dans api, moderation-service, frontend"
-	@echo "    make port-forward             - Application :8080, Keycloak :8081, Adminer :8082, Prometheus :9090, Grafana :3002, NATS :8222 et :4222, Postgres :5432 -> localhost"
+	@echo "    make port-forward             - Pour developper : NATS :8222 et :4222, Postgres :5432 -> localhost, et l'ingress sur le port 80 s'il n'y est pas deja"
 	@echo "    make api | moderation | frontend"
 	@echo ""
 	@echo "  Tests"
@@ -95,12 +102,39 @@ help:
 
 # ---- Cluster Minikube ----
 
-# Aucun addon ingress : tout est joint par "kubectl port-forward" (voir make port-forward).
+# --ports publie les ports 80 et 443 du noeud (ou ecoute l'ingress) sur 127.0.0.1 de l'ordinateur : l'ingress est
+# alors joignable sans "make tunnel" ni redirection. Option prise en compte a la CREATION du cluster seulement :
+# sur un cluster existant, il faut "minikube delete" puis "make minikube-up" (les deploiements sont perdus).
+# 443 est reserve pour le HTTPS (cert-manager), afin de ne pas recreer le cluster une seconde fois.
 minikube-up:
-	minikube start --driver=docker --memory=$(MINIKUBE_MEMORY) --cpus=$(MINIKUBE_CPUS)
+	minikube start --driver=docker --memory=$(MINIKUBE_MEMORY) --cpus=$(MINIKUBE_CPUS) \
+		--ports=127.0.0.1:80:80,127.0.0.1:443:443
+	$(MAKE) ingress
 
 minikube-down:
 	minikube stop
+
+# Ingress-nginx (addon Minikube). On attend le controleur : un "make deploy" lance trop tot echoue sur
+# le webhook d'admission, qui n'est pas encore pret.
+ingress:
+	minikube addons enable ingress
+	kubectl -n ingress-nginx wait --for=condition=ready pod -l app.kubernetes.io/component=controller --timeout=180s
+
+# Les navigateurs envoient toujours un nom en .localhost vers 127.0.0.1, quelle que soit la ligne /etc/hosts
+# (RFC 6761). L'ingress doit donc ecouter sur 127.0.0.1:80 : on y redirige le port 80 du controleur.
+# Port 80 = port privilegie, d'ou sudo (KUBECONFIG est transmis, sudo ne garde pas l'environnement).
+# Laisser ce terminal ouvert. Fonctionne de la meme facon sous Linux, macOS et Windows.
+# "make port-forward" lance la meme redirection en arriere-plan : ne pas lancer les deux (le port 80 serait pris).
+INGRESS_FORWARD = kubectl -n ingress-nginx port-forward --address 127.0.0.1 svc/ingress-nginx-controller 80:80
+tunnel:
+	sudo env KUBECONFIG="$${KUBECONFIG:-$$HOME/.kube/config}" $(INGRESS_FORWARD)
+
+# N'ecrit rien dans /etc/hosts : affiche la ligne a ajouter (une seule fois) avec un editeur ou "sudo tee -a".
+# Les navigateurs n'en ont pas besoin pour .localhost ; curl, Node (make api, make smoke) peuvent en avoir besoin.
+hosts:
+	@echo "Ajouter cette ligne dans le fichier hosts de l'ordinateur (/etc/hosts sous Linux et macOS) :"
+	@echo ""
+	@echo "127.0.0.1 $(HOSTS)"
 
 # ---- Build & deploiement ----
 
@@ -212,32 +246,36 @@ install:
 	cd moderation-service && npm ci
 	cd frontend && npm ci
 
-# Rend l'application accessible sur l'ordinateur. Chaque redirection se relance toute seule si elle tombe.
-# Postgres et NATS (5432, 4222) ne servent qu'au developpement local : voir "make api" et "make moderation".
+# Tout ce qu'il faut pour developper sur l'ordinateur : NATS et PostgreSQL (qui n'ont pas d'ingress) et, si
+# le port 80 n'est pas deja joignable, l'ingress (Keycloak et les interfaces web, comme "make tunnel").
+# Un cluster cree par "make minikube-up" publie deja le port 80 : aucune redirection ni mot de passe.
+# Sinon l'ingress demande le mot de passe administrateur (port 80) : "sudo -v" le demande ici, au premier plan,
+# puis la boucle tourne en arriere-plan avec ces droits. Ne pas lancer "make tunnel" en meme temps.
+# Chaque redirection se relance toute seule si elle tombe. Postgres et NATS (5432, 4222) servent a "make api"
+# et "make moderation".
 port-forward:
-	@( while true; do kubectl -n $(NS) port-forward svc/pme-frontend $(FRONT_PORT):8080; sleep 2; done ) &
-	@( while true; do kubectl -n $(NS) port-forward svc/keycloak $(KEYCLOAK_PORT):8080; sleep 2; done ) &
+	@if curl -s -o /dev/null -m 2 http://127.0.0.1:80/; then \
+		echo "Ingress deja joignable sur 127.0.0.1:80"; \
+	else \
+		sudo -v; \
+		sudo env KUBECONFIG="$${KUBECONFIG:-$$HOME/.kube/config}" sh -c 'while true; do $(INGRESS_FORWARD); sleep 2; done' >/dev/null 2>&1 & \
+	fi
 	@( while true; do kubectl -n $(NS) port-forward svc/nats $(NATS_MONITOR_PORT):8222; sleep 2; done ) &
-	@( while true; do kubectl -n $(NS) port-forward svc/adminer $(ADMINER_PORT):8080; sleep 2; done ) &
-	@( while true; do kubectl -n $(NS) port-forward svc/prometheus $(PROMETHEUS_PORT):9090; sleep 2; done ) &
-	@( while true; do kubectl -n $(NS) port-forward svc/grafana $(GRAFANA_PORT):3000; sleep 2; done ) &
 	@( while true; do kubectl -n $(NS) port-forward svc/postgres 5432:5432; sleep 2; done ) &
 	@( while true; do kubectl -n $(NS) port-forward svc/nats 4222:4222; sleep 2; done ) &
 	@sleep 2
-	@echo "Application   : $(APP_URL)"
-	@echo "Keycloak      : $(KEYCLOAK_URL)"
 	@echo "NATS          : $(NATS_URL)/jsz?streams=1&consumers=1"
-	@echo "Adminer       : $(ADMINER_URL) (serveur pre-rempli : postgres)"
-	@echo "Prometheus    : $(PROMETHEUS_URL)/targets"
-	@echo "Grafana       : $(GRAFANA_URL) (identifiants : GRAFANA_ADMIN dans .env)"
+	@echo "NATS (client) : localhost:4222 ; PostgreSQL : localhost:5432"
+	@echo "Application   : $(APP_URL) (ingress sur 127.0.0.1:80, ligne /etc/hosts de 'make hosts' requise)"
 	@echo "'make stop-forward' pour tout arreter."
 
 stop-forward:
 	@pkill -f "kubectl -n $(NS) port-forward" || true
+	@if pgrep -f "kubectl -n ingress-nginx port-forward" >/dev/null; then sudo pkill -f "kubectl -n ingress-nginx port-forward"; fi
 	@echo "Port-forwards arretes."
 
-# En developpement local, les services tournent sur le poste mais lisent les cles de
-# Keycloak par le port-forward. L'emetteur attendu est le meme qu'en cluster, puisque
+# En developpement local, les services tournent sur l'ordinateur mais lisent les cles de
+# Keycloak par l'ingress (make port-forward le lance). L'emetteur attendu est le meme qu'en cluster, puisque
 # --hostname-url le fige (voir k8s/03-keycloak.yaml).
 DEV_KEYCLOAK_ENV = KEYCLOAK_ISSUER=$(KEYCLOAK_URL)/realms/pme \
 	KEYCLOAK_JWKS_URI=$(KEYCLOAK_URL)/realms/pme/protocol/openid-connect/certs \
@@ -257,7 +295,6 @@ frontend:
 	cd frontend && npm run dev
 
 # ---- Qualite logicielle (memes controles que l'etape "quality" de la chaine CI/CD) ----
-# Voir docs/QUALITE.md : attributs de qualite -> controle -> etape du pipeline.
 
 # Lint du code TypeScript (ESLint : regles + complexite cyclomatique <= 10 et cognitive <= 15) puis typage strict (tsc)
 lint:

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Affiche un jeton d'acces Keycloak pour un utilisateur de demonstration (client pme-cli, mot de passe direct).
-# Usage : KEYCLOAK_URL=http://localhost:8081 ./scripts/token.sh membre
+# Usage : KEYCLOAK_URL=http://keycloak.localhost ./scripts/token.sh membre
 set -euo pipefail
 
-KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8081}"
+KEYCLOAK_URL="${KEYCLOAK_URL:-http://keycloak.localhost}"
 USERNAME="${1:-membre}"
 
 # Les mots de passe de demonstration sont identiques aux noms d'utilisateur (voir k8s/config/realm-pme.json)

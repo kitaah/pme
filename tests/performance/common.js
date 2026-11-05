@@ -2,8 +2,8 @@
 import http from 'k6/http';
 import { check, fail } from 'k6';
 
-export const APP_URL = __ENV.APP_URL || 'http://localhost:8080';
-export const KEYCLOAK_URL = __ENV.KEYCLOAK_URL || 'http://localhost:8081';
+export const APP_URL = __ENV.APP_URL || 'http://pme.localhost';
+export const KEYCLOAK_URL = __ENV.KEYCLOAK_URL || 'http://keycloak.localhost';
 
 /** Jeton Keycloak via le client de test pme-cli (le mot de passe de demonstration vaut le nom d'utilisateur). */
 export function login(username) {

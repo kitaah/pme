@@ -3,7 +3,7 @@
 # rien n'est a configurer a la main, et un redemarrage retrouve le meme etat.
 # L'etat interne de Grafana (comptes, preferences) est dans PostgreSQL, base `grafana` : meme principe que Keycloak,
 # il survit a la recreation du pod. La base est creee par postgres-init.sh (ou par make create-grafana-db).
-# Joint par "kubectl port-forward" sur http://localhost:3002 (make grafana).
+# Joint par l'ingress (k8s/08-ingress.yaml) sur http://grafana.localhost (make grafana).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -34,6 +34,11 @@ spec:
             - name: GF_SECURITY_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef: { name: pme-secrets, key: grafana-admin-password }
+            # Adresse publique : Grafana s'en sert pour ses redirections (connexion, deconnexion).
+            - name: GF_SERVER_DOMAIN
+              value: grafana.localhost
+            - name: GF_SERVER_ROOT_URL
+              value: http://grafana.localhost/
             - name: GF_USERS_ALLOW_SIGN_UP
               value: "false"
             - name: GF_AUTH_ANONYMOUS_ENABLED

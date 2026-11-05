@@ -10,9 +10,10 @@ async function bootstrap() {
   const config = loadConfiguration();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Derriere l'ingress : l'IP reelle du client vient de X-Forwarded-For
+  // Derriere deux relais (ingress-nginx puis nginx du front) : l'IP reelle du client vient de
+  // X-Forwarded-For, en faisant confiance aux deux derniers sauts
   // (equivalent de server.forward-headers-strategy=framework).
-  app.set('trust proxy', 1);
+  app.set('trust proxy', 2);
   app.use(httpMetricsMiddleware);
   app.use(helmet());
   app.setGlobalPrefix('api');
