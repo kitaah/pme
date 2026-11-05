@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Construit l'interface web que les utilisateurs voient et utilisent |
 | **Version** | React 19.3.1 |
-| **Adresse en local** | <http://localhost:8080> (après `make port-forward`) et <http://localhost:5173> (mode développement) |
+| **Adresse en local** | <http://pme.localhost> et <http://localhost:5173> (mode développement) |
 
 ## Description
 
@@ -60,10 +60,9 @@ il envoie l’interface au navigateur et transmet à l’API les demandes de l�
 | `make image-frontend` | Fabrique l'image Docker de l'interface dans Minikube. |
 
 !!! note "À savoir"
-`make frontend` a besoin de Keycloak : lancer d'abord `make port-forward`.
+`make frontend` a besoin de Keycloak : vérifier d'abord avec `make pods` qu'il est démarré.
 
 ## Pour aller plus loin
 
 - [Site officiel de React](https://react.dev/)
 - [Documentation de React en français](https://fr.react.dev/)
-- [Qualité logicielle du projet](../QUALITE.md)
