@@ -15,7 +15,7 @@
  * ACCESSIBILITE : cette palette est verifiee automatiquement par src/theme.test.ts, qui lit
  * les jetons ci-dessous et controle chaque association reellement utilisee dans l'interface
  * (WCAG 2.1 criteres 1.4.3 et 1.4.11, RGAA 4 criteres 3.2 et 3.3). Toute couleur modifiee ici
- * fait echouer les tests si elle descend sous le seuil. Voir docs/QUALITE.md.
+ * fait echouer les tests si elle descend sous le seuil.
  */
 @import 'tailwindcss';
 

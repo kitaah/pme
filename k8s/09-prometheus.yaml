@@ -1,7 +1,7 @@
 # Prometheus : collecte les metriques des services et les conserve quelques heures.
 # Les donnees sont dans le conteneur (pas de volume) : elles disparaissent au redemarrage du pod.
 # Aucune authentification : outil de developpement et de demonstration, joint par
-# "kubectl port-forward" sur http://localhost:9090 (make prometheus).
+# l'ingress (k8s/08-ingress.yaml) sur http://prometheus.localhost (make prometheus).
 apiVersion: apps/v1
 kind: Deployment
 metadata:

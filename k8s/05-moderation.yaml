@@ -48,7 +48,7 @@ spec:
               valueFrom:
                 secretKeyRef: { name: pme-secrets, key: nats-password }
             - name: KEYCLOAK_ISSUER
-              value: http://localhost:8081/realms/pme
+              value: http://keycloak.localhost/realms/pme
             - name: KEYCLOAK_JWKS_URI
               value: http://keycloak:8080/realms/pme/protocol/openid-connect/certs
             - name: KEYCLOAK_ALLOWED_CLIENTS
