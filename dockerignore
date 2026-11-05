@@ -1,0 +1,8 @@
+# Contexte de construction de Dockerfile.docs (racine du depot).
+# Liste blanche : seuls les fichiers de la documentation partent vers le moteur Docker.
+# Les trois applications ont leur propre contexte (api/, moderation-service/, frontend/) et leur .dockerignore.
+*
+!requirements-docs.txt
+!mkdocs.yml
+!docs/
+!nginx-docs.conf

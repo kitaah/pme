@@ -1,0 +1,25 @@
+# Image de la documentation technique : site statique MkDocs servi par nginx.
+#   docker build -f Dockerfile.docs -t pme-docs:dev .     (ou : make docs-image)
+
+# --- Etape 1 : outillage MkDocs (versions exactes), reutilise par "make docs-serve" et "make docs-check" ---
+FROM python:3.12-slim AS deps
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1
+WORKDIR /docs
+# Dependances seules : cette couche reste en cache tant que requirements-docs.txt ne change pas
+COPY requirements-docs.txt .
+RUN pip install --no-cache-dir -r requirements-docs.txt
+
+# --- Etape 2 : construction du site ---
+FROM deps AS build
+COPY mkdocs.yml .
+COPY docs/ docs/
+# --strict : un lien casse ou une page absente du menu fait echouer la construction de l'image
+RUN mkdocs build --strict
+
+# --- Etape 3 : image finale legere, sans privileges root, sans Python ni sources Markdown ---
+FROM nginxinc/nginx-unprivileged:1.27-alpine
+COPY nginx-docs.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /docs/site /usr/share/nginx/html
+EXPOSE 8080

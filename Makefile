@@ -11,7 +11,8 @@
         port-forward stop-forward dev-api dev-moderation dev-frontend \
         smoke token queues db-listings db-moderation \
         demo-stop-moderation demo-start-moderation demo-kill-api \
-        open-app open-keycloak open-rabbitmq open-adminer open-swagger
+        open-app open-keycloak open-rabbitmq open-adminer open-swagger \
+        docs-serve docs-check docs-image docs-run docs-image-test
 
 # NS sert aux commandes kubectl. Il n'est PAS propage aux manifestes : le namespace est
 # fixe dans k8s/kustomization.yaml (voir README, "Limites connues").
@@ -26,6 +27,8 @@ FRONT_PORT ?= 8080
 KEYCLOAK_PORT ?= 8081
 RABBITMQ_UI_PORT ?= 15672
 ADMINER_PORT ?= 8082
+DOCS_PORT ?= 8000
+DOCS_IMAGE_PORT ?= 8083
 
 APP_URL := http://localhost:$(FRONT_PORT)
 KEYCLOAK_URL := http://localhost:$(KEYCLOAK_PORT)
@@ -74,6 +77,13 @@ help:
 	@echo "    make test-integration         - Tests d'integration avec PostgreSQL et RabbitMQ reels (Testcontainers, Docker requis)"
 	@echo "    make image-test               - Tests des images Docker (container-structure-test + Trivy)"
 	@echo "    make perf                     - Tests de performance k6 (charge + decouplage), apres make perf-prepare"
+	@echo ""
+	@echo "  Documentation (MkDocs, Docker requis)"
+	@echo "    make docs-serve               - Apercu en direct : http://localhost:$(DOCS_PORT)"
+	@echo "    make docs-check               - Construction stricte (lien casse ou page hors menu = echec)"
+	@echo "    make docs-image               - Image pme-docs:dev (site statique, nginx non-root)"
+	@echo "    make docs-run                 - Sert l'image : http://localhost:$(DOCS_IMAGE_PORT)"
+	@echo "    make docs-image-test          - Tests de l'image (container-structure-test + Trivy)"
 	@echo ""
 	@echo "  Ouvrir : make open-app | open-keycloak | open-rabbitmq | open-adminer | open-swagger"
 
@@ -255,11 +265,11 @@ format-check:
 # Lint YAML (manifestes Kubernetes, tests d'image, pipeline) : pip install yamllint.
 # Le realm Keycloak est un .json : il n'est pas couvert ici (voir README, "Limites connues").
 lint-yaml:
-	yamllint -c .yamllint.yml k8s tests .gitlab-ci.yml .yamllint.yml
+	yamllint -c .yamllint.yml k8s tests .gitlab-ci.yml .yamllint.yml mkdocs.yml
 
 # Lint Dockerfile : hadolint (binaire ou conteneur)
 lint-docker:
-	hadolint --config .hadolint.yaml api/Dockerfile moderation-service/Dockerfile frontend/Dockerfile
+	hadolint --config .hadolint.yaml api/Dockerfile moderation-service/Dockerfile frontend/Dockerfile Dockerfile.docs
 
 # Validation des manifestes Kubernetes rendus par kustomize (schemas officiels)
 lint-k8s:
@@ -312,6 +322,29 @@ image-test:
 		container-structure-test test --image pme-$$svc:dev --config tests/image/$$svc.yaml || exit 1; \
 		trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 pme-$$svc:dev || exit 1; \
 	done
+
+# ---- Documentation (MkDocs) ----
+# Tout passe par Docker (Dockerfile.docs) : ni Python ni venv a installer sur le poste.
+# docs-serve et docs-check utilisent l'etape "deps" (outillage seul) et montent le depot :
+# l'apercu tourne meme si un lien est casse, pour pouvoir le corriger.
+docs-serve:
+	docker build -f Dockerfile.docs --target deps -t pme-docs-deps:dev .
+	docker run --rm -it -p $(DOCS_PORT):8000 -v "$(CURDIR)":/docs pme-docs-deps:dev mkdocs serve -a 0.0.0.0:8000
+
+docs-check:
+	docker build -f Dockerfile.docs --target deps -t pme-docs-deps:dev .
+	docker run --rm -v "$(CURDIR)":/docs pme-docs-deps:dev mkdocs build --strict --site-dir /tmp/site
+
+docs-image:
+	docker build -f Dockerfile.docs -t pme-docs:dev .
+
+docs-run:
+	@echo "Documentation : http://localhost:$(DOCS_IMAGE_PORT) (Ctrl+C pour arreter)"
+	docker run --rm -p $(DOCS_IMAGE_PORT):8080 pme-docs:dev
+
+docs-image-test:
+	container-structure-test test --image pme-docs:dev --config tests/image/docs.yaml
+	trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 pme-docs:dev
 
 # Performance (k6) : sur le cluster deploye, apres le deploiement en recette.
 # k6 envoie tout depuis une seule IP : on releve la limitation de debit de l'API le temps du test.
