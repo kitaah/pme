@@ -8,7 +8,7 @@
         minikube-up minikube-down \
         secrets image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         pods logs logs-api logs-moderation logs-keycloak \
-        port-forward stop-forward \
+        port-forward stop-forward api moderation frontend \
         smoke token queues db-listings db-moderation \
         demo-stop-moderation demo-start-moderation demo-kill-api \
         app keycloak nats adminer \
@@ -66,12 +66,10 @@ help:
 	@echo "    make demo-start-moderation    - Le relance : la file se vide"
 	@echo "    make demo-kill-api            - Supprime le pod de l'API : Kubernetes le recree"
 	@echo ""
-	@echo "  Acces"
-	@echo "    make port-forward             - Application :8080, Keycloak :8081, Adminer :8082, NATS :8222 -> localhost"
-	@echo "    make stop-forward             - Arrete les redirections de ports"
-	@echo ""
-	@echo "  Installation"
+	@echo "  Developpement local"
 	@echo "    make install                  - npm ci dans api, moderation-service, frontend"
+	@echo "    make port-forward             - Application :8080, Keycloak :8081, Adminer :8082, NATS :8222 et :4222, Postgres :5432 -> localhost"
+	@echo "    make api | moderation | frontend"
 	@echo ""
 	@echo "  Tests"
 	@echo "    make test                     - Tests unitaires (Jest : api + moderation-service, Vitest : frontend)"
@@ -192,7 +190,7 @@ demo-kill-api:
 	kubectl -n $(NS) delete pod -l app=pme-api
 	kubectl -n $(NS) get pods -l app=pme-api -w
 
-# ---- Installation des dependances (necessaire pour lint et test) ----
+# ---- Developpement local (services lances sur la machine, infrastructure dans Minikube) ----
 
 install:
 	cd api && npm ci
@@ -200,11 +198,14 @@ install:
 	cd frontend && npm ci
 
 # Rend l'application accessible sur l'ordinateur. Chaque redirection se relance toute seule si elle tombe.
+# Postgres et NATS (5432, 4222) ne servent qu'au developpement local : voir "make api" et "make moderation".
 port-forward:
 	@( while true; do kubectl -n $(NS) port-forward svc/pme-frontend $(FRONT_PORT):8080; sleep 2; done ) &
 	@( while true; do kubectl -n $(NS) port-forward svc/keycloak $(KEYCLOAK_PORT):8080; sleep 2; done ) &
 	@( while true; do kubectl -n $(NS) port-forward svc/nats $(NATS_MONITOR_PORT):8222; sleep 2; done ) &
 	@( while true; do kubectl -n $(NS) port-forward svc/adminer $(ADMINER_PORT):8080; sleep 2; done ) &
+	@( while true; do kubectl -n $(NS) port-forward svc/postgres 5432:5432; sleep 2; done ) &
+	@( while true; do kubectl -n $(NS) port-forward svc/nats 4222:4222; sleep 2; done ) &
 	@sleep 2
 	@echo "Application   : $(APP_URL)"
 	@echo "Keycloak      : $(KEYCLOAK_URL)"
@@ -215,6 +216,26 @@ port-forward:
 stop-forward:
 	@pkill -f "kubectl -n $(NS) port-forward" || true
 	@echo "Port-forwards arretes."
+
+# En developpement local, les services tournent sur le poste mais lisent les cles de
+# Keycloak par le port-forward. L'emetteur attendu est le meme qu'en cluster, puisque
+# --hostname-url le fige (voir k8s/03-keycloak.yaml).
+DEV_KEYCLOAK_ENV = KEYCLOAK_ISSUER=$(KEYCLOAK_URL)/realms/pme \
+	KEYCLOAK_JWKS_URI=$(KEYCLOAK_URL)/realms/pme/protocol/openid-connect/certs \
+	KEYCLOAK_ALLOWED_CLIENTS=pme-web,pme-cli
+
+api:
+	@cd api && DB_HOST=localhost DB_NAME=pme DB_USER='$(POSTGRES_USER)' DB_PASSWORD='$(POSTGRES_PASSWORD)' \
+		NATS_HOST=localhost NATS_USER='$(NATS_USER)' NATS_PASSWORD='$(NATS_PASSWORD)' \
+		$(DEV_KEYCLOAK_ENV) npm run start:dev
+
+moderation:
+	@cd moderation-service && DB_HOST=localhost DB_NAME=moderation DB_USER='$(POSTGRES_USER)' DB_PASSWORD='$(POSTGRES_PASSWORD)' \
+		NATS_HOST=localhost NATS_USER='$(NATS_USER)' NATS_PASSWORD='$(NATS_PASSWORD)' \
+		$(DEV_KEYCLOAK_ENV) npm run start:dev
+
+frontend:
+	cd frontend && npm run dev
 
 # ---- Qualite logicielle (memes controles que l'etape "quality" de la chaine CI/CD) ----
 # Voir docs/QUALITE.md : attributs de qualite -> controle -> etape du pipeline.
