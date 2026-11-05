@@ -9,5 +9,3 @@ coverage
 .git
 .idea
 .vscode
-Dockerfile
-.dockerignore
