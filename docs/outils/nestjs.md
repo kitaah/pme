@@ -44,10 +44,14 @@ REST : il reçoit les demandes de l'interface, applique les règles métier, pui
 | Commande | Description |
 |---|---|
 | `make install` | Installe les dépendances. |
+| `make api` | Démarre l'API et la redémarre à chaque modification du code. |
 | `make test` | Lance les tests automatiques. |
 | `make test-integration` | Teste l'API avec de vraies bases de données, Docker démarré. |
 | `make image-api` | Fabrique l'image Docker de l'API dans Minikube. |
 | `make logs-api` | Affiche le journal de l'API, mis à jour en direct. |
+
+!!! note "À savoir"
+`make api` a besoin de la base de données, de NATS et de Keycloak : lancer d'abord `make port-forward`.
 
 ## Pour aller plus loin
 
