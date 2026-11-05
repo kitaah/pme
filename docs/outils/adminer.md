@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Permet de consulter les bases PostgreSQL depuis un navigateur |
 | **Version** | Adminer 4.8.1 |
-| **Adresse en local** | <http://localhost:8082> (après `make port-forward`) |
+| **Adresse en local** | <http://adminer.localhost> |
 
 ## Description
 
@@ -41,17 +41,16 @@ connecte à la base avec l'identifiant et le mot de passe saisis sur la page de 
 | Commande | Description |
 |---|---|
 | `make deploy` | Installe Adminer avec le reste de la plateforme. |
-| `make port-forward` | Rend Adminer accessible sur l'ordinateur. |
 | `make adminer` | Ouvre Adminer dans le navigateur. |
 | `make pods` | Indique si Adminer est prêt. |
 
 !!! tip "Astuce"
-    Sur la page de connexion, choisir le système « PostgreSQL ». Le champ « Serveur » est déjà rempli. Saisir
-    l'identifiant et le mot de passe du fichier `.env`, puis le nom de la base : `pme`, `moderation`, `keycloak` ou
-    `grafana`.
+Sur la page de connexion, choisir le système « PostgreSQL ». Le champ « Serveur » est déjà rempli. Saisir
+l'identifiant et le mot de passe du fichier `.env`, puis le nom de la base : `pme`, `moderation`, `keycloak` ou
+`grafana`.
 
 !!! warning "Attention"
-    Adminer n'a pas d'authentification propre. Il ne doit jamais être exposé hors de l'ordinateur de l'équipe.
+Adminer n'a pas d'authentification propre. Il ne doit jamais être exposé hors de l'ordinateur de l'équipe.
 
 ## Pour aller plus loin
 

@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Construit le back-end de la plateforme : il reçoit les demandes de l'interface et applique les règles étier |
 | **Version** | NestJS 11.2.8 |
-| **Adresse en local** | <http://localhost:8080/api> (après `make port-forward`) |
+| **Adresse en local** | <http://pme.localhost/api> |
 
 ## Description
 

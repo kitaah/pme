@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Fait tourner la plateforme dans un cluster Kubernetes local, sur un seul ordinateur |
 | **Version** | Minikube 1.39.0 |
-| **Adresse en local** | Aucune : les applications sont jointes avec `make port-forward` |
+| **Adresse en local** | Aucune : les applications sont jointes par l'ingress |
 
 ## Description
 
@@ -23,7 +23,7 @@ toute la plateforme sur un ordinateur.
 - **Docker** : outil libre qui crée et fait fonctionner des conteneurs sur un ordinateur.
 - **Dockerfile** : fichier qui décrit, étape par étape, comment fabriquer une image Docker.
 - **Hadolint** : outil libre qui contrôle les Dockerfile avant la fabrication des images, au début de la chaîne CI/CD.
-Il garantit que les images respectent les bonnes pratiques de sécurité et de fiabilité.
+  Il garantit que les images respectent les bonnes pratiques de sécurité et de fiabilité.
 - **Image Docker** : modèle figé d’une application, à partir duquel Docker crée des conteneurs.
 - **Kubernetes** : système libre qui gère les conteneurs d’un cluster. Il les démarre, les surveille, les relance en cas d’arrêt et répartit la charge entre eux.
 - **Manifeste** : fichier de configuration qui décrit ce que Kubernetes doit faire tourner.
@@ -56,7 +56,7 @@ Il garantit que les images respectent les bonnes pratiques de sécurité et de f
 
 | Commande | Description |
 |---|---|
-| `make minikube-up` | Démarre le cluster. |
+| `make minikube-up` | Démarre le cluster, publie les ports 80 et 443 et active l'ingress. |
 | `make image` | Construit les images des applications dans le cluster. |
 | `make lint-docker` | Repère les erreurs et les mauvaises pratiques dans les Dockerfile, avec Hadolint. |
 | `make deploy` | Déploie toute la plateforme. |

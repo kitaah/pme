@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Affiche les mesures des services sous forme de tableaux de bord |
 | **Version** | Grafana 11.3.1 |
-| **Adresse en local** | <http://localhost:3002> (après `make port-forward`) |
+| **Adresse en local** | <http://grafana.localhost> |
 
 ## Description
 
@@ -49,18 +49,17 @@ connexion par identifiant et mot de passe. Il enregistre ses propres réglages d
 | Commande | Description |
 |---|---|
 | `make deploy` | Installe Grafana avec le reste de la plateforme. |
-| `make port-forward` | Rend Grafana accessible sur l'ordinateur. |
 | `make grafana` | Ouvre Grafana dans le navigateur. |
 | `make create-grafana-db` | Crée la base de Grafana sur un cluster déjà installé. |
 | `make pods` | Indique si Grafana est prêt. |
 
 !!! tip "Astuce"
-    Les identifiants se définissent dans le fichier `.env`, avec `GRAFANA_ADMIN` et `GRAFANA_ADMIN_PASSWORD`. Après un
-    changement, relancer `make deploy`.
+Les identifiants se définissent dans le fichier `.env`, avec `GRAFANA_ADMIN` et `GRAFANA_ADMIN_PASSWORD`. Après un
+changement, relancer `make deploy`.
 
 !!! note "À savoir"
-    Le tableau de bord fourni ne peut pas être enregistré depuis l'interface. Pour le modifier, éditer le fichier JSON,
-    puis lancer `make deploy`.
+Le tableau de bord fourni ne peut pas être enregistré depuis l'interface. Pour le modifier, éditer le fichier JSON,
+puis lancer `make deploy`.
 
 ## Pour aller plus loin
 

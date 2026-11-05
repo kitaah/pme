@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Gère les comptes et la connexion des utilisateurs, et délivre les jetons d'accès |
 | **Version** | Keycloak 24.0.0 |
-| **Adresse en local** | <http://localhost:8081> (après `make port-forward`) |
+| **Adresse en local** | <http://keycloak.localhost> |
 
 ## Description
 
@@ -42,8 +42,7 @@ ne stockent ni ne voient jamais les mots de passe.
 |---|---|
 | `make deploy` | Installe Keycloak avec le reste de la plateforme. |
 | `make pods` | Indique si Keycloak est prêt. Il met environ une minute à démarrer. |
-| `make port-forward` | Rend Keycloak accessible sur le poste. |
-| `make open-keycloak` | Ouvre la console d'administration dans le navigateur. |
+| `make keycloak` | Ouvre la console d'administration dans le navigateur. |
 | `make token KC_USER=membre` | Affiche un jeton de test pour un utilisateur. |
 | `make logs-keycloak` | Affiche les messages de Keycloak. |
 
