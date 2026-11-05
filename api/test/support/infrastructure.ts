@@ -1,5 +1,5 @@
+import { NatsContainer } from '@testcontainers/nats';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
-import { RabbitMQContainer } from '@testcontainers/rabbitmq';
 
 export interface PostgresInfo {
   host: string;
@@ -10,7 +10,7 @@ export interface PostgresInfo {
   stop: () => Promise<void>;
 }
 
-export interface RabbitInfo {
+export interface NatsInfo {
   host: string;
   port: number;
   user: string;
@@ -46,15 +46,22 @@ export async function startPostgres(database: string): Promise<PostgresInfo> {
   };
 }
 
-/** RabbitMQ reel (meme version que le cluster), utilisateur par defaut guest / guest. */
-export async function startRabbit(): Promise<RabbitInfo> {
-  const container = await new RabbitMQContainer('rabbitmq:3.13-management-alpine').start();
+/**
+ * NATS reel (meme version que le cluster), avec JetStream active : sans `withJetStream()`, le
+ * serveur ne garde aucun message et les flux ne peuvent pas etre declares.
+ */
+export async function startNats(): Promise<NatsInfo> {
+  const container = await new NatsContainer('nats:2.10-alpine')
+    .withJetStream()
+    .withUsername('test')
+    .withPass('test')
+    .start();
   let stopped = false;
   return {
     host: container.getHost(),
-    port: container.getMappedPort(5672),
-    user: 'guest',
-    password: 'guest',
+    port: container.getMappedPort(4222),
+    user: 'test',
+    password: 'test',
     // idempotent : un test peut arreter le broker pour simuler une panne, le nettoyage final le rappelle
     stop: async () => {
       if (!stopped) {

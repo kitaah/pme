@@ -7,7 +7,7 @@ namespace: pme
 resources:
   - namespace.yaml
   - 01-postgres.yaml
-  - 02-rabbitmq.yaml
+  - 02-nats.yaml
   - 03-keycloak.yaml
   - 04-api.yaml
   - 05-moderation.yaml

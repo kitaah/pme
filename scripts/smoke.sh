@@ -38,7 +38,7 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do
   if curl -s "$APP_URL/api/v1/moderation/queue" -H "Authorization: Bearer $MODERATOR_TOKEN" | grep -q "$TITLE"; then found=1; break; fi
   sleep 1
 done
-check "le moderateur voit l'annonce dans la file (via RabbitMQ)" 1 "$found"
+check "le moderateur voit l'annonce dans la file (via NATS)" 1 "$found"
 
 echo
 if [ "$failures" -eq 0 ]; then echo "Test de fumee reussi."; else echo "$failures verification(s) en echec."; exit 1; fi

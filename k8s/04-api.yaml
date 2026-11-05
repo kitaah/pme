@@ -15,7 +15,7 @@ spec:
         app: pme-api
     spec:
       # Desactive l'injection automatique par Kubernetes des variables d'environnement
-      # "liens Docker" d'un Service (ex. RABBITMQ_PORT=tcp://<ip>:5672) : son nom entre en
+      # "liens Docker" d'un Service (ex. NATS_PORT=tcp://<ip>:4222) : son nom entre en
       # collision avec la variable du meme nom que l'application attend (un entier simple).
       enableServiceLinks: false
       containers:
@@ -37,14 +37,14 @@ spec:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef: { name: pme-secrets, key: db-password }
-            - name: RABBITMQ_HOST
-              value: rabbitmq
-            - name: RABBITMQ_USER
+            - name: NATS_HOST
+              value: nats
+            - name: NATS_USER
               valueFrom:
-                secretKeyRef: { name: pme-secrets, key: rabbitmq-username }
-            - name: RABBITMQ_PASSWORD
+                secretKeyRef: { name: pme-secrets, key: nats-username }
+            - name: NATS_PASSWORD
               valueFrom:
-                secretKeyRef: { name: pme-secrets, key: rabbitmq-password }
+                secretKeyRef: { name: pme-secrets, key: nats-password }
             # `iss` = URL publique vue par le navigateur ; les cles sont lues via le service interne
             - name: KEYCLOAK_ISSUER
               value: http://localhost:8081/realms/pme

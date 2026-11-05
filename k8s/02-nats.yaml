@@ -1,0 +1,81 @@
+# NATS 2.10 avec JetStream (option -js) : le stockage durable des messages.
+# Sans JetStream, NATS ne garde rien : un message publie alors que le service de moderation est
+# arrete serait perdu. JetStream apporte le flux durable, l'acquittement manuel et la remise en file.
+#
+# Deux ports : 4222 pour les clients, 8222 pour la supervision HTTP (/healthz, /jsz).
+# NATS n'a pas d'interface web : l'etat des flux se lit sur /jsz (voir `make queues` et `make open-nats`).
+#
+# Stockage non persistant (emptyDir) : suffisant pour le POC. Les messages survivent a l'arret du
+# SERVICE DE MODERATION (ils restent dans le flux), pas a la perte du pod NATS.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nats
+  labels:
+    app: nats
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nats
+  template:
+    metadata:
+      labels:
+        app: nats
+    spec:
+      containers:
+        - name: nats
+          image: nats:2.10-alpine
+          # Kubernetes remplace $(VAR) par la variable d'environnement du conteneur declaree ci-dessous.
+          args:
+            - "-js"
+            - "--store_dir=/data/jetstream"
+            - "--http_port=8222"
+            - "--user=$(NATS_USER)"
+            - "--pass=$(NATS_PASSWORD)"
+          ports:
+            - name: client
+              containerPort: 4222
+            - name: monitor
+              containerPort: 8222
+          env:
+            - name: NATS_USER
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: nats-username }
+            - name: NATS_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: nats-password }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+          volumeMounts:
+            - name: jetstream
+              mountPath: /data/jetstream
+          readinessProbe:
+            httpGet: { path: /healthz, port: 8222 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8222 }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      volumes:
+        - name: jetstream
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats
+spec:
+  selector:
+    app: nats
+  ports:
+    - name: client
+      port: 4222
+      targetPort: 4222
+    - name: monitor
+      port: 8222
+      targetPort: 8222

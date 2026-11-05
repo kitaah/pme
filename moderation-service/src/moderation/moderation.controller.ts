@@ -8,7 +8,7 @@ import { ModerationService } from './moderation.service';
 
 /**
  * Les gardes sont poses sur ce controleur plutot qu'en APP_GUARD : ce service est aussi un
- * consommateur RabbitMQ, et un garde global s'appliquerait aussi aux messages (pas de jeton HTTP).
+ * consommateur NATS, et un garde global s'appliquerait aussi aux messages (pas de jeton HTTP).
  */
 @UseGuards(ThrottlerGuard, JwtAuthGuard, RolesGuard)
 @Roles(ROLE_MODERATOR)

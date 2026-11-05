@@ -1,27 +1,30 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { connect } from 'amqplib';
+import { AckPolicy, NatsConnection, RetentionPolicy, StorageType, connect } from 'nats';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../../src/app.module';
 import { ProblemDetailsFilter } from '../../src/common/problem-details.filter';
-import {
-  LISTING_SUBMITTED,
-  LISTING_SUBMITTED_QUEUE,
-  LISTING_SUBMITTED_QUEUE_OPTIONS,
-} from '../../src/listings/listing-events';
-import { PostgresInfo, RabbitInfo, startPostgres, startRabbit, waitFor } from '../support/infrastructure';
+import { LISTINGS_STREAM, LISTING_SUBMITTED_SUBJECT } from '../../src/listings/listing-events';
+import { NatsInfo, PostgresInfo, startNats, startPostgres } from '../support/infrastructure';
 import { FakeKeycloak } from '../support/jwt-helper';
 
+/** Lecteur de test : le consommateur durable du service de moderation n'existe pas ici. */
+const TEST_CONSUMER = 'test-reader';
+
 /**
- * L'API face a un VRAI RabbitMQ et un vrai PostgreSQL (conteneurs jetables) : on verifie ce que
- * recevrait vraiment le service de moderation. Necessite Docker. Lancer avec `npm run test:integration`.
+ * L'API face a un VRAI NATS (JetStream) et un vrai PostgreSQL (conteneurs jetables) : on verifie ce
+ * que recevrait vraiment le service de moderation. Necessite Docker. Lancer avec `npm run test:integration`.
+ *
+ * Le flux est declare ici avec la MEME configuration que moderation-service/src/moderation/nats-topology.ts
+ * (sujet et retention en file de travail) : le contrat entre les deux services est ainsi verifie.
  */
-describe('API annonces avec RabbitMQ (integration)', () => {
+describe('API annonces avec NATS (integration)', () => {
   const keycloak = new FakeKeycloak();
   const body = { title: 'Figurine Pyramid Head', description: 'Édition 2019, dans sa boîte.', condition: 'GOOD' };
   let postgres: PostgresInfo;
-  let rabbit: RabbitInfo;
+  let nats: NatsInfo;
+  let connection: NatsConnection;
   let app: INestApplication;
   let dataSource: DataSource;
 
@@ -30,20 +33,34 @@ describe('API annonces avec RabbitMQ (integration)', () => {
 
   beforeAll(async () => {
     await keycloak.start();
-    [postgres, rabbit] = await Promise.all([startPostgres('pme'), startRabbit()]);
+    [postgres, nats] = await Promise.all([startPostgres('pme'), startNats()]);
     Object.assign(process.env, {
       DB_HOST: postgres.host,
       DB_PORT: String(postgres.port),
       DB_NAME: postgres.database,
       DB_USER: postgres.user,
       DB_PASSWORD: postgres.password,
-      RABBITMQ_HOST: rabbit.host,
-      RABBITMQ_PORT: String(rabbit.port),
-      RABBITMQ_USER: rabbit.user,
-      RABBITMQ_PASSWORD: rabbit.password,
+      NATS_HOST: nats.host,
+      NATS_PORT: String(nats.port),
+      NATS_USER: nats.user,
+      NATS_PASSWORD: nats.password,
       KEYCLOAK_ISSUER: FakeKeycloak.ISSUER,
       KEYCLOAK_JWKS_URI: keycloak.jwksUri,
     });
+
+    connection = await connect({
+      servers: `${nats.host}:${nats.port}`,
+      user: nats.user,
+      pass: nats.password,
+    });
+    const jsm = await connection.jetstreamManager();
+    await jsm.streams.add({
+      name: LISTINGS_STREAM,
+      subjects: [LISTING_SUBMITTED_SUBJECT],
+      retention: RetentionPolicy.Workqueue,
+      storage: StorageType.File,
+    });
+    await jsm.consumers.add(LISTINGS_STREAM, { durable_name: TEST_CONSUMER, ack_policy: AckPolicy.Explicit });
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
@@ -57,49 +74,56 @@ describe('API annonces avec RabbitMQ (integration)', () => {
   afterAll(async () => {
     await app?.close();
     await keycloak.stop();
-    await Promise.all([postgres?.stop(), rabbit?.stop()]);
+    await connection?.close().catch(() => undefined);
+    await Promise.all([postgres?.stop(), nats?.stop()]);
   });
 
-  it('publie un message persistant avec le contrat attendu par le service de moderation', async () => {
-    // Given : le service de moderation n'est pas la ; on lit la file comme le ferait un consommateur
-    const connection = await connect({
-      protocol: 'amqp',
-      hostname: rabbit.host,
-      port: rabbit.port,
-      username: rabbit.user,
-      password: rabbit.password,
+  it('publie dans le flux un message au contrat attendu par le service de moderation', async () => {
+    // Given : le service de moderation n'est pas la ; on lit le flux comme le ferait son consommateur
+    const consumer = await connection.jetstream().consumers.get(LISTINGS_STREAM, TEST_CONSUMER);
+
+    // When
+    const res = await post();
+
+    // Then : 201, annonce en attente, et un message conserve dans le flux
+    expect(res.status).toBe(201);
+    expect(res.body.status).toBe('PENDING_MODERATION');
+
+    const message = await consumer.next({ expires: 20_000 });
+    expect(message).not.toBeNull();
+    expect(message?.subject).toBe(LISTING_SUBMITTED_SUBJECT);
+    expect(message?.json()).toMatchObject({
+      listingId: res.body.id,
+      ownerUsername: 'membre',
+      title: body.title,
+      condition: 'GOOD',
     });
-    const channel = await connection.createChannel();
-    try {
-      // meme declaration que le service de moderation : echoue si les arguments de la file divergent
-      await channel.assertQueue(LISTING_SUBMITTED_QUEUE, LISTING_SUBMITTED_QUEUE_OPTIONS);
-
-      // When
-      const res = await post();
-
-      // Then : 201, annonce en attente, et un message persistant dans la file
-      expect(res.status).toBe(201);
-      expect(res.body.status).toBe('PENDING_MODERATION');
-      const message = await waitFor(
-        async () => (await channel.get(LISTING_SUBMITTED_QUEUE, { noAck: true })) || undefined,
-        20_000,
-        'le message publie',
-      );
-      expect(JSON.parse(message.content.toString())).toMatchObject({
-        pattern: LISTING_SUBMITTED,
-        data: { listingId: res.body.id, ownerUsername: 'membre', title: body.title, condition: 'GOOD' },
-      });
-      expect(message.properties.deliveryMode).toBe(2);
-    } finally {
-      await channel.close();
-      await connection.close();
-    }
+    message?.ack();
   });
 
-  it("repond 503 et ne garde pas l'annonce quand RabbitMQ tombe", async () => {
+  it("ignore un rejeu : la fenetre de deduplication du flux n'accepte qu'un message par annonce", async () => {
+    // Given : une annonce publiee, dont on connait l'identifiant (= msgID)
+    await dataSource.query('TRUNCATE listings');
+    const res = await post();
+    const jetstream = connection.jetstream();
+    const consumer = await jetstream.consumers.get(LISTINGS_STREAM, TEST_CONSUMER);
+    const first = await consumer.next({ expires: 20_000 });
+    first?.ack();
+
+    // When : le meme evenement est republie (ce que ferait une nouvelle tentative du publieur)
+    await jetstream.publish(LISTING_SUBMITTED_SUBJECT, JSON.stringify({ listingId: res.body.id }), {
+      msgID: res.body.id as string,
+    });
+
+    // Then : NATS le marque comme doublon, le service de moderation ne le verra pas
+    expect(await consumer.next({ expires: 2000 })).toBeNull();
+  });
+
+  it("repond 503 et ne garde pas l'annonce quand NATS tombe", async () => {
     // Given : le broker est arrete
     await dataSource.query('TRUNCATE listings');
-    await rabbit.stop();
+    await connection.close().catch(() => undefined);
+    await nats.stop();
 
     // When
     const res = await post();

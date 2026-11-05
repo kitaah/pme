@@ -23,8 +23,8 @@ kubectl -n "$NS" wait --for=delete pod -l app=pme-moderation --timeout=90s >/dev
 run_phase down "Phase 2 : service de moderation arrete"
 
 echo
-echo "=== Messages en attente dans RabbitMQ (moderation arretee) ==="
-kubectl -n "$NS" exec deploy/rabbitmq -- rabbitmqctl list_queues name messages consumers
+echo "=== Messages en attente dans NATS (moderation arretee) ==="
+kubectl -n "$NS" exec deploy/nats -- wget -qO- 'http://localhost:8222/jsz?streams=1&consumers=1'
 
 python3 - "$OUT" <<'PY'
 import json, sys

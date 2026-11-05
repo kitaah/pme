@@ -6,7 +6,7 @@ import { IS_PUBLIC_KEY } from './public.decorator';
 /**
  * Exige un jeton valide, sauf si la route est marquee @Public().
  * Dans ce service la garde est posee controleur par controleur (voir ModerationController) et non
- * en APP_GUARD : il est aussi consommateur RabbitMQ, or un garde global s'appliquerait aussi aux
+ * en APP_GUARD : il est aussi consommateur NATS, or un garde global s'appliquerait aussi aux
  * messages, qui n'ont pas de jeton HTTP. Tout nouveau controleur doit donc declarer ses gardes.
  */
 @Injectable()
