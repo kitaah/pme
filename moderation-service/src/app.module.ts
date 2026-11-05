@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { ProblemDetailsFilter } from './common/problem-details.filter';
 import { loadConfiguration } from './config/configuration';
 import { HealthController } from './health/health.controller';
+import { MetricsController } from './metrics/metrics.controller';
 import { CreateModerationQueue1730000000000 } from './migrations/1730000000000-create-moderation-queue';
 import { ModerationItem } from './moderation/moderation-item.entity';
 import { ModerationModule } from './moderation/moderation.module';
@@ -37,7 +38,7 @@ import { ModerationModule } from './moderation/moderation.module';
     AuthModule,
     ModerationModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, MetricsController],
   providers: [{ provide: APP_FILTER, useClass: ProblemDetailsFilter }],
 })
 export class AppModule {}

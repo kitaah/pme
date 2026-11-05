@@ -7,6 +7,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { ProblemDetailsFilter } from './common/problem-details.filter';
 import { loadConfiguration } from './config/configuration';
 import { HealthController } from './health/health.controller';
+import { MetricsController } from './metrics/metrics.controller';
 import { Listing } from './listings/listing.entity';
 import { ListingsModule } from './listings/listings.module';
 import { CreateListings1730000000000 } from './migrations/1730000000000-create-listings';
@@ -39,7 +40,7 @@ import { CreateListings1730000000000 } from './migrations/1730000000000-create-l
     AuthModule,
     ListingsModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, MetricsController],
   providers: [
     { provide: APP_FILTER, useClass: ProblemDetailsFilter },
     // Ordre = ordre d'execution : debit, puis authentification (refus par defaut).

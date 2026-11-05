@@ -1,0 +1,12 @@
+# Fournisseur de tableaux de bord : Grafana charge les fichiers JSON du dossier ci-dessous.
+apiVersion: 1
+providers:
+  - name: pme
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/dashboards
