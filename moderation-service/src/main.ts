@@ -4,6 +4,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { loadConfiguration } from './config/configuration';
+import { httpMetricsMiddleware } from './metrics/metrics';
 import { LISTINGS_STREAM } from './moderation/listing-submitted.event';
 import { ListingSubmittedConsumer } from './moderation/listing-submitted.consumer';
 import { ensureStreams } from './moderation/nats-topology';
@@ -18,6 +19,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.set('trust proxy', 1);
+  app.use(httpMetricsMiddleware);
   app.use(helmet());
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));

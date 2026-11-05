@@ -4,6 +4,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { loadConfiguration } from './config/configuration';
+import { httpMetricsMiddleware } from './metrics/metrics';
 
 async function bootstrap() {
   const config = loadConfiguration();
@@ -12,6 +13,7 @@ async function bootstrap() {
   // Derriere l'ingress : l'IP reelle du client vient de X-Forwarded-For
   // (equivalent de server.forward-headers-strategy=framework).
   app.set('trust proxy', 1);
+  app.use(httpMetricsMiddleware);
   app.use(helmet());
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));

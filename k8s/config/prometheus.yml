@@ -1,0 +1,18 @@
+# Configuration de Prometheus (ConfigMap `prometheus-config`, generee par kustomize :
+# modifier ce fichier redemarre Prometheus automatiquement).
+global:
+  # 15 s : assez fin pour les tableaux de bord, sans charge de fond inutile.
+  scrape_interval: 15s
+scrape_configs:
+  # Prometheus se surveille lui-meme : sa propre ligne dans la page Targets confirme qu'il fonctionne.
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+  - job_name: pme-api
+    metrics_path: /api/metrics
+    static_configs:
+      - targets: ['pme-api:3000']
+  - job_name: pme-moderation
+    metrics_path: /api/metrics
+    static_configs:
+      - targets: ['pme-moderation:3001']

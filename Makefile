@@ -9,10 +9,10 @@
         secrets image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         pods logs logs-api logs-moderation logs-keycloak \
         port-forward stop-forward api moderation frontend \
-        smoke token queues db-listings db-moderation \
+        smoke token queues db-listings db-moderation create-grafana-db \
         demo-stop-moderation demo-start-moderation demo-kill-api \
-        app keycloak nats adminer \
-        docs-serve docs-check docs-image docs-run docs-image-test
+        app keycloak nats adminer prometheus grafana \
+        docs-serve docs-check docs-image docs-run docs-stop docs-image-test
 
 # NS sert aux commandes kubectl. Il n'est PAS propage aux manifestes : le namespace est
 # fixe dans k8s/kustomization.yaml (voir README, "Limites connues").
@@ -27,6 +27,9 @@ FRONT_PORT ?= 8080
 KEYCLOAK_PORT ?= 8081
 NATS_MONITOR_PORT ?= 8222
 ADMINER_PORT ?= 8082
+PROMETHEUS_PORT ?= 9090
+# 3002 et non 3000 : en developpement local, make api (3000) et make moderation (3001) occupent ces ports.
+GRAFANA_PORT ?= 3002
 DOCS_PORT ?= 8000
 DOCS_IMAGE_PORT ?= 8083
 
@@ -34,6 +37,8 @@ APP_URL := http://localhost:$(FRONT_PORT)
 KEYCLOAK_URL := http://localhost:$(KEYCLOAK_PORT)
 NATS_URL := http://localhost:$(NATS_MONITOR_PORT)
 ADMINER_URL := http://localhost:$(ADMINER_PORT)
+PROMETHEUS_URL := http://localhost:$(PROMETHEUS_PORT)
+GRAFANA_URL := http://localhost:$(GRAFANA_PORT)
 
 # Charge .env s'il existe (POSTGRES_*, NATS_*, KEYCLOAK_ADMIN*)
 -include .env
@@ -52,6 +57,7 @@ help:
 	@echo "    make deploy                   - secrets + kubectl apply -k k8s/ (Postgres, NATS, Keycloak, API, moderation, front)"
 	@echo "    make redeploy                 - image + redemarrage des 3 deployments (apres une modification du code)"
 	@echo "    make undeploy                 - Supprime le namespace (donnees comprises)"
+	@echo "    make create-grafana-db        - Cree la base grafana dans un PostgreSQL existant (make reset la cree d'office)"
 	@echo ""
 	@echo "  Observation"
 	@echo "    make pods | logs-api | logs-moderation | logs-keycloak"
@@ -68,7 +74,7 @@ help:
 	@echo ""
 	@echo "  Developpement local"
 	@echo "    make install                  - npm ci dans api, moderation-service, frontend"
-	@echo "    make port-forward             - Application :8080, Keycloak :8081, Adminer :8082, NATS :8222 et :4222, Postgres :5432 -> localhost"
+	@echo "    make port-forward             - Application :8080, Keycloak :8081, Adminer :8082, Prometheus :9090, Grafana :3002, NATS :8222 et :4222, Postgres :5432 -> localhost"
 	@echo "    make api | moderation | frontend"
 	@echo ""
 	@echo "  Tests"
@@ -82,9 +88,10 @@ help:
 	@echo "    make docs-check               - Construction stricte (lien casse ou page hors menu = echec)"
 	@echo "    make docs-image               - Image pme-docs:dev (site statique, nginx non-root)"
 	@echo "    make docs-run                 - Sert l'image : http://localhost:$(DOCS_IMAGE_PORT)"
+	@echo "    make docs-stop                - Arrete l'apercu et le site servis par docs-serve et docs-run"
 	@echo "    make docs-image-test          - Tests de l'image (container-structure-test + Trivy)"
 	@echo ""
-	@echo "  Ouvrir : make app | keycloak | nats | adminer"
+	@echo "  Ouvrir : make app | keycloak | nats | adminer | prometheus | grafana"
 
 # ---- Cluster Minikube ----
 
@@ -101,6 +108,7 @@ minikube-down:
 # Le projet Spring utilisait des Sealed Secrets : a reprendre quand le POC passera a la chaine CI/CD.
 secrets:
 	@test -f .env || (echo "Fichier .env absent : cp .env.example .env" && exit 1)
+	@test -n '$(GRAFANA_ADMIN)' && test -n '$(GRAFANA_ADMIN_PASSWORD)' || (echo "GRAFANA_ADMIN et GRAFANA_ADMIN_PASSWORD absents de .env : voir .env.example" && exit 1)
 	@kubectl create namespace $(NS) --dry-run=client -o yaml | kubectl apply -f -
 	@kubectl -n $(NS) create secret generic pme-secrets \
 		--from-literal=db-username='$(POSTGRES_USER)' \
@@ -109,6 +117,8 @@ secrets:
 		--from-literal=nats-password='$(NATS_PASSWORD)' \
 		--from-literal=keycloak-admin-username='$(KEYCLOAK_ADMIN)' \
 		--from-literal=keycloak-admin-password='$(KEYCLOAK_ADMIN_PASSWORD)' \
+		--from-literal=grafana-admin-username='$(GRAFANA_ADMIN)' \
+		--from-literal=grafana-admin-password='$(GRAFANA_ADMIN_PASSWORD)' \
 		--dry-run=client -o yaml | kubectl apply -f -
 	@echo "Secret pme-secrets cree dans le namespace $(NS) (valeurs lues dans .env, non affichees)"
 
@@ -165,6 +175,11 @@ queues:
 	@kubectl -n $(NS) exec deploy/nats -- wget -qO- 'http://localhost:8222/jsz?streams=1&consumers=1' \
 		| python3 -m json.tool
 
+# Cree la base `grafana` dans un PostgreSQL deja initialise : postgres-init.sh ne s'execute qu'une fois.
+# Sans effet si la base existe deja.
+create-grafana-db:
+	kubectl -n $(NS) exec deploy/postgres -- sh -c "psql -U \"\$$POSTGRES_USER\" -d pme -tAc \"SELECT 1 FROM pg_database WHERE datname='grafana'\" | grep -q 1 || psql -U \"\$$POSTGRES_USER\" -d pme -c \"CREATE DATABASE grafana\""
+
 db-listings:
 	kubectl -n $(NS) exec deploy/postgres -- sh -c 'psql -U "$$POSTGRES_USER" -d pme -c "SELECT id, owner_username, title, status, created_at FROM listings ORDER BY created_at DESC"'
 
@@ -204,6 +219,8 @@ port-forward:
 	@( while true; do kubectl -n $(NS) port-forward svc/keycloak $(KEYCLOAK_PORT):8080; sleep 2; done ) &
 	@( while true; do kubectl -n $(NS) port-forward svc/nats $(NATS_MONITOR_PORT):8222; sleep 2; done ) &
 	@( while true; do kubectl -n $(NS) port-forward svc/adminer $(ADMINER_PORT):8080; sleep 2; done ) &
+	@( while true; do kubectl -n $(NS) port-forward svc/prometheus $(PROMETHEUS_PORT):9090; sleep 2; done ) &
+	@( while true; do kubectl -n $(NS) port-forward svc/grafana $(GRAFANA_PORT):3000; sleep 2; done ) &
 	@( while true; do kubectl -n $(NS) port-forward svc/postgres 5432:5432; sleep 2; done ) &
 	@( while true; do kubectl -n $(NS) port-forward svc/nats 4222:4222; sleep 2; done ) &
 	@sleep 2
@@ -211,6 +228,8 @@ port-forward:
 	@echo "Keycloak      : $(KEYCLOAK_URL)"
 	@echo "NATS          : $(NATS_URL)/jsz?streams=1&consumers=1"
 	@echo "Adminer       : $(ADMINER_URL) (serveur pre-rempli : postgres)"
+	@echo "Prometheus    : $(PROMETHEUS_URL)/targets"
+	@echo "Grafana       : $(GRAFANA_URL) (identifiants : GRAFANA_ADMIN dans .env)"
 	@echo "'make stop-forward' pour tout arreter."
 
 stop-forward:
@@ -343,6 +362,12 @@ docs-run:
 	@echo "Documentation : http://localhost:$(DOCS_IMAGE_PORT) (Ctrl+C pour arreter)"
 	docker run --rm -p $(DOCS_IMAGE_PORT):8080 pme-docs:dev
 
+# Arrete les conteneurs lances par docs-serve (pme-docs-deps:dev) et docs-run (pme-docs:dev).
+# Ils sont lances avec --rm : ils disparaissent a l'arret.
+docs-stop:
+	@ids=$$(docker ps -q --filter ancestor=pme-docs-deps:dev --filter ancestor=pme-docs:dev); \
+	if [ -n "$$ids" ]; then docker stop $$ids >/dev/null && echo "MkDocs arrete."; else echo "Aucun MkDocs en cours."; fi
+
 docs-image-test:
 	container-structure-test test --image pme-docs:dev --config tests/image/docs.yaml
 	trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 pme-docs:dev
@@ -378,3 +403,9 @@ nats:
 
 adminer:
 	@xdg-open "$(ADMINER_URL)" 2>/dev/null || open "$(ADMINER_URL)" 2>/dev/null || echo "Ouvrir : $(ADMINER_URL)"
+
+prometheus:
+	@xdg-open "$(PROMETHEUS_URL)/targets" 2>/dev/null || open "$(PROMETHEUS_URL)/targets" 2>/dev/null || echo "Ouvrir : $(PROMETHEUS_URL)/targets"
+
+grafana:
+	@xdg-open "$(GRAFANA_URL)" 2>/dev/null || open "$(GRAFANA_URL)" 2>/dev/null || echo "Ouvrir : $(GRAFANA_URL)"

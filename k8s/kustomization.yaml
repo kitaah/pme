@@ -13,6 +13,8 @@ resources:
   - 05-moderation.yaml
   - 06-frontend.yaml
   - 07-adminer.yaml
+  - 09-prometheus.yaml
+  - 10-grafana.yaml
 configMapGenerator:
   - name: postgres-init
     files:
@@ -23,6 +25,18 @@ configMapGenerator:
   - name: frontend-config
     files:
       - config.js=config/frontend-config.js
+  - name: prometheus-config
+    files:
+      - prometheus.yml=config/prometheus.yml
+  - name: grafana-datasources
+    files:
+      - prometheus.yml=config/grafana-datasource.yml
+  - name: grafana-dashboards-provider
+    files:
+      - dashboards.yml=config/grafana-dashboards.yml
+  - name: grafana-dashboards
+    files:
+      - pme.json=config/grafana-dashboard-pme.json
 # Point d'entree pour la future chaine CI/CD : `kustomize edit set image pme-api=<registre>/pme-api:<sha>`
 images:
   - name: pme-api
