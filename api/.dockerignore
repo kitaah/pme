@@ -1,6 +1,13 @@
 node_modules
 dist
-test
 coverage
+.vite
 *.log
+*.tsbuildinfo
 .env
+.env.*
+.git
+.idea
+.vscode
+Dockerfile
+.dockerignore
