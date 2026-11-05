@@ -27,11 +27,15 @@ theme:
 nav:
   - Accueil: index.md
   - Outils:
+      - Adminer: outils/adminer.md
+      - Grafana: outils/grafana.md
       - Keycloak: outils/keycloak.md
       - Minikube: outils/minikube.md
       - MkDocs: outils/mkdocs.md
       - NATS: outils/nats.md
       - NestJS: outils/nestjs.md
+      - PostgreSQL: outils/postgresql.md
+      - Prometheus: outils/prometheus.md
       - React: outils/react.md
   - Contribuer:
       - Modèle de fiche outil: outils/modele-fiche.md
