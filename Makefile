@@ -30,7 +30,7 @@ ADMINER_PORT ?= 8082
 PROMETHEUS_PORT ?= 9090
 # 3002 et non 3000 : en developpement local, make api (3000) et make moderation (3001) occupent ces ports.
 GRAFANA_PORT ?= 3002
-DOCS_PORT ?= 8000
+DOCS_PORT ?= 8005
 DOCS_IMAGE_PORT ?= 8083
 
 APP_URL := http://localhost:$(FRONT_PORT)
