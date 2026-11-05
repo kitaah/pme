@@ -54,9 +54,13 @@ il envoie l’interface au navigateur et transmet à l’API les demandes de l�
 | Commande | Description |
 |---|---|
 | `make install` | Installe les dépendances. |
+| `make frontend` | Affiche l’interface et la met à jour à chaque modification du code. |
 | `make test` | Lance les tests automatiques. |
 | `make lint` | Repère les erreurs et les mauvaises pratiques dans le code, avec ESLint. |
 | `make image-frontend` | Fabrique l'image Docker de l'interface dans Minikube. |
+
+!!! note "À savoir"
+`make frontend` a besoin de Keycloak : lancer d'abord `make port-forward`.
 
 ## Pour aller plus loin
 
