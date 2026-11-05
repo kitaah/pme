@@ -1,6 +1,8 @@
-import { RmqContext } from '@nestjs/microservices';
+import { JsMsg } from 'nats';
+import { LISTING_SUBMITTED_DLQ_SUBJECT } from './listing-submitted.event';
 import { ListingSubmittedConsumer } from './listing-submitted.consumer';
 import { ModerationService } from './moderation.service';
+import { NatsClient } from './nats.client';
 
 describe('ListingSubmittedConsumer', () => {
   const validEvent = {
@@ -14,64 +16,99 @@ describe('ListingSubmittedConsumer', () => {
   };
 
   let moderation: { enqueue: jest.Mock };
+  let publish: jest.Mock;
   let consumer: ListingSubmittedConsumer;
-  let channel: { ack: jest.Mock; nack: jest.Mock };
-  let message: object;
-  let context: RmqContext;
+
+  /** Faux message JetStream : ack / nak / term sont observables sans broker. */
+  function fakeMessage(payload: unknown): JsMsg {
+    const raw = JSON.stringify(payload);
+    return {
+      data: new TextEncoder().encode(raw),
+      json: () => JSON.parse(raw) as unknown,
+      string: () => raw,
+      ack: jest.fn(),
+      nak: jest.fn(),
+      term: jest.fn(),
+      working: jest.fn(),
+    } as unknown as JsMsg;
+  }
 
   beforeEach(() => {
     moderation = { enqueue: jest.fn().mockResolvedValue(true) };
-    consumer = new ListingSubmittedConsumer(moderation as unknown as ModerationService);
-    channel = { ack: jest.fn(), nack: jest.fn() };
-    message = { content: Buffer.from('{}') };
-    context = { getChannelRef: () => channel, getMessage: () => message } as unknown as RmqContext;
+    publish = jest.fn().mockResolvedValue({ seq: 1 });
+    const nats = { jetstream: jest.fn().mockResolvedValue({ publish }) } as unknown as NatsClient;
+    consumer = new ListingSubmittedConsumer(nats, moderation as unknown as ModerationService);
   });
 
   it("place l'annonce dans la file puis acquitte le message", async () => {
-    await consumer.onListingSubmitted(validEvent, context);
+    const message = fakeMessage(validEvent);
+
+    await consumer.handle(message);
 
     expect(moderation.enqueue).toHaveBeenCalledWith(expect.objectContaining({ listingId: validEvent.listingId }));
-    expect(channel.ack).toHaveBeenCalledWith(message);
-    expect(channel.nack).not.toHaveBeenCalled();
+    expect(message.ack).toHaveBeenCalled();
+    expect(message.nak).not.toHaveBeenCalled();
+    expect(message.term).not.toHaveBeenCalled();
   });
 
   it('acquitte sans erreur un message deja traite (doublon)', async () => {
     moderation.enqueue.mockResolvedValue(false);
+    const message = fakeMessage(validEvent);
 
-    await consumer.onListingSubmitted(validEvent, context);
+    await consumer.handle(message);
 
-    expect(channel.ack).toHaveBeenCalledWith(message);
-    expect(channel.nack).not.toHaveBeenCalled();
+    expect(message.ack).toHaveBeenCalled();
+    expect(message.nak).not.toHaveBeenCalled();
   });
 
-  it('rejette sans remise en file un message mal forme, sans rien enregistrer', async () => {
-    await consumer.onListingSubmitted({ listingId: 'pas-un-uuid' }, context);
+  it("copie un message mal forme dans le flux d'echec et arrete ses remises, sans rien enregistrer", async () => {
+    const message = fakeMessage({ listingId: 'pas-un-uuid' });
+
+    await consumer.handle(message);
 
     expect(moderation.enqueue).not.toHaveBeenCalled();
-    expect(channel.nack).toHaveBeenCalledWith(message, false, false);
-    expect(channel.ack).not.toHaveBeenCalled();
+    expect(publish).toHaveBeenCalledWith(LISTING_SUBMITTED_DLQ_SUBJECT, message.data, expect.anything());
+    expect(message.term).toHaveBeenCalled();
+    expect(message.ack).not.toHaveBeenCalled();
+    expect(message.nak).not.toHaveBeenCalled();
   });
 
   it("remet le message dans la file quand la panne est passagere : l'annonce n'est pas perdue", async () => {
     // Given : la base est momentanement injoignable (redemarrage du pod PostgreSQL)
     moderation.enqueue.mockRejectedValue(new Error('base indisponible'));
+    const message = fakeMessage(validEvent);
 
-    await consumer.onListingSubmitted(validEvent, context);
+    await consumer.handle(message);
 
-    // Then : remise en file (3e argument a true) et non envoi en file d'echec,
+    // Then : nouvelle remise demandee, et non envoi dans le flux d'echec,
     // pour que le message soit retraite une fois la base revenue
-    expect(channel.nack).toHaveBeenCalledWith(message, false, true);
-    expect(channel.ack).not.toHaveBeenCalled();
+    expect(message.nak).toHaveBeenCalled();
+    expect(message.term).not.toHaveBeenCalled();
+    expect(message.ack).not.toHaveBeenCalled();
+    expect(publish).not.toHaveBeenCalled();
   });
 
-  it("n'eteint pas le service si l'acquittement negatif echoue a son tour", async () => {
-    // Given : la base est tombee ET le canal AMQP est deja ferme
+  it("n'arrete pas les remises si la copie dans le flux d'echec echoue", async () => {
+    // Given : message invalide ET broker indisponible pour la copie
+    publish.mockRejectedValue(new Error('broker injoignable'));
+    const message = fakeMessage({ listingId: 'pas-un-uuid' });
+
+    await consumer.handle(message);
+
+    // Then : pas de term() -> JetStream remettra le message, il n'est pas perdu silencieusement
+    expect(message.term).not.toHaveBeenCalled();
+    expect(message.ack).not.toHaveBeenCalled();
+  });
+
+  it("n'eteint pas le service si le rejet echoue a son tour", async () => {
+    // Given : la base est tombee ET la connexion NATS est deja fermee
     moderation.enqueue.mockRejectedValue(new Error('base indisponible'));
-    channel.nack.mockImplementation(() => {
-      throw new Error('canal ferme');
+    const message = fakeMessage(validEvent);
+    (message.nak as unknown as jest.Mock).mockImplementation(() => {
+      throw new Error('connexion fermee');
     });
 
     // Then : l'erreur secondaire est tracee, pas propagee (sinon rejet de promesse non gere)
-    await expect(consumer.onListingSubmitted(validEvent, context)).resolves.toBeUndefined();
+    await expect(consumer.handle(message)).resolves.toBeUndefined();
   });
 });

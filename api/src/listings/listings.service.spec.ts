@@ -53,7 +53,7 @@ describe('ListingsService', () => {
     });
 
     it("retire l'annonce et repond 503 quand la publication echoue (compensation)", async () => {
-      // Given : RabbitMQ injoignable
+      // Given : NATS injoignable
       publisher.publishSubmitted.mockRejectedValue(new Error('connexion refusee'));
 
       // When / Then

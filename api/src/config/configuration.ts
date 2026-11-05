@@ -8,7 +8,7 @@ export interface AppConfig {
   /** Requetes autorisees par minute et par IP (a relever pour les tests de charge). */
   throttleLimit: number;
   db: { host: string; port: number; name: string; user: string; password: string };
-  rabbit: { host: string; port: number; user: string; password: string };
+  nats: { host: string; port: number; user: string; password: string };
   keycloak: {
     /** Valeur attendue dans la claim `iss` : URL publique de Keycloak (celle que voit le navigateur). */
     issuer: string;
@@ -55,11 +55,11 @@ export function loadConfiguration(env: NodeJS.ProcessEnv = process.env): AppConf
       user: required(env, 'DB_USER'),
       password: required(env, 'DB_PASSWORD'),
     },
-    rabbit: {
-      host: env.RABBITMQ_HOST ?? 'localhost',
-      port: num(env, 'RABBITMQ_PORT', 5672),
-      user: required(env, 'RABBITMQ_USER'),
-      password: required(env, 'RABBITMQ_PASSWORD'),
+    nats: {
+      host: env.NATS_HOST ?? 'localhost',
+      port: num(env, 'NATS_PORT', 4222),
+      user: required(env, 'NATS_USER'),
+      password: required(env, 'NATS_PASSWORD'),
     },
     keycloak: {
       issuer: required(env, 'KEYCLOAK_ISSUER'),

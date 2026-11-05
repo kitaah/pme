@@ -1,17 +1,18 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { RmqContext } from '@nestjs/microservices';
 import { Test } from '@nestjs/testing';
+import { JsMsg } from 'nats';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../../src/app.module';
 import { ProblemDetailsFilter } from '../../src/common/problem-details.filter';
 import { ListingSubmittedConsumer } from '../../src/moderation/listing-submitted.consumer';
+import { NatsClient } from '../../src/moderation/nats.client';
 import { FakeKeycloak } from '../support/jwt-helper';
 import { PostgresInfo, startPostgres } from '../support/infrastructure';
 
 /**
  * Test d'integration du service de moderation : vrai PostgreSQL (conteneur jetable), vrai controle
- * de jeton (faux Keycloak) et consommateur appele avec un faux contexte RabbitMQ (ack / nack
+ * de jeton (faux Keycloak) et consommateur appele avec un faux message JetStream (ack / nak / term
  * observables). Le vrai broker est teste dans moderation-broker.integration-spec.ts.
  */
 describe('Service de moderation (integration)', () => {
@@ -20,6 +21,7 @@ describe('Service de moderation (integration)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
   let consumer: ListingSubmittedConsumer;
+  const deadLetterPublish = jest.fn().mockResolvedValue({ seq: 1 });
 
   const event = (overrides: Record<string, unknown> = {}) => ({
     listingId: '33333333-3333-4333-8333-333333333333',
@@ -32,11 +34,18 @@ describe('Service de moderation (integration)', () => {
     ...overrides,
   });
 
-  function fakeRmq() {
-    const channel = { ack: jest.fn(), nack: jest.fn() };
-    const message = { content: Buffer.from('{}') };
-    const context = { getChannelRef: () => channel, getMessage: () => message } as unknown as RmqContext;
-    return { channel, message, context };
+  /** Faux message JetStream : ack / nak / term sont observables sans broker. */
+  function fakeMessage(payload: unknown): JsMsg {
+    const raw = JSON.stringify(payload);
+    return {
+      data: new TextEncoder().encode(raw),
+      json: () => JSON.parse(raw) as unknown,
+      string: () => raw,
+      ack: jest.fn(),
+      nak: jest.fn(),
+      term: jest.fn(),
+      working: jest.fn(),
+    } as unknown as JsMsg;
   }
 
   beforeAll(async () => {
@@ -48,13 +57,17 @@ describe('Service de moderation (integration)', () => {
       DB_NAME: postgres.database,
       DB_USER: postgres.user,
       DB_PASSWORD: postgres.password,
-      RABBITMQ_USER: 'test',
-      RABBITMQ_PASSWORD: 'test',
+      NATS_USER: 'test',
+      NATS_PASSWORD: 'test',
       KEYCLOAK_ISSUER: FakeKeycloak.ISSUER,
       KEYCLOAK_JWKS_URI: keycloak.jwksUri,
     });
 
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    // Le broker est remplace par un double : seule la copie en flux d'echec l'utilise ici.
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(NatsClient)
+      .useValue({ jetstream: async () => ({ publish: deadLetterPublish }) })
+      .compile();
     app = moduleRef.createNestApplication();
     app.setGlobalPrefix('api');
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
@@ -71,46 +84,48 @@ describe('Service de moderation (integration)', () => {
   });
 
   beforeEach(async () => {
+    deadLetterPublish.mockClear();
     await dataSource.query('TRUNCATE moderation_queue');
   });
 
   describe('consommation de l evenement annonce soumise', () => {
     it("place l'annonce dans la file de moderation et acquitte le message", async () => {
-      const { channel, message, context } = fakeRmq();
+      const message = fakeMessage(event());
 
-      await consumer.onListingSubmitted(event(), context);
+      await consumer.handle(message);
 
       const rows = await dataSource.query('SELECT listing_id, status, title FROM moderation_queue');
       expect(rows).toEqual([{ listing_id: event().listingId, status: 'PENDING', title: 'Figurine Pyramid Head' }]);
-      expect(channel.ack).toHaveBeenCalledWith(message);
-      expect(channel.nack).not.toHaveBeenCalled();
+      expect(message.ack).toHaveBeenCalled();
+      expect(message.nak).not.toHaveBeenCalled();
     });
 
     it('est idempotent : un message rejoue est acquitte sans creer de doublon', async () => {
-      await consumer.onListingSubmitted(event(), fakeRmq().context);
-      const replay = fakeRmq();
+      await consumer.handle(fakeMessage(event()));
+      const replay = fakeMessage(event());
 
-      await consumer.onListingSubmitted(event(), replay.context);
+      await consumer.handle(replay);
 
       expect(await dataSource.query('SELECT 1 FROM moderation_queue')).toHaveLength(1);
-      expect(replay.channel.ack).toHaveBeenCalled();
-      expect(replay.channel.nack).not.toHaveBeenCalled();
+      expect(replay.ack).toHaveBeenCalled();
+      expect(replay.nak).not.toHaveBeenCalled();
     });
 
-    it('rejette un message mal forme vers la file des messages en echec (nack sans remise en file)', async () => {
-      const { channel, message, context } = fakeRmq();
+    it("copie un message mal forme dans le flux d'echec et arrete ses remises", async () => {
+      const message = fakeMessage({ listingId: 'pas-un-uuid', title: '' });
 
-      await consumer.onListingSubmitted({ listingId: 'pas-un-uuid', title: '' }, context);
+      await consumer.handle(message);
 
-      expect(channel.nack).toHaveBeenCalledWith(message, false, false);
-      expect(channel.ack).not.toHaveBeenCalled();
+      expect(deadLetterPublish).toHaveBeenCalledWith('listing.submitted.dlq', message.data, expect.anything());
+      expect(message.term).toHaveBeenCalled();
+      expect(message.ack).not.toHaveBeenCalled();
       expect(await dataSource.query('SELECT 1 FROM moderation_queue')).toHaveLength(0);
     });
   });
 
   describe('GET /api/v1/moderation/queue', () => {
     beforeEach(async () => {
-      await consumer.onListingSubmitted(event(), fakeRmq().context);
+      await consumer.handle(fakeMessage(event()));
     });
 
     it('refuse un membre (403)', async () => {

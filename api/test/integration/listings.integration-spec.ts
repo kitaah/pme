@@ -1,23 +1,22 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { of, throwError } from 'rxjs';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../../src/app.module';
 import { ProblemDetailsFilter } from '../../src/common/problem-details.filter';
-import { RABBIT_CLIENT } from '../../src/listings/listing-events.publisher';
+import { NatsClient } from '../../src/listings/nats.client';
 import { FakeKeycloak } from '../support/jwt-helper';
 import { PostgresInfo, startPostgres } from '../support/infrastructure';
 
 /**
  * Test d'integration de l'API : vrai PostgreSQL (conteneur jetable), vrai controle de jeton
- * (faux Keycloak local), RabbitMQ remplace par un double (le vrai broker est teste dans
+ * (faux Keycloak local), NATS remplace par un double (le vrai broker est teste dans
  * listings-broker.integration-spec.ts). Lancer avec `npm run test:integration`.
  */
 describe('API annonces (integration)', () => {
   let postgres: PostgresInfo;
   const keycloak = new FakeKeycloak();
-  const emit = jest.fn();
+  const publish = jest.fn();
   let app: INestApplication;
   let dataSource: DataSource;
 
@@ -33,16 +32,16 @@ describe('API annonces (integration)', () => {
       DB_NAME: postgres.database,
       DB_USER: postgres.user,
       DB_PASSWORD: postgres.password,
-      RABBITMQ_USER: 'test',
-      RABBITMQ_PASSWORD: 'test',
+      NATS_USER: 'test',
+      NATS_PASSWORD: 'test',
       KEYCLOAK_ISSUER: FakeKeycloak.ISSUER,
       KEYCLOAK_JWKS_URI: keycloak.jwksUri,
       KEYCLOAK_ALLOWED_CLIENTS: 'pme-web,pme-cli',
     });
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(RABBIT_CLIENT)
-      .useValue({ emit })
+      .overrideProvider(NatsClient)
+      .useValue({ jetstream: async () => ({ publish }) })
       .compile();
 
     app = moduleRef.createNestApplication();
@@ -60,7 +59,7 @@ describe('API annonces (integration)', () => {
   });
 
   beforeEach(async () => {
-    emit.mockReset().mockReturnValue(of(true));
+    publish.mockReset().mockResolvedValue({ seq: 1, duplicate: false });
     await dataSource.query('TRUNCATE listings');
   });
 
@@ -121,10 +120,14 @@ describe('API annonces (integration)', () => {
       const rows = await dataSource.query('SELECT status FROM listings');
       expect(rows).toEqual([{ status: 'PENDING_MODERATION' }]);
 
-      expect(emit).toHaveBeenCalledTimes(1);
-      const [pattern, event] = emit.mock.calls[0];
-      expect(pattern).toBe('listing.submitted');
-      expect(event).toMatchObject({ listingId: res.body.id, title: validBody.title, ownerUsername: 'membre' });
+      expect(publish).toHaveBeenCalledTimes(1);
+      const [subject, payload] = publish.mock.calls[0];
+      expect(subject).toBe('listing.submitted');
+      expect(JSON.parse(payload as string)).toMatchObject({
+        listingId: res.body.id,
+        title: validBody.title,
+        ownerUsername: 'membre',
+      });
     });
 
     it.each([
@@ -139,12 +142,12 @@ describe('API annonces (integration)', () => {
       expect(res.status).toBe(400);
       expect(res.body.title).toBe('Erreur de validation');
       expect(res.body.errors.length).toBeGreaterThan(0);
-      expect(emit).not.toHaveBeenCalled();
+      expect(publish).not.toHaveBeenCalled();
       expect(await dataSource.query('SELECT 1 FROM listings')).toHaveLength(0);
     });
 
-    it("retire l'annonce et repond 503 si RabbitMQ est injoignable", async () => {
-      emit.mockReturnValue(throwError(() => new Error('connexion refusee')));
+    it("retire l'annonce et repond 503 si NATS est injoignable", async () => {
+      publish.mockRejectedValue(new Error('connexion refusee'));
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/listings')

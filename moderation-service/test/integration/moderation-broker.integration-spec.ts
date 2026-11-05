@@ -1,35 +1,36 @@
 import { INestApplication } from '@nestjs/common';
-import { ClientProxy, ClientProxyFactory, Transport } from '@nestjs/microservices';
 import { Test } from '@nestjs/testing';
-import { connect } from 'amqplib';
-import { lastValueFrom } from 'rxjs';
+import { AckPolicy, JetStreamManager, NatsConnection, connect } from 'nats';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../../src/app.module';
 import {
-  LISTING_SUBMITTED,
-  LISTING_SUBMITTED_DLQ,
-  LISTING_SUBMITTED_QUEUE,
-  LISTING_SUBMITTED_QUEUE_OPTIONS,
+  DEAD_LETTER_REASON_HEADER,
+  LISTINGS_DLQ_STREAM,
+  LISTINGS_STREAM,
+  LISTING_SUBMITTED_DLQ_SUBJECT,
+  LISTING_SUBMITTED_SUBJECT,
+  MODERATION_CONSUMER,
 } from '../../src/moderation/listing-submitted.event';
-import { rabbitConsumerOptions } from '../../src/moderation/rabbit-options';
-import { ensureDeadLetterQueue } from '../../src/moderation/rabbit-topology';
-import { PostgresInfo, RabbitInfo, startPostgres, startRabbit, waitFor } from '../support/infrastructure';
+import { ListingSubmittedConsumer } from '../../src/moderation/listing-submitted.consumer';
+import { ensureStreams } from '../../src/moderation/nats-topology';
+import { NatsInfo, PostgresInfo, startNats, startPostgres, waitFor } from '../support/infrastructure';
+
+/** Lecteur de test du flux des messages en echec : personne ne le consomme en production. */
+const DLQ_READER = 'test-dlq-reader';
 
 /**
- * Service de moderation face a un VRAI RabbitMQ et un vrai PostgreSQL (conteneurs jetables).
- * Le producteur est configure comme celui de l'API (memes options de file) : si les arguments de
- * la file divergeaient entre les deux services, RabbitMQ refuserait la declaration et ces tests echoueraient.
- * Necessite Docker. Lancer avec `npm run test:integration`.
+ * Service de moderation face a un VRAI NATS (JetStream) et un vrai PostgreSQL (conteneurs jetables).
+ * Le producteur publie sur le meme sujet que l'API. Necessite Docker.
+ * Lancer avec `npm run test:integration`.
  */
-describe('Service de moderation avec RabbitMQ (integration)', () => {
+describe('Service de moderation avec NATS (integration)', () => {
   let postgres: PostgresInfo;
-  let rabbit: RabbitInfo;
-  let connection: Awaited<ReturnType<typeof connect>>;
-  let channel: Awaited<ReturnType<Awaited<ReturnType<typeof connect>>['createChannel']>>;
-  let producer: ClientProxy;
+  let nats: NatsInfo;
+  let connection: NatsConnection;
+  let jsm: JetStreamManager;
   let app: INestApplication | undefined;
 
-  const rabbitConfig = () => ({ host: rabbit.host, port: rabbit.port, user: rabbit.user, password: rabbit.password });
+  const natsConfig = () => ({ host: nats.host, port: nats.port, user: nats.user, password: nats.password });
 
   const event = (overrides: Record<string, unknown> = {}) => ({
     listingId: '33333333-3333-4333-8333-333333333333',
@@ -42,16 +43,22 @@ describe('Service de moderation avec RabbitMQ (integration)', () => {
     ...overrides,
   });
 
-  const publish = (payload: unknown) =>
-    lastValueFrom(producer.emit(LISTING_SUBMITTED, payload), { defaultValue: undefined });
-  const messagesIn = async (queue: string) => (await channel.checkQueue(queue)).messageCount;
+  let published = 0;
+
+  /** Publie comme le fait l'API (meme sujet, meme deduplication par identifiant d'annonce). */
+  const publish = (payload: Record<string, unknown>) =>
+    connection.jetstream().publish(LISTING_SUBMITTED_SUBJECT, JSON.stringify(payload), {
+      msgID: String(payload.listingId ?? `sans-identifiant-${++published}`),
+    });
+
+  /** Messages restant dans un flux : en file de travail, un message acquitte est supprime. */
+  const messagesIn = async (stream: string) => (await jsm.streams.info(stream)).state.messages;
   const rowCount = async (dataSource: DataSource) =>
     (await dataSource.query('SELECT count(*)::int AS n FROM moderation_queue'))[0].n as number;
 
   async function buildApp(): Promise<{ application: INestApplication; dataSource: DataSource }> {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     const application = moduleRef.createNestApplication();
-    application.connectMicroservice(rabbitConsumerOptions(rabbitConfig()));
     await application.init(); // base + migrations ; le consommateur n'est PAS encore demarre
     const dataSource = application.get(DataSource);
     await dataSource.query('TRUNCATE moderation_queue');
@@ -59,79 +66,62 @@ describe('Service de moderation avec RabbitMQ (integration)', () => {
     return { application, dataSource };
   }
 
+  const startConsumer = (application: INestApplication) => application.get(ListingSubmittedConsumer).start();
+
   beforeAll(async () => {
-    [postgres, rabbit] = await Promise.all([startPostgres('moderation'), startRabbit()]);
+    [postgres, nats] = await Promise.all([startPostgres('moderation'), startNats()]);
     Object.assign(process.env, {
       DB_HOST: postgres.host,
       DB_PORT: String(postgres.port),
       DB_NAME: postgres.database,
       DB_USER: postgres.user,
       DB_PASSWORD: postgres.password,
-      RABBITMQ_HOST: rabbit.host,
-      RABBITMQ_PORT: String(rabbit.port),
-      RABBITMQ_USER: rabbit.user,
-      RABBITMQ_PASSWORD: rabbit.password,
+      NATS_HOST: nats.host,
+      NATS_PORT: String(nats.port),
+      NATS_USER: nats.user,
+      NATS_PASSWORD: nats.password,
       KEYCLOAK_ISSUER: 'https://keycloak.test/realms/pme',
       KEYCLOAK_JWKS_URI: 'http://127.0.0.1:9/certs', // jamais appele : aucune requete HTTP authentifiee ici
     });
 
-    await ensureDeadLetterQueue(rabbitConfig());
+    // Declaration des flux et du consommateur durable, exactement comme au demarrage du service
+    await ensureStreams(natsConfig());
     connection = await connect({
-      protocol: 'amqp',
-      hostname: rabbit.host,
-      port: rabbit.port,
-      username: rabbit.user,
-      password: rabbit.password,
+      servers: `${nats.host}:${nats.port}`,
+      user: nats.user,
+      pass: nats.password,
     });
-    channel = await connection.createChannel();
-    // meme declaration que l'API : echoue (PRECONDITION_FAILED) si les arguments divergent
-    await channel.assertQueue(LISTING_SUBMITTED_QUEUE, LISTING_SUBMITTED_QUEUE_OPTIONS);
-
-    producer = ClientProxyFactory.create({
-      transport: Transport.RMQ,
-      options: {
-        urls: [
-          {
-            protocol: 'amqp',
-            hostname: rabbit.host,
-            port: rabbit.port,
-            username: rabbit.user,
-            password: rabbit.password,
-          },
-        ],
-        queue: LISTING_SUBMITTED_QUEUE,
-        queueOptions: LISTING_SUBMITTED_QUEUE_OPTIONS,
-        persistent: true,
-      },
-    });
+    jsm = await connection.jetstreamManager();
+    await jsm.consumers.add(LISTINGS_DLQ_STREAM, { durable_name: DLQ_READER, ack_policy: AckPolicy.Explicit });
   });
 
   afterEach(async () => {
     await app?.close();
     app = undefined;
-    await channel.purgeQueue(LISTING_SUBMITTED_QUEUE);
-    await channel.purgeQueue(LISTING_SUBMITTED_DLQ);
+    await jsm.streams.purge(LISTINGS_STREAM);
+    await jsm.streams.purge(LISTINGS_DLQ_STREAM);
   });
 
   afterAll(async () => {
-    await producer?.close();
-    await channel?.close();
-    await connection?.close();
-    await Promise.all([postgres?.stop(), rabbit?.stop()]);
+    await connection?.close().catch(() => undefined);
+    await Promise.all([postgres?.stop(), nats?.stop()]);
   });
 
   it("consomme l'evenement et place l'annonce dans la file de moderation", async () => {
     // Given : le service de moderation tourne
     const { application, dataSource } = await buildApp();
-    await application.startAllMicroservices();
+    await startConsumer(application);
 
     // When : l'API publie "annonce soumise"
     await publish(event());
 
-    // Then : l'annonce est en base, le message est acquitte (file vide) et le consommateur reste connecte
+    // Then : l'annonce est en base et le message est acquitte (donc retire du flux de travail)
     await waitFor(async () => (await rowCount(dataSource)) === 1, 20_000, "l'annonce dans la file de moderation");
-    await waitFor(async () => (await messagesIn(LISTING_SUBMITTED_QUEUE)) === 0, 10_000, 'la file RabbitMQ vide');
-    expect((await channel.checkQueue(LISTING_SUBMITTED_QUEUE)).consumerCount).toBe(1);
+    await waitFor(async () => (await messagesIn(LISTINGS_STREAM)) === 0, 10_000, 'le flux NATS vide');
+
+    const rows = await dataSource.query('SELECT listing_id, status, title FROM moderation_queue');
+    expect(rows).toEqual([{ listing_id: event().listingId, status: 'PENDING', title: 'Figurine Pyramid Head' }]);
+    expect(await messagesIn(LISTINGS_DLQ_STREAM)).toBe(0);
   });
 
   it('conserve le message tant que le service est arrete, puis le traite au demarrage', async () => {
@@ -141,35 +131,47 @@ describe('Service de moderation avec RabbitMQ (integration)', () => {
     // When : une annonce est soumise pendant l'arret
     await publish(event());
 
-    // Then : le message attend dans RabbitMQ, rien n'est perdu ni traite
-    await waitFor(async () => (await messagesIn(LISTING_SUBMITTED_QUEUE)) === 1, 10_000, 'le message en attente');
+    // Then : le message attend dans le flux, rien n'est perdu ni traite
+    await waitFor(async () => (await messagesIn(LISTINGS_STREAM)) === 1, 10_000, 'le message en attente');
     expect(await rowCount(dataSource)).toBe(0);
 
     // When : le service redemarre
-    await application.startAllMicroservices();
+    await startConsumer(application);
 
-    // Then : le message est traite et la file se vide
+    // Then : le message est traite et le flux se vide
     await waitFor(async () => (await rowCount(dataSource)) === 1, 20_000, "l'annonce traitee apres redemarrage");
-    await waitFor(async () => (await messagesIn(LISTING_SUBMITTED_QUEUE)) === 0, 10_000, 'la file RabbitMQ vide');
+    await waitFor(async () => (await messagesIn(LISTINGS_STREAM)) === 0, 10_000, 'le flux NATS vide');
   });
 
-  it('envoie un message invalide dans la file des messages en echec, sans rien enregistrer', async () => {
+  it('envoie un message invalide dans le flux des messages en echec, sans rien enregistrer', async () => {
     // Given
     const { application, dataSource } = await buildApp();
-    await application.startAllMicroservices();
+    await startConsumer(application);
 
     // When : un message mal forme arrive
     await publish({ listingId: 'pas-un-uuid', title: '' });
 
-    // Then : RabbitMQ le range dans la file d'echec (rejected), il n'est ni perdu ni rejoue en boucle
-    const dead = await waitFor(
-      async () => (await channel.get(LISTING_SUBMITTED_DLQ, { noAck: true })) || undefined,
-      20_000,
-      "le message en file d'echec",
-    );
-    expect(JSON.parse(dead.content.toString()).data.listingId).toBe('pas-un-uuid');
-    expect(dead.properties.headers?.['x-death']?.[0]?.reason).toBe('rejected');
+    // Then : il est copie dans le flux d'echec, avec le motif, et ne revient pas en boucle
+    await waitFor(async () => (await messagesIn(LISTINGS_DLQ_STREAM)) === 1, 20_000, "le message en flux d'echec");
+    const dead = await connection
+      .jetstream()
+      .consumers.get(LISTINGS_DLQ_STREAM, DLQ_READER)
+      .then((consumer) => consumer.next({ expires: 10_000 }));
+
+    expect(dead).not.toBeNull();
+    expect(dead?.subject).toBe(LISTING_SUBMITTED_DLQ_SUBJECT);
+    expect(dead?.json()).toMatchObject({ listingId: 'pas-un-uuid' });
+    expect(dead?.headers?.get(DEAD_LETTER_REASON_HEADER)).toContain('message invalide');
+    dead?.ack();
+
     expect(await rowCount(dataSource)).toBe(0);
-    expect(await messagesIn(LISTING_SUBMITTED_QUEUE)).toBe(0);
+    await waitFor(async () => (await messagesIn(LISTINGS_STREAM)) === 0, 10_000, 'le flux principal vide');
+  });
+
+  it('expose le consommateur durable attendu par la supervision', async () => {
+    // `make queues` lit ces informations sur /jsz : le consommateur doit bien porter ce nom
+    const info = await jsm.consumers.info(LISTINGS_STREAM, MODERATION_CONSUMER);
+    expect(info.name).toBe(MODERATION_CONSUMER);
+    expect(info.config.ack_policy).toBe(AckPolicy.Explicit);
   });
 });

@@ -1,9 +1,8 @@
-import { ClientProxy } from '@nestjs/microservices';
-import { of, throwError } from 'rxjs';
 import { ListingCondition, ListingStatus } from './listing.enums';
 import { Listing } from './listing.entity';
-import { LISTING_SUBMITTED } from './listing-events';
+import { LISTING_SUBMITTED_SUBJECT } from './listing-events';
 import { ListingEventsPublisher } from './listing-events.publisher';
+import { NatsClient } from './nats.client';
 
 describe('ListingEventsPublisher', () => {
   const listing = {
@@ -17,13 +16,21 @@ describe('ListingEventsPublisher', () => {
     createdAt: new Date('2026-11-04T10:00:00Z'),
   } as Listing;
 
+  /** Faux client NATS : seule la publication JetStream est utilisee par le publieur. */
+  function fakeNats(publish: jest.Mock) {
+    return { jetstream: jest.fn().mockResolvedValue({ publish }) } as unknown as NatsClient;
+  }
+
   it("publie l'evenement listing.submitted avec le contrat attendu par le service de moderation", async () => {
-    const emit = jest.fn().mockReturnValue(of(true));
-    const publisher = new ListingEventsPublisher({ emit } as unknown as ClientProxy);
+    const publish = jest.fn().mockResolvedValue({ seq: 1, duplicate: false });
+    const publisher = new ListingEventsPublisher(fakeNats(publish));
 
     await publisher.publishSubmitted(listing);
 
-    expect(emit).toHaveBeenCalledWith(LISTING_SUBMITTED, {
+    expect(publish).toHaveBeenCalledTimes(1);
+    const [subject, payload, options] = publish.mock.calls[0];
+    expect(subject).toBe(LISTING_SUBMITTED_SUBJECT);
+    expect(JSON.parse(payload as string)).toEqual({
       listingId: listing.id,
       ownerId: listing.ownerId,
       ownerUsername: 'membre',
@@ -32,13 +39,26 @@ describe('ListingEventsPublisher', () => {
       condition: 'GOOD',
       submittedAt: '2026-11-04T10:00:00.000Z',
     });
+    // msgID = identifiant de l'annonce : NATS ignore un rejeu dans la fenetre de deduplication du flux
+    expect(options).toMatchObject({ msgID: listing.id });
   });
 
   it("reessaie deux fois puis propage l'erreur si le broker reste injoignable", async () => {
-    const emit = jest.fn().mockReturnValue(throwError(() => new Error('broker injoignable')));
-    const publisher = new ListingEventsPublisher({ emit } as unknown as ClientProxy);
+    const publish = jest.fn().mockRejectedValue(new Error('broker injoignable'));
+    const publisher = new ListingEventsPublisher(fakeNats(publish));
 
     await expect(publisher.publishSubmitted(listing)).rejects.toThrow('broker injoignable');
-    expect(emit).toHaveBeenCalledTimes(1); // le flux est re-souscrit : 1 appel a emit(), 3 souscriptions
+    expect(publish).toHaveBeenCalledTimes(3); // 1 tentative + 2 nouvelles
+  });
+
+  it('reussit si une nouvelle tentative aboutit', async () => {
+    const publish = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('broker lent'))
+      .mockResolvedValue({ seq: 1, duplicate: false });
+    const publisher = new ListingEventsPublisher(fakeNats(publish));
+
+    await expect(publisher.publishSubmitted(listing)).resolves.toBeUndefined();
+    expect(publish).toHaveBeenCalledTimes(2);
   });
 });

@@ -1,4 +1,4 @@
-# Service de moderation : consomme `listing.submitted` (RabbitMQ) et expose la file de moderation en HTTP.
+# Service de moderation : consomme `listing.submitted` (NATS JetStream) et expose la file de moderation en HTTP.
 # Base de donnees dediee (`moderation`) : aucune lecture dans la base de l'API.
 apiVersion: apps/v1
 kind: Deployment
@@ -17,7 +17,7 @@ spec:
         app: pme-moderation
     spec:
       # Desactive l'injection automatique par Kubernetes des variables d'environnement
-      # "liens Docker" d'un Service (ex. RABBITMQ_PORT=tcp://<ip>:5672) : son nom entre en
+      # "liens Docker" d'un Service (ex. NATS_PORT=tcp://<ip>:4222) : son nom entre en
       # collision avec la variable du meme nom que l'application attend (un entier simple).
       enableServiceLinks: false
       containers:
@@ -39,14 +39,14 @@ spec:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef: { name: pme-secrets, key: db-password }
-            - name: RABBITMQ_HOST
-              value: rabbitmq
-            - name: RABBITMQ_USER
+            - name: NATS_HOST
+              value: nats
+            - name: NATS_USER
               valueFrom:
-                secretKeyRef: { name: pme-secrets, key: rabbitmq-username }
-            - name: RABBITMQ_PASSWORD
+                secretKeyRef: { name: pme-secrets, key: nats-username }
+            - name: NATS_PASSWORD
               valueFrom:
-                secretKeyRef: { name: pme-secrets, key: rabbitmq-password }
+                secretKeyRef: { name: pme-secrets, key: nats-password }
             - name: KEYCLOAK_ISSUER
               value: http://localhost:8081/realms/pme
             - name: KEYCLOAK_JWKS_URI
@@ -56,7 +56,7 @@ spec:
           resources:
             requests: { cpu: 100m, memory: 128Mi }
             limits: { cpu: 500m, memory: 256Mi }
-          # Le service declare la file d'echec avant d'ecouter : il peut attendre RabbitMQ
+          # Le service declare les flux avant d'ecouter : il peut attendre NATS
           # jusqu'a 60 s au premier demarrage. La startupProbe laisse ce temps (5 s x 36 = 180 s)
           # et suspend la livenessProbe jusqu'a son succes ; sans elle, kubelet tue le pod a ~60 s.
           startupProbe:
