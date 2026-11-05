@@ -5,7 +5,6 @@
  */
 export interface AppConfig {
   port: number;
-  swaggerEnabled: boolean;
   /** Requetes autorisees par minute et par IP (a relever pour les tests de charge). */
   throttleLimit: number;
   db: { host: string; port: number; name: string; user: string; password: string };
@@ -48,7 +47,6 @@ function csv(value: string): string[] {
 export function loadConfiguration(env: NodeJS.ProcessEnv = process.env): AppConfig {
   return {
     port: num(env, 'PORT', 3000),
-    swaggerEnabled: (env.SWAGGER_ENABLED ?? 'true') === 'true',
     throttleLimit: num(env, 'THROTTLE_LIMIT', 200),
     db: {
       host: env.DB_HOST ?? 'localhost',

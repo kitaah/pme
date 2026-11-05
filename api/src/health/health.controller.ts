@@ -1,11 +1,9 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
-import { ApiExcludeController } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { DataSource } from 'typeorm';
 import { Public } from '../auth/public.decorator';
 
 /** Sondes Kubernetes (equivalent des /actuator/health/liveness et /readiness de Spring). */
-@ApiExcludeController()
 @Public()
 @SkipThrottle()
 @Controller('health')

@@ -52,8 +52,6 @@ spec:
               value: http://keycloak:8080/realms/pme/protocol/openid-connect/certs
             - name: KEYCLOAK_ALLOWED_CLIENTS
               value: pme-web,pme-cli
-            - name: SWAGGER_ENABLED
-              value: "true"
             # requetes par minute et par IP ; relevee temporairement par `make perf-prepare`
             - name: THROTTLE_LIMIT
               value: "200"

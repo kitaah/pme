@@ -53,8 +53,6 @@ spec:
               value: http://keycloak:8080/realms/pme/protocol/openid-connect/certs
             - name: KEYCLOAK_ALLOWED_CLIENTS
               value: pme-web,pme-cli
-            - name: SWAGGER_ENABLED
-              value: "false"
           resources:
             requests: { cpu: 100m, memory: 128Mi }
             limits: { cpu: 500m, memory: 256Mi }
