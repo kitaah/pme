@@ -1,7 +1,7 @@
 # Documentation technique du POC, generee par MkDocs (theme Material).
 # Sources : docs/ ; site genere : site/ (non versionne). Voir README, "Documentation".
 site_name: La Petite Maison de l'Épouvante — Documentation technique
-site_description: Documentation technique du POC (React, NestJS, RabbitMQ, Keycloak, Minikube)
+site_description: Documentation technique du POC (React, NestJS, NATS, Keycloak, Minikube)
 repo_url: https://gitlab.com/kitaah/pme
 repo_name: kitaah/pme
 edit_uri: -/edit/main/docs/
@@ -30,6 +30,7 @@ nav:
       - Keycloak: outils/keycloak.md
       - Minikube: outils/minikube.md
       - MkDocs: outils/mkdocs.md
+      - NATS: outils/nats.md
       - NestJS: outils/nestjs.md
       - React: outils/react.md
   - Contribuer:
