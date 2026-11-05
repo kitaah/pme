@@ -25,7 +25,7 @@ il envoie l’interface au navigateur et transmet à l’API les demandes de l�
 - **ESLint** : outil libre qui relit le code sans l'exécuter, puis signale les erreurs probables
   et les écritures contraires aux règles de l'équipe.
 - **nginx** : serveur web libre qui reçoit les demandes des navigateurs. Dans le projet, il renvoie l’interface React et
-transmet les autres demandes à l’API.
+  transmet les autres demandes à l’API.
 
 ## Rôle dans le projet
 
@@ -54,13 +54,9 @@ transmet les autres demandes à l’API.
 | Commande | Description |
 |---|---|
 | `make install` | Installe les dépendances. |
-| `make dev-frontend` | Affiche l’interface et la met à jour à chaque modification du code. |
 | `make test` | Lance les tests automatiques. |
 | `make lint` | Repère les erreurs et les mauvaises pratiques dans le code, avec ESLint. |
 | `make image-frontend` | Fabrique l'image Docker de l'interface dans Minikube. |
-
-!!! note "À savoir"
-`make dev-frontend` a besoin de Keycloak : lancer d'abord `make port-forward`.
 
 ## Pour aller plus loin
 

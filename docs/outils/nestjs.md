@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Construit le back-end de la plateforme : il reçoit les demandes de l'interface et applique les règles étier |
 | **Version** | NestJS 11.2.8 |
-| **Adresse en local** | <http://localhost:8080/api> (après `make port-forward`) et <http://localhost:8080/api/docs> (documentation interactive) |
+| **Adresse en local** | <http://localhost:8080/api> (après `make port-forward`) |
 
 ## Description
 
@@ -44,14 +44,10 @@ REST : il reçoit les demandes de l'interface, applique les règles métier, pui
 | Commande | Description |
 |---|---|
 | `make install` | Installe les dépendances. |
-| `make dev-api` | Démarre l'API et la redémarre à chaque modification du code. |
 | `make test` | Lance les tests automatiques. |
 | `make test-integration` | Teste l'API avec de vraies bases de données, Docker démarré. |
 | `make image-api` | Fabrique l'image Docker de l'API dans Minikube. |
 | `make logs-api` | Affiche le journal de l'API, mis à jour en direct. |
-
-!!! note "À savoir"
-    `make dev-api` a besoin de la base de données, de NATS et de Keycloak : lancer d'abord `make port-forward`.
 
 ## Pour aller plus loin
 
