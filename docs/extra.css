@@ -1,0 +1,115 @@
+/* ===== Mode clair : gris doux, pas de blanc pur, texte gris très foncé
+   (pas noir pur) — contraste toujours conforme WCAG AA ===== */
+[data-md-color-scheme="default"] {
+  --md-default-bg-color: #f4f4f5;
+  --md-default-fg-color: #2b2b2b;
+  --md-default-fg-color--light: #454545;
+  --md-default-fg-color--lighter: #616161;
+
+  --md-code-bg-color: #eaebee;
+  --md-code-fg-color: #2b2b2b;
+}
+
+[data-md-color-scheme="default"] .md-main__inner {
+  background-color: #fafafa;
+}
+
+/* ===== Mode sombre : gris anthracite plutôt que noir pur,
+   texte gris clair plutôt que blanc pur — réduit la fatigue oculaire ===== */
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: #23262b;
+  --md-default-fg-color: #d8dadd;
+  --md-default-fg-color--light: #c2c4c8;
+  --md-default-fg-color--lighter: #a5a7ab;
+
+  --md-code-bg-color: #2c2f36;
+  --md-code-fg-color: #d8dadd;
+}
+
+[data-md-color-scheme="slate"] .md-main__inner {
+  background-color: #292c32;
+}
+
+/* ===== Commun aux deux modes ===== */
+
+.md-typeset pre > code {
+  border: 1px solid #d5d8dc;
+}
+
+[data-md-color-scheme="slate"] .md-typeset pre > code {
+  border-color: #3a3d44;
+}
+
+.md-typeset code {
+  background-color: var(--md-code-bg-color);
+  color: var(--md-code-fg-color);
+}
+
+.md-typeset .admonition,
+.md-typeset details {
+  background-color: #eceef0;
+  border: 1px solid #d5d8dc;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .admonition,
+[data-md-color-scheme="slate"] .md-typeset details {
+  background-color: #2c2f36;
+  border-color: #3a3d44;
+}
+
+/* ===== Tableaux : un seul style pour tout le site =====
+   En-tête indigo (couleur du thème), lignes alternées, première colonne en relief,
+   coins arrondis. Texte blanc sur indigo : contraste conforme WCAG AA. ===== */
+
+/* Le conteneur des tableaux se réduisait à leur contenu : tous prennent maintenant la pleine largeur */
+.md-typeset__table {
+  display: block;
+}
+
+.md-typeset table:not([class]) {
+  display: table;
+  width: 100%;
+  font-size: 0.7rem;
+  border: 1px solid #c5cae9;
+  border-radius: 10px;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(63, 81, 181, 0.12);
+}
+
+.md-typeset table:not([class]) th {
+  background-color: var(--md-primary-fg-color);
+  color: var(--md-primary-bg-color);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.8em 1.1em;
+}
+
+.md-typeset table:not([class]) td {
+  border-top: 1px solid #e3e5f0;
+  padding: 0.8em 1.1em;
+}
+
+.md-typeset table:not([class]) tbody tr:nth-child(even) td {
+  background-color: #f1f2f9;
+}
+
+.md-typeset table:not([class]) tbody tr:hover td {
+  background-color: #e8eaf6;
+}
+
+/* Première colonne : le « nom » de la ligne (rubrique, commande, attribut), en relief */
+.md-typeset table:not([class]) td:first-child {
+  background-color: #e8eaf6;
+  border-right: 1px solid #c5cae9;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.md-typeset table:not([class]) td:first-child code {
+  background-color: #ffffff;
+  border: 1px solid #c5cae9;
+  color: #283593;
+  font-weight: 600;
+}

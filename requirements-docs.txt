@@ -1,0 +1,6 @@
+# Dependances de la documentation (MkDocs + theme Material), versions exactes :
+# meme rendu sur chaque poste, dans la CI et dans l'image (Dockerfile.docs).
+# Mise a jour : changer les versions ici, puis "make docs-check".
+mkdocs==1.6.1
+mkdocs-material==9.7.7
+pymdown-extensions==11.0.2
