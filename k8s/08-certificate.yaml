@@ -1,0 +1,25 @@
+# Certificat TLS unique, valable pour les cinq noms d'hote de l'ingress. cert-manager le signe avec
+# `pme-ca-issuer` (voir k8s/cert-manager/issuers.yaml), le range dans le Secret `pme-tls` et le renouvelle
+# seul avant son expiration. Les deux Ingress (k8s/08-ingress.yaml) lisent ce Secret.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: pme-tls
+spec:
+  secretName: pme-tls
+  duration: 2160h # 90 jours
+  renewBefore: 360h # renouvele 15 jours avant l'expiration
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  dnsNames:
+    - pme.localhost
+    - keycloak.localhost
+    - adminer.localhost
+    - grafana.localhost
+    - prometheus.localhost
+  issuerRef:
+    name: pme-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io

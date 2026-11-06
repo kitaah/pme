@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # Affiche un jeton d'acces Keycloak pour un utilisateur de demonstration (client pme-cli, mot de passe direct).
-# Usage : KEYCLOAK_URL=http://keycloak.localhost ./scripts/token.sh membre
+# Usage : KEYCLOAK_URL=https://keycloak.localhost ./scripts/token.sh membre
 set -euo pipefail
 
-KEYCLOAK_URL="${KEYCLOAK_URL:-http://keycloak.localhost}"
+KEYCLOAK_URL="${KEYCLOAK_URL:-https://keycloak.localhost}"
 USERNAME="${1:-membre}"
+# Le certificat de l'ingress est signe par l'autorite locale du POC : curl lui fait confiance si pme-ca.crt existe
+# (make ca-cert), sinon la verification est desactivee (-k), acceptable pour un cluster local uniquement.
+CA_FILE="${CA_FILE:-pme-ca.crt}"
+if [ -f "$CA_FILE" ]; then CURL_TLS=(--cacert "$CA_FILE"); else CURL_TLS=(-k); fi
 
 # Les mots de passe de demonstration sont identiques aux noms d'utilisateur (voir k8s/config/realm-pme.json)
-response=$(curl -s -X POST "$KEYCLOAK_URL/realms/pme/protocol/openid-connect/token" \
+response=$(curl -s "${CURL_TLS[@]}" -X POST "$KEYCLOAK_URL/realms/pme/protocol/openid-connect/token" \
   -d grant_type=password -d client_id=pme-cli -d "username=$USERNAME" -d "password=$USERNAME")
 
 python3 -c '

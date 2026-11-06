@@ -9,3 +9,5 @@ coverage/
 # Fichiers de travail de sonar-scanner (make sonar) et cache de la CI
 .scannerwork/
 .sonar/
+# Autorite locale exportee par make ca-cert
+pme-ca.crt

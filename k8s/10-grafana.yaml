@@ -3,7 +3,7 @@
 # rien n'est a configurer a la main, et un redemarrage retrouve le meme etat.
 # L'etat interne de Grafana (comptes, preferences) est dans PostgreSQL, base `grafana` : meme principe que Keycloak,
 # il survit a la recreation du pod. La base est creee par postgres-init.sh (ou par make create-grafana-db).
-# Joint par l'ingress (k8s/08-ingress.yaml) sur http://grafana.localhost (make grafana).
+# Joint par l'ingress (k8s/08-ingress.yaml) sur https://grafana.localhost (make grafana).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -34,10 +34,12 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       # Attend PostgreSQL avant de lancer l'application : evite les redemarrages (CrashLoopBackOff)
       # du premier demarrage, quand le service demarre plus vite que la base.
+      # `-U postgres` : l'utilisateur du pod (UID impose) n'existe pas dans l'image, et sans nom d'utilisateur
+      # pg_isready renonce a tenter la connexion ("no attempt").
       initContainers:
         - name: wait-for-postgres
           image: postgres:16-alpine
-          command: ["sh", "-c", "until pg_isready -h postgres -p 5432; do echo 'En attente de PostgreSQL'; sleep 2; done"]
+          command: ["sh", "-c", "until pg_isready -h postgres -p 5432 -U postgres; do echo 'En attente de PostgreSQL'; sleep 2; done"]
           resources:
             requests: { cpu: 10m, memory: 16Mi }
             limits: { cpu: 50m, memory: 32Mi }
@@ -60,7 +62,7 @@ spec:
             - name: GF_SERVER_DOMAIN
               value: grafana.localhost
             - name: GF_SERVER_ROOT_URL
-              value: http://grafana.localhost/
+              value: https://grafana.localhost/
             - name: GF_USERS_ALLOW_SIGN_UP
               value: "false"
             - name: GF_AUTH_ANONYMOUS_ENABLED
