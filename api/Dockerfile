@@ -1,5 +1,5 @@
 # --- Etape 1 : compilation TypeScript ---
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -8,7 +8,7 @@ COPY src src
 RUN npm run build && npm prune --omit=dev
 
 # --- Etape 2 : image finale legere, sans privileges root ---
-FROM node:22-alpine
+FROM node:24-alpine
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build --chown=node:node /app/node_modules node_modules
