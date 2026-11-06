@@ -31,7 +31,7 @@ connexion par identifiant et mot de passe. Il enregistre ses propres réglages d
 - Le tableau « Logs » filtre par service et par mot recherché, et affiche les 100 derniers journaux.
 - Les deux tableaux sont reliés et gardent la même période.
 - Il charge son tableau de bord et sa source de données au démarrage.
-- Il enregistre ses réglages dans la base `grafana` de PostgreSQL.
+- Il enregistre ses réglages dans la base `grafana` de PostgreSQL, par une connexion chiffrée et vérifiée.
 - Sans lui, les mesures restent consultables dans Prometheus, mais sans graphiques ni lecture des journaux.
 
 ## Fichiers et dossiers principaux
@@ -59,16 +59,16 @@ connexion par identifiant et mot de passe. Il enregistre ses propres réglages d
 | `make pods` | Indique si Grafana est prêt. |
 
 !!! tip "Astuce"
-Les identifiants se définissent dans le fichier `.env`, avec `GRAFANA_ADMIN` et `GRAFANA_ADMIN_PASSWORD`. Après un
-changement, relancer `make deploy`.
+    Les identifiants se définissent dans le fichier `.env`, avec `GRAFANA_ADMIN` et `GRAFANA_ADMIN_PASSWORD`. Après un
+    changement, relancer `make deploy`.
 
 !!! note "À savoir"
-Le tableau de bord fourni ne peut pas être enregistré depuis l'interface. Pour le modifier, éditer le fichier JSON,
-puis lancer `make deploy`.
+    Le tableau de bord fourni ne peut pas être enregistré depuis l'interface. Pour le modifier, éditer le fichier JSON,
+    puis lancer `make deploy`.
 
 !!! note "À savoir"
-Les courbes sont affichées par pod : la légende indique le service et l'adresse du pod. Après un redéploiement,
-les anciens pods restent visibles jusqu'à la fin de la période affichée (15 minutes par défaut).
+    Les courbes sont affichées par pod : la légende indique le service et l'adresse du pod. Après un redéploiement,
+    les anciens pods restent visibles jusqu'à la fin de la période affichée (15 minutes par défaut).
 
 ## Pour aller plus loin
 

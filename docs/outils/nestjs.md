@@ -24,6 +24,7 @@ REST : il reçoit les demandes de l'interface, applique les règles métier, pui
 - Il est découplé du front-end : les deux parties communiquent uniquement par l'API.
 - Il applique les règles métiers et vérifie les droits de chaque utilisateur, grâce au jeton délivré par Keycloak.
 - Il publie des événements dans NATS pour les autres services, sans attendre leur traitement.
+- Il se connecte à PostgreSQL et à NATS par des connexions chiffrées (TLS), en vérifiant le certificat du serveur.
 
 ## Fichiers et dossiers principaux
 
@@ -33,7 +34,7 @@ REST : il reçoit les demandes de l'interface, applique les règles métier, pui
 | `api/src/app.module.ts` | Module principal, qui assemble tous les autres. |
 | `api/src/listings/` | Module des annonces : réception, contrôle et enregistrement. |
 | `api/src/auth/` | Module de connexion : vérifie le jeton et le rôle de l'utilisateur. |
-| `api/src/config/` | Lit la configuration de l'API. |
+| `api/src/config/` | Lit la configuration de l'API, dont l'autorité de confiance pour le chiffrement. |
 | `api/package.json` | Liste les dépendances et les commandes de l'API. |
 | `api/Dockerfile` | Fabrique l'image Docker de l'API. |
 
@@ -51,7 +52,12 @@ REST : il reçoit les demandes de l'interface, applique les règles métier, pui
 | `make logs-api` | Affiche le journal de l'API, mis à jour en direct. |
 
 !!! note "À savoir"
-`make api` a besoin de la base de données, de NATS et de Keycloak : lancer d'abord `make port-forward`.
+    `make api` a besoin de la base de données, de NATS et de Keycloak : lancer d'abord `make port-forward`.
+
+!!! note "Chiffrement des connexions"
+    Dans le cluster, les variables `DB_SSL_CA` et `NATS_TLS_CA` indiquent le fichier de l'autorité locale. Si elles sont
+    absentes, l'API se connecte sans chiffrement, comme dans les tests automatiques. `make api` les définit et utilise
+    `pme-ca.crt` : lancer d'abord `make ca-cert`.
 
 ## Pour aller plus loin
 
