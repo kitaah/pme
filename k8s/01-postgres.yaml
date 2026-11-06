@@ -1,4 +1,4 @@
-# PostgreSQL 16 : une instance, trois bases (pme, moderation, keycloak) creees par postgres-init.sh.
+# PostgreSQL 18 : une instance, trois bases (pme, moderation, keycloak) creees par postgres-init.sh.
 # Simplification du POC par rapport au projet Spring : pas de TLS interne (sslmode=require retire).
 # Durcissement partiel : l'entrypoint de l'image demarre en root pour initialiser le volume, puis passe a l'utilisateur
 # `postgres`. Les capacites ne sont donc pas toutes retirees (voir le namespace : `restricted` est seulement audite).
@@ -43,15 +43,13 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: postgres
-          image: postgres:16-alpine
+          image: postgres:18-alpine
           args: ["postgres", "-c", "shared_buffers=64MB"]
           ports:
             - containerPort: 5432
           env:
             - name: POSTGRES_DB
               value: pme
-            - name: PGDATA
-              value: /var/lib/postgresql/data/pgdata
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef: { name: pme-secrets, key: db-username }
@@ -62,8 +60,10 @@ spec:
             requests: { cpu: 100m, memory: 128Mi }
             limits: { cpu: 300m, memory: 256Mi }
           volumeMounts:
+            # Depuis PostgreSQL 18, l'image attend le volume sur /var/lib/postgresql (et non /data) : les donnees sont dans
+            # un sous-dossier par version majeure (18/docker), ce qui permet de preparer un futur pg_upgrade.
             - name: data
-              mountPath: /var/lib/postgresql/data
+              mountPath: /var/lib/postgresql
             - name: init
               mountPath: /docker-entrypoint-initdb.d
               readOnly: true
