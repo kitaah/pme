@@ -56,7 +56,7 @@ toute la plateforme sur un ordinateur.
 
 | Commande | Description |
 |---|---|
-| `make minikube-up` | Démarre le cluster, publie les ports 80 et 443 et active l'ingress. |
+| `make minikube-up` | Démarre le cluster, publie les ports 80 et 443, active l'ingress et installe cert-manager. |
 | `make image` | Construit les images des applications dans le cluster. |
 | `make lint-docker` | Repère les erreurs et les mauvaises pratiques dans les Dockerfile, avec Hadolint. |
 | `make deploy` | Déploie toute la plateforme. |

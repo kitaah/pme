@@ -38,6 +38,8 @@ PROMETHEUS_HOST ?= prometheus.localhost
 NATS_MONITOR_PORT ?= 8222
 DOCS_PORT ?= 8005
 DOCS_IMAGE_PORT ?= 8083
+DOCS_URL := http://localhost:$(DOCS_PORT)
+DOCS_IMAGE_URL := http://localhost:$(DOCS_IMAGE_PORT)
 
 APP_URL := https://$(APP_HOST)
 KEYCLOAK_URL := https://$(KEYCLOAK_HOST)
@@ -412,6 +414,7 @@ image-test:
 # l'apercu tourne meme si un lien est casse, pour pouvoir le corriger.
 docs-serve:
 	docker build -f Dockerfile.docs --target deps -t pme-docs-deps:dev .
+	@( for i in $$(seq 1 90); do curl -s -o /dev/null "$(DOCS_URL)" && { xdg-open "$(DOCS_URL)" 2>/dev/null || open "$(DOCS_URL)" 2>/dev/null; break; }; sleep 1; done ) &
 	docker run --rm -it -p $(DOCS_PORT):8000 -v "$(CURDIR)":/docs pme-docs-deps:dev mkdocs serve -a 0.0.0.0:8000
 
 docs-check:
@@ -423,6 +426,7 @@ docs-image:
 
 docs-run:
 	@echo "Documentation : http://localhost:$(DOCS_IMAGE_PORT) (Ctrl+C pour arreter)"
+	@( for i in $$(seq 1 90); do curl -s -o /dev/null "$(DOCS_IMAGE_URL)" && { xdg-open "$(DOCS_IMAGE_URL)" 2>/dev/null || open "$(DOCS_IMAGE_URL)" 2>/dev/null; break; }; sleep 1; done ) &
 	docker run --rm -p $(DOCS_IMAGE_PORT):8080 pme-docs:dev
 
 # Arrete les conteneurs lances par docs-serve (pme-docs-deps:dev) et docs-run (pme-docs:dev).

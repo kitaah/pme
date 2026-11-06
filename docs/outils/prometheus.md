@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Collecte et conserve les mesures de fonctionnement des services |
 | **Version** | Prometheus 2.55.1 |
-| **Adresse en local** | <http://prometheus.localhost> |
+| **Adresse en local** | <https://prometheus.localhost> |
 
 ## Description
 
