@@ -1,0 +1,47 @@
+// Configuration d'Alloy (ConfigMap `alloy-config`, generee par kustomize :
+// modifier ce fichier redemarre Alloy automatiquement).
+// Chaine : decouverte des pods du namespace -> etiquettes -> lecture des logs -> envoi a Loki.
+
+// 1. Decouverte : tous les pods du namespace pme (un seul namespace, voir le Role dans k8s/13-alloy.yaml).
+discovery.kubernetes "pods" {
+  role = "pod"
+  namespaces {
+    names = ["pme"]
+  }
+}
+
+// 2. Etiquettes : peu de valeurs differentes, pour que Loki reste leger. `app` reprend le label `app` des
+// Deployments (pme-api, keycloak...), comme les jobs de Prometheus. `pod` permet de separer les replicas
+// de l'autoscaling.
+discovery.relabel "pods" {
+  targets = discovery.kubernetes.pods.targets
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    target_label  = "namespace"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app"]
+    target_label  = "app"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label  = "pod"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_name"]
+    target_label  = "container"
+  }
+}
+
+// 3. Lecture : les logs sont lus par l'API Kubernetes (comme `kubectl logs`), sans acces aux fichiers du noeud.
+loki.source.kubernetes "pods" {
+  targets    = discovery.relabel.pods.output
+  forward_to = [loki.write.loki.receiver]
+}
+
+// 4. Envoi : au Service `loki`, par son nom dans le cluster.
+loki.write "loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

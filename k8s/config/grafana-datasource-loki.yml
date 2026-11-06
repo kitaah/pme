@@ -1,0 +1,9 @@
+# Source de donnees de Grafana : Loki, par le nom de son Service dans le cluster.
+# Prometheus reste la source par defaut (k8s/config/grafana-datasource.yml).
+apiVersion: 1
+datasources:
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100

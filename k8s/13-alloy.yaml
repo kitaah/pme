@@ -1,0 +1,121 @@
+# Alloy : lit les logs des pods du namespace et les envoie a Loki (k8s/12-loki.yaml). Remplace Promtail, arrete en 2026.
+# Contrairement aux autres pods du projet, celui-ci a besoin du jeton du compte de service : il interroge l'API Kubernetes
+# pour lister les pods et lire leurs logs. Ses droits sont limites par un Role au seul namespace pme (lecture seule).
+# La configuration (decouverte, etiquettes, envoi) est dans k8s/config/alloy.alloy.
+# Son interface web (etat des composants, graphe de la chaine) est jointe par l'ingress sur https://alloy.localhost (make alloy).
+# Elle n'a pas d'authentification : outil de developpement et de demonstration, comme Prometheus et Adminer.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alloy
+  labels:
+    app.kubernetes.io/name: alloy
+    app.kubernetes.io/component: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: alloy
+  labels:
+    app.kubernetes.io/name: alloy
+    app.kubernetes.io/component: monitoring
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: alloy
+  labels:
+    app.kubernetes.io/name: alloy
+    app.kubernetes.io/component: monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: alloy
+subjects:
+  - kind: ServiceAccount
+    name: alloy
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alloy
+  labels:
+    app: alloy
+    app.kubernetes.io/name: alloy
+    app.kubernetes.io/component: monitoring
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: alloy
+  template:
+    metadata:
+      labels:
+        app: alloy
+        app.kubernetes.io/name: alloy
+        app.kubernetes.io/component: monitoring
+    spec:
+      serviceAccountName: alloy
+      enableServiceLinks: false
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 473
+        runAsGroup: 473
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: alloy
+          image: grafana/alloy:v1.21.0
+          args:
+            - run
+            - /etc/alloy/config.alloy
+            - --server.http.listen-addr=0.0.0.0:12345
+            - --storage.path=/tmp/alloy
+            - --disable-reporting
+          ports:
+            - containerPort: 12345
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { cpu: 200m, memory: 192Mi }
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alloy
+              readOnly: true
+            - name: data
+              mountPath: /tmp/alloy
+          readinessProbe:
+            httpGet: { path: /-/ready, port: 12345 }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /-/ready, port: 12345 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: alloy-config
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alloy
+  labels:
+    app.kubernetes.io/name: alloy
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    app: alloy
+  ports:
+    - port: 12345
+      targetPort: 12345

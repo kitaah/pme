@@ -1,4 +1,4 @@
-# Certificat TLS unique, valable pour les cinq noms d'hote de l'ingress. cert-manager le signe avec
+# Certificat TLS unique, valable pour les six noms d'hote de l'ingress. cert-manager le signe avec
 # `pme-ca-issuer` (voir k8s/cert-manager/issuers.yaml), le range dans le Secret `pme-tls` et le renouvelle
 # seul avant son expiration. Les deux Ingress (k8s/08-ingress.yaml) lisent ce Secret.
 apiVersion: cert-manager.io/v1
@@ -19,6 +19,7 @@ spec:
     - adminer.localhost
     - grafana.localhost
     - prometheus.localhost
+    - alloy.localhost
   issuerRef:
     name: pme-ca-issuer
     kind: ClusterIssuer

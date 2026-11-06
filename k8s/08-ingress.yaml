@@ -13,7 +13,8 @@
 #   adminer.localhost    -> adminer
 #   grafana.localhost    -> grafana
 #   prometheus.localhost -> prometheus
-# NATS, PostgreSQL et MkDocs n'ont pas d'ingress : NATS et PostgreSQL restent joints par "make port-forward".
+#   alloy.localhost      -> alloy (interface de suivi de la collecte des logs)
+# Loki, NATS, PostgreSQL et MkDocs n'ont pas d'ingress (Loki n'est interroge que par Grafana) : NATS et PostgreSQL restent joints par "make port-forward".
 #
 # Controleur : ingress-nginx, installe par l'addon Minikube (make ingress). Le projet ingress-nginx est
 # arrete depuis mars 2026 : acceptable pour un POC local, a remplacer en production (Traefik ou API Gateway).
@@ -36,6 +37,7 @@ spec:
         - adminer.localhost
         - grafana.localhost
         - prometheus.localhost
+        - alloy.localhost
   rules:
     - host: pme.localhost
       http:
@@ -73,6 +75,13 @@ spec:
             pathType: Prefix
             backend:
               service: { name: prometheus, port: { number: 9090 } }
+    - host: alloy.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: alloy, port: { number: 12345 } }
 ---
 # Keycloak a son propre Ingress : les cookies et jetons de la connexion depassent la taille d'en-tete
 # par defaut d'ingress-nginx (erreur 502 apres la saisie du mot de passe). Le tampon est agrandi ici seulement.

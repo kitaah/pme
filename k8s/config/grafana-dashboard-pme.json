@@ -2,11 +2,12 @@
   "uid": "pme-services",
   "title": "La Petite Maison de l'Epouvante - Services",
   "tags": [
-    "pme"
+    "pme",
+    "metriques"
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 3,
   "refresh": "10s",
   "time": {
     "from": "now-15m",
@@ -331,6 +332,19 @@
           "legendFormat": "{{job}} {{instance}}"
         }
       ]
+    }
+  ],
+  "links": [
+    {
+      "type": "dashboards",
+      "title": "Dashboards PME",
+      "tags": [
+        "pme"
+      ],
+      "asDropdown": true,
+      "includeVars": false,
+      "keepTime": true,
+      "icon": "external link"
     }
   ]
 }
