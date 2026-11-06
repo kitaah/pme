@@ -8,11 +8,18 @@ scrape_configs:
   - job_name: prometheus
     static_configs:
       - targets: ['localhost:9090']
+  # Un pod = une cible : le service sans adresse (headless) renvoie l'adresse de chaque pod, et la liste est relue
+  # toutes les 30 s pour suivre l'autoscaler. Via le Service normal, chaque lecture tomberait sur un pod different
+  # et les compteurs se melangeraient.
   - job_name: pme-api
     metrics_path: /api/metrics
-    static_configs:
-      - targets: ['pme-api:3000']
+    dns_sd_configs:
+      - names: ['pme-api-headless.pme.svc.cluster.local']
+        type: A
+        port: 3000
   - job_name: pme-moderation
     metrics_path: /api/metrics
-    static_configs:
-      - targets: ['pme-moderation:3001']
+    dns_sd_configs:
+      - names: ['pme-moderation-headless.pme.svc.cluster.local']
+        type: A
+        port: 3001
