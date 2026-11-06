@@ -5,7 +5,7 @@
 .PHONY: help install test test-integration image-test \
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
         perf perf-prepare perf-reset perf-load perf-decoupling \
-        minikube-up minikube-down ingress cert-manager ca-cert metrics-server hpa tunnel hosts \
+        minikube-up minikube-down ingress cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
         secrets image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         pods logs logs-api logs-moderation logs-keycloak \
         port-forward stop-forward api moderation frontend \
@@ -22,7 +22,7 @@ MINIKUBE_CPUS ?= 2
 CERT_MANAGER_VERSION ?= v1.18.2
 CA_FILE ?= pme-ca.crt
 
-# Les interfaces web passent par l'ingress en HTTPS (certificat cert-manager signe par ufeat(k8s): ajouter l'autoscaling, le budget de disponibilité et la collecte des métriques par podne autorite locale), sous des
+# Les interfaces web passent par l'ingress en HTTPS (certificat cert-manager signe par une autorite locale), sous des
 # noms d'hote .localhost (contexte securise pour les navigateurs : requis par keycloak-js).
 # Pour les joindre depuis l'ordinateur : "make tunnel" (redirige les ports 80 et 443 vers l'ingress), puis la ligne /etc/hosts de "make hosts".
 # Le navigateur doit faire confiance a l'autorite locale : "make ca-cert" ecrit pme-ca.crt, a importer une fois.
@@ -66,13 +66,14 @@ help:
 	@echo "    make metrics-server           - Active metrics-server (addon Minikube), requis par l'autoscaling"
 	@echo "    make hpa                      - Suit l'autoscaling : charge, cible et nombre de pods"
 	@echo "    make ca-cert                  - Ecrit l'autorite locale dans $(CA_FILE), a importer dans le navigateur"
+	@echo "    make ca-configmap             - Copie l'autorite locale dans le namespace $(NS) (verification du TLS de PostgreSQL)"
 	@echo "    make tunnel                   - Redirige les ports 80 et 443 vers l'ingress (cluster cree sans --ports ; laisser ouvert, mot de passe demande)"
 	@echo "    make hosts                    - Affiche la ligne a ajouter dans /etc/hosts pour les noms .localhost"
 	@echo ""
 	@echo "  Deploiement"
 	@echo "    make secrets                  - Cree le Secret pme-secrets depuis .env"
 	@echo "    make image                    - Construit les 3 images dans Minikube"
-	@echo "    make deploy                   - secrets + kubectl apply -k k8s/ (Postgres, NATS, Keycloak, API, moderation, front, ingress)"
+	@echo "    make deploy                   - secrets + ca-configmap + kubectl apply -k k8s/ (Postgres, NATS, Keycloak, API, moderation, front, ingress)"
 	@echo "    make redeploy                 - image + redemarrage des 3 deployments (apres une modification du code)"
 	@echo "    make undeploy                 - Supprime le namespace (donnees comprises)"
 	@echo "    make create-grafana-db        - Cree la base grafana dans un PostgreSQL existant (make reset la cree d'office)"
@@ -133,6 +134,10 @@ minikube-down:
 # le webhook d'admission, qui n'est pas encore pret.
 # Le patch ajoute la compression gzip des reponses a la ConfigMap du controleur (desactivee par defaut). Un patch
 # et non un `kubectl apply` : la ConfigMap vient de l'addon (elle contient deja hsts: "false"), le patch n'ajoute que ces cles.
+# La version minimale de TLS n'est PAS forcee ici, contrairement a PostgreSQL (k8s/01-postgres.yaml) et a NATS
+# (k8s/config/nats.conf) : l'addon accepte "TLSv1.2 TLSv1.3" et les navigateurs choisissent 1.3 d'eux-memes.
+# C'est le seul point d'entree public du SI, donc le seul ou les clients ne sont pas maitrises : les referentiels
+# (ANSSI, NIST, PCI DSS) y demandent TLS 1.2 au minimum, et non 1.3 exclusivement.
 ingress:
 	minikube addons enable ingress
 	kubectl -n ingress-nginx wait --for=condition=ready pod -l app.kubernetes.io/component=controller --timeout=180s
@@ -163,6 +168,19 @@ cert-manager:
 ca-cert:
 	@kubectl -n cert-manager get secret pme-ca -o jsonpath='{.data.ca\.crt}' | base64 -d > $(CA_FILE)
 	@echo "Autorite ecrite dans $(CA_FILE)"
+
+# Bundle de confiance interne : copie l'autorite locale (Secret pme-ca du namespace cert-manager) dans la ConfigMap
+# `pme-ca` du namespace applicatif. Les clients de PostgreSQL (API, moderation, Keycloak, Grafana) la montent pour
+# verifier le certificat du serveur. Un Secret ne se partage pas entre namespaces, d'ou cette copie ; en entreprise,
+# trust-manager (projet cert-manager) produit la MEME ConfigMap et la met a jour tout seul a chaque renouvellement.
+# Relancer cette commande apres "make cert-manager" sur un cluster recree (nouvelle autorite).
+ca-configmap:
+	@kubectl -n cert-manager get secret pme-ca >/dev/null 2>&1 || (echo "Autorite locale absente : lancer make cert-manager" && exit 1)
+	@tmp=$$(mktemp) && \
+		kubectl -n cert-manager get secret pme-ca -o jsonpath='{.data.ca\.crt}' | base64 -d > $$tmp && \
+		kubectl -n $(NS) create configmap pme-ca --from-file=ca.crt=$$tmp --dry-run=client -o yaml | kubectl apply -f - && \
+		rm -f $$tmp
+	@echo "ConfigMap pme-ca (autorite locale) creee dans le namespace $(NS)"
 
 # Les navigateurs envoient toujours un nom en .localhost vers 127.0.0.1, quelle que soit la ligne /etc/hosts
 # (RFC 6761). L'ingress doit donc ecouter sur 127.0.0.1:80 et :443 : on y redirige les ports 80 et 443 du controleur.
@@ -211,7 +229,7 @@ image-moderation:
 image-frontend:
 	minikube image build -t pme-frontend:dev ./frontend
 
-deploy: secrets
+deploy: secrets ca-configmap
 	@kubectl get crd certificates.cert-manager.io >/dev/null 2>&1 || { echo "cert-manager est absent : lancer make cert-manager"; exit 1; }
 	kubectl apply -k k8s/
 	@echo "Deploiement lance. Suivre : make pods (Keycloak met ~1 min a demarrer)"
@@ -327,15 +345,21 @@ DEV_KEYCLOAK_ENV = KEYCLOAK_ISSUER=$(KEYCLOAK_URL)/realms/pme \
 	KEYCLOAK_ALLOWED_CLIENTS=pme-web,pme-cli \
 	NODE_EXTRA_CA_CERTS=$(CURDIR)/$(CA_FILE)
 
+# PostgreSQL et NATS n'acceptent du reseau que des connexions chiffrees : un service lance sur l'ordinateur
+# doit donc connaitre l'autorite locale, comme son equivalent dans le cluster. Les certificats sont valables
+# pour `localhost` (k8s/00-internal-tls.yaml), le nom compose par "make port-forward".
+# "make ca-cert", dont dependent les deux cibles ci-dessous, ecrit le fichier.
+DEV_TLS_ENV = DB_SSL_CA=$(CURDIR)/$(CA_FILE) NATS_TLS_CA=$(CURDIR)/$(CA_FILE)
+
 api: ca-cert
 	@cd api && DB_HOST=localhost DB_NAME=pme DB_USER='$(POSTGRES_USER)' DB_PASSWORD='$(POSTGRES_PASSWORD)' \
 		NATS_HOST=localhost NATS_USER='$(NATS_USER)' NATS_PASSWORD='$(NATS_PASSWORD)' \
-		$(DEV_KEYCLOAK_ENV) npm run start:dev
+		$(DEV_TLS_ENV) $(DEV_KEYCLOAK_ENV) npm run start:dev
 
 moderation: ca-cert
 	@cd moderation-service && DB_HOST=localhost DB_NAME=moderation DB_USER='$(POSTGRES_USER)' DB_PASSWORD='$(POSTGRES_PASSWORD)' \
 		NATS_HOST=localhost NATS_USER='$(NATS_USER)' NATS_PASSWORD='$(NATS_PASSWORD)' \
-		$(DEV_KEYCLOAK_ENV) npm run start:dev
+		$(DEV_TLS_ENV) $(DEV_KEYCLOAK_ENV) npm run start:dev
 
 frontend:
 	cd frontend && npm run dev

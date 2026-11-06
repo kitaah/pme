@@ -21,6 +21,9 @@ export class NatsClient implements OnApplicationShutdown {
       pass: this.options.password,
       name: 'pme-moderation',
       timeout: 3000,
+      // TLS des que l'autorite est fournie : le certificat du serveur doit etre signe par elle ET emis pour
+      // le nom utilise dans `servers` (ici `nats`). Sans elle, l'option est absente : connexion en clair.
+      ...(this.options.tlsCaFile ? { tls: { caFile: this.options.tlsCaFile } } : {}),
       maxReconnectAttempts: -1,
       reconnectTimeWait: 1000,
     }).catch((error: unknown) => {

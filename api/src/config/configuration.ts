@@ -7,8 +7,31 @@ export interface AppConfig {
   port: number;
   /** Requetes autorisees par minute et par IP (a relever pour les tests de charge). */
   throttleLimit: number;
-  db: { host: string; port: number; name: string; user: string; password: string };
-  nats: { host: string; port: number; user: string; password: string };
+  db: {
+    host: string;
+    port: number;
+    name: string;
+    user: string;
+    password: string;
+    /**
+     * Chemin du certificat de l'autorite qui a signe celui de PostgreSQL. Defini, il active le TLS avec
+     * verification du nom du serveur (equivalent de `sslmode=verify-full`). Absent en developpement local
+     * et dans les tests d'integration (Testcontainers demarre un PostgreSQL sans TLS) : connexion en clair.
+     */
+    sslCaFile?: string;
+  };
+  nats: {
+    host: string;
+    port: number;
+    user: string;
+    password: string;
+    /**
+     * Chemin du certificat de l'autorite qui a signe celui de NATS. Defini, il active le TLS avec
+     * verification du nom du serveur. Absent en developpement local et dans les tests d'integration
+     * (Testcontainers demarre un NATS sans TLS) : connexion en clair.
+     */
+    tlsCaFile?: string;
+  };
   keycloak: {
     /** Valeur attendue dans la claim `iss` : URL publique de Keycloak (celle que voit le navigateur). */
     issuer: string;
@@ -54,12 +77,14 @@ export function loadConfiguration(env: NodeJS.ProcessEnv = process.env): AppConf
       name: env.DB_NAME ?? 'pme',
       user: required(env, 'DB_USER'),
       password: required(env, 'DB_PASSWORD'),
+      sslCaFile: env.DB_SSL_CA || undefined,
     },
     nats: {
       host: env.NATS_HOST ?? 'localhost',
       port: num(env, 'NATS_PORT', 4222),
       user: required(env, 'NATS_USER'),
       password: required(env, 'NATS_PASSWORD'),
+      tlsCaFile: env.NATS_TLS_CA || undefined,
     },
     keycloak: {
       issuer: required(env, 'KEYCLOAK_ISSUER'),

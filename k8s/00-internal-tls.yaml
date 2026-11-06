@@ -1,0 +1,70 @@
+# Certificats TLS des services internes du SI (PostgreSQL et NATS).
+# Signes par l'autorite locale `pme-ca-issuer` (k8s/cert-manager/issuers.yaml), la meme que les certificats
+# de l'ingress (k8s/08-certificate.yaml) : un seul bundle de confiance pour tout le cluster.
+#
+# A la difference de l'ingress, ces certificats ne servent PAS a un navigateur : ils chiffrent et authentifient
+# les connexions entre les pods. Les clients verifient le nom du serveur (`verify-full`), d'ou la liste des noms
+# DNS internes ci-dessous : un certificat valable pour `postgres` seul suffirait aujourd'hui, les trois formes
+# longues permettent d'y acceder depuis un autre namespace sans regenerer le certificat. `localhost` est la pour
+# le developpement local : `make port-forward` publie ces services sur localhost, et le nom presente par le
+# certificat doit correspondre a celui que le client compose (`make api`, `make moderation`).
+#
+# En production, seul l'emetteur change (autorite interne de l'entreprise) : ces ressources restent identiques.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: postgres-tls
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
+spec:
+  secretName: postgres-tls
+  commonName: postgres
+  duration: 2160h # 90 jours
+  renewBefore: 360h # renouvele 15 jours avant l'expiration
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  # Certificat de SERVEUR uniquement : PostgreSQL ne s'authentifie pas aupres d'un tiers.
+  usages:
+    - server auth
+  dnsNames:
+    - postgres
+    - postgres.pme
+    - postgres.pme.svc
+    - postgres.pme.svc.cluster.local
+    - localhost
+  issuerRef:
+    name: pme-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: nats-tls
+  labels:
+    app.kubernetes.io/name: nats
+    app.kubernetes.io/component: messaging
+spec:
+  secretName: nats-tls
+  commonName: nats
+  duration: 2160h # 90 jours
+  renewBefore: 360h # renouvele 15 jours avant l'expiration
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  usages:
+    - server auth
+  dnsNames:
+    - nats
+    - nats.pme
+    - nats.pme.svc
+    - nats.pme.svc.cluster.local
+    - localhost
+  issuerRef:
+    name: pme-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io

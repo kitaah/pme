@@ -6,6 +6,7 @@ kind: Kustomization
 namespace: pme
 resources:
   - namespace.yaml
+  - 00-internal-tls.yaml
   - 01-postgres.yaml
   - 02-nats.yaml
   - 03-keycloak.yaml
@@ -31,6 +32,12 @@ configMapGenerator:
   - name: postgres-init
     files:
       - init-databases.sh=config/postgres-init.sh
+  - name: postgres-hba
+    files:
+      - pg_hba.conf=config/postgres-hba.conf
+  - name: nats-config
+    files:
+      - nats.conf=config/nats.conf
   - name: keycloak-realm
     files:
       - realm-pme.json=config/realm-pme.json

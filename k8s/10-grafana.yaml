@@ -79,9 +79,11 @@ spec:
             - name: GF_DATABASE_PASSWORD
               valueFrom:
                 secretKeyRef: { name: pme-secrets, key: db-password }
-            # Pas de TLS interne dans ce POC : la connexion a PostgreSQL n'est pas chiffree.
+            # Connexion chiffree et certificat du serveur verifie contre l'autorite locale.
             - name: GF_DATABASE_SSL_MODE
-              value: disable
+              value: verify-full
+            - name: GF_DATABASE_CA_CERT_PATH
+              value: /etc/ssl/pme/ca.crt
             # Aucune requete sortante vers grafana.com (statistiques d'usage, recherche de mises a jour).
             - name: GF_ANALYTICS_REPORTING_ENABLED
               value: "false"
@@ -103,6 +105,9 @@ spec:
             - name: dashboards
               mountPath: /etc/grafana/dashboards
               readOnly: true
+            - name: ca
+              mountPath: /etc/ssl/pme
+              readOnly: true
           readinessProbe:
             httpGet: { path: /api/health, port: 3000 }
             initialDelaySeconds: 5
@@ -121,6 +126,11 @@ spec:
         - name: dashboards
           configMap:
             name: grafana-dashboards
+        # Autorite locale, copiee depuis le namespace cert-manager par `make ca-configmap` : sert a verifier
+        # le certificat de PostgreSQL. En entreprise, trust-manager produit et maintient cette meme ConfigMap.
+        - name: ca
+          configMap:
+            name: pme-ca
 ---
 apiVersion: v1
 kind: Service

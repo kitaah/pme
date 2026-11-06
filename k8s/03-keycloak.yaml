@@ -48,7 +48,8 @@ spec:
             - start-dev
             - --import-realm
             - --db=postgres
-            - --db-url=jdbc:postgresql://postgres:5432/keycloak
+            # sslmode=verify-full : connexion chiffree ET verification du nom du serveur contre l'autorite locale.
+            - "--db-url=jdbc:postgresql://postgres:5432/keycloak?sslmode=verify-full&sslrootcert=/etc/ssl/pme/ca.crt"
             # Keycloak est joint par l'ingress sur https://keycloak.localhost. --hostname fige
             # l'URL publique : l'emetteur (iss) des jetons vaut toujours
             # https://keycloak.localhost/realms/pme, quel que soit le chemin emprunte pour atteindre
@@ -88,6 +89,9 @@ spec:
             - name: realm
               mountPath: /opt/keycloak/data/import
               readOnly: true
+            - name: ca
+              mountPath: /etc/ssl/pme
+              readOnly: true
           # /realms/pme repond une fois le realm importe : la sonde valide donc aussi l'import
           startupProbe:
             httpGet: { path: /realms/pme, port: 8080 }
@@ -105,6 +109,11 @@ spec:
         - name: realm
           configMap:
             name: keycloak-realm
+        # Autorite locale, copiee depuis le namespace cert-manager par `make ca-configmap` : sert a verifier
+        # le certificat de PostgreSQL. En entreprise, trust-manager produit et maintient cette meme ConfigMap.
+        - name: ca
+          configMap:
+            name: pme-ca
 ---
 apiVersion: v1
 kind: Service
