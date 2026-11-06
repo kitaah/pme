@@ -22,12 +22,14 @@ au service qui correspond à ce nom. Il déchiffre aussi les échanges HTTPS, av
 - **Tunnel** : liaison qui rend l'ingress du cluster accessible depuis l'ordinateur.
 - **Terminaison TLS** : l'ingress déchiffre les échanges HTTPS, puis transmet la requête en HTTP aux services.
 - **Fichier hosts** : fichier de l'ordinateur qui associe un nom d'hôte à une adresse IP.
+- **Répartition de charge** : distribution des requêtes entre plusieurs pods d'une même application, pour qu'aucun ne soit saturé.
 
 ## Rôle dans le projet
 
 - Il est le point d'entrée des interfaces web du cluster.
 - Il dirige chaque nom d'hôte vers son service, selon le tableau ci-dessous.
 - Il chiffre les échanges avec le navigateur et redirige le HTTP vers le HTTPS.
+- Il répartit les requêtes entre les pods de l'API, de la modération et du front, à tour de rôle.
 - Il évite d'ouvrir un accès séparé pour chaque service.
 - Sans lui, chaque interface devrait être jointe par une redirection de port distincte.
 
@@ -42,6 +44,10 @@ au service qui correspond à ce nom. Il déchiffre aussi les échanges HTTPS, av
 Sur l'adresse de l'application, l'ingress distingue trois chemins. Le chemin `/api/v1/moderation` mène au service de
 modération. Le chemin `/api/v1` mène à l'API. Tout le reste mène au site. Les chemins `/api/metrics` et `/api/health`
 ne sont pas exposés.
+
+Chaque application tourne avec plusieurs pods. L'ingress envoie les requêtes directement vers ces pods. Quand
+l'autoscaler en ajoute ou en retire, la répartition suit sans rien changer. Il joue donc le rôle de répartiteur de
+charge, sans service de type `LoadBalancer`.
 
 Le chiffrement HTTPS s'arrête à l'ingress. Derrière lui, les échanges restent en HTTP dans le cluster.
 
