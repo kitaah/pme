@@ -16,6 +16,12 @@ resources:
   - 08-ingress.yaml
   - 09-prometheus.yaml
   - 10-grafana.yaml
+# Label commun a toutes les ressources et aux modeles de pods. Les selecteurs ne changent pas (immuables).
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: pme
+    includeSelectors: false
+    includeTemplates: true
 configMapGenerator:
   - name: postgres-init
     files:

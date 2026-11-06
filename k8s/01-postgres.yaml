@@ -1,9 +1,14 @@
 # PostgreSQL 16 : une instance, trois bases (pme, moderation, keycloak) creees par postgres-init.sh.
 # Simplification du POC par rapport au projet Spring : pas de TLS interne (sslmode=require retire).
+# Durcissement partiel : l'entrypoint de l'image demarre en root pour initialiser le volume, puis passe a l'utilisateur
+# `postgres`. Les capacites ne sont donc pas toutes retirees (voir le namespace : `restricted` est seulement audite).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: postgres-data
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
 spec:
   accessModes: [ReadWriteOnce]
   resources:
@@ -16,8 +21,11 @@ metadata:
   name: postgres
   labels:
     app: postgres
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
 spec:
   replicas: 1
+  revisionHistoryLimit: 3
   strategy:
     type: Recreate
   selector:
@@ -27,7 +35,12 @@ spec:
     metadata:
       labels:
         app: postgres
+        app.kubernetes.io/name: postgres
+        app.kubernetes.io/component: database
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile: { type: RuntimeDefault }
       containers:
         - name: postgres
           image: postgres:16-alpine
@@ -54,11 +67,22 @@ spec:
             - name: init
               mountPath: /docker-entrypoint-initdb.d
               readOnly: true
+          # Le premier demarrage initialise le volume et cree les bases (postgres-init.sh) : la startupProbe laisse
+          # jusqu'a 150 s (5 s x 30) avant que la liveness ne s'applique.
+          startupProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d pme -h 127.0.0.1"]
+            periodSeconds: 5
+            failureThreshold: 30
           readinessProbe:
             exec:
               command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d pme -h 127.0.0.1"]
-            initialDelaySeconds: 10
             periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d pme -h 127.0.0.1"]
+            periodSeconds: 20
+            timeoutSeconds: 5
       volumes:
         - name: data
           persistentVolumeClaim:
@@ -72,6 +96,9 @@ apiVersion: v1
 kind: Service
 metadata:
   name: postgres
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
 spec:
   selector:
     app: postgres

@@ -3,7 +3,7 @@
 # arrete serait perdu. JetStream apporte le flux durable, l'acquittement manuel et la remise en file.
 #
 # Deux ports : 4222 pour les clients, 8222 pour la supervision HTTP (/healthz, /jsz).
-# NATS n'a pas d'interface web : l'etat des flux se lit sur /jsz (voir `make queues` et `make open-nats`).
+# NATS n'a pas d'interface web : l'etat des flux se lit sur /jsz (voir `make queues` et `make nats`).
 #
 # Stockage non persistant (emptyDir) : suffisant pour le POC. Les messages survivent a l'arret du
 # SERVICE DE MODERATION (ils restent dans le flux), pas a la perte du pod NATS.
@@ -13,8 +13,11 @@ metadata:
   name: nats
   labels:
     app: nats
+    app.kubernetes.io/name: nats
+    app.kubernetes.io/component: messaging
 spec:
   replicas: 1
+  revisionHistoryLimit: 3
   strategy:
     type: Recreate
   selector:
@@ -24,7 +27,12 @@ spec:
     metadata:
       labels:
         app: nats
+        app.kubernetes.io/name: nats
+        app.kubernetes.io/component: messaging
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile: { type: RuntimeDefault }
       containers:
         - name: nats
           image: nats:2.10-alpine
@@ -47,6 +55,9 @@ spec:
             - name: NATS_PASSWORD
               valueFrom:
                 secretKeyRef: { name: pme-secrets, key: nats-password }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
           resources:
             requests: { cpu: 50m, memory: 64Mi }
             limits: { cpu: 500m, memory: 256Mi }
@@ -69,6 +80,9 @@ apiVersion: v1
 kind: Service
 metadata:
   name: nats
+  labels:
+    app.kubernetes.io/name: nats
+    app.kubernetes.io/component: messaging
 spec:
   selector:
     app: nats

@@ -1,15 +1,18 @@
 # Adminer : interface web d'administration de PostgreSQL, pour inspecter les 3 bases
 # (pme, moderation, keycloak) sans ligne de commande. Outil de developpement/demo uniquement :
 # pas d'authentification propre (Adminer se connecte avec les identifiants Postgres saisis
-# a l'ecran de connexion), donc jamais expose hors du port-forward local.
+# a l'ecran de connexion), donc reserve a l'ordinateur local (ingress adminer.localhost), jamais expose a un reseau.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: adminer
   labels:
     app: adminer
+    app.kubernetes.io/name: adminer
+    app.kubernetes.io/component: tooling
 spec:
   replicas: 1
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app: adminer
@@ -17,7 +20,12 @@ spec:
     metadata:
       labels:
         app: adminer
+        app.kubernetes.io/name: adminer
+        app.kubernetes.io/component: tooling
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile: { type: RuntimeDefault }
       containers:
         - name: adminer
           image: adminer:4.8.1
@@ -27,17 +35,26 @@ spec:
             # Pre-remplit le champ "Serveur" de l'ecran de connexion avec le nom du Service Postgres.
             - name: ADMINER_DEFAULT_SERVER
               value: postgres
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
           resources:
             requests: { cpu: 50m, memory: 64Mi }
             limits: { cpu: 200m, memory: 128Mi }
           readinessProbe:
             httpGet: { path: /, port: 8080 }
             periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /, port: 8080 }
+            periodSeconds: 20
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: adminer
+  labels:
+    app.kubernetes.io/name: adminer
+    app.kubernetes.io/component: tooling
 spec:
   selector:
     app: adminer
