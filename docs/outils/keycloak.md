@@ -1,55 +1,59 @@
-# Keycloak
+# NestJS
 
 ## Fiche d'identité
 
 | Information | Détail |
 |---|---|
-| **Rôle** | Gère les comptes et la connexion des utilisateurs, et délivre les jetons d'accès |
-| **Version** | Keycloak 24.0.0 |
-| **Adresse en local** | <http://keycloak.localhost> |
+| **Rôle** | Construit le back-end de la plateforme : il reçoit les demandes de l'interface et applique les règles étier |
+| **Version** | NestJS 11.2.8 |
+| **Adresse en local** | <https://pme.localhost/api> |
 
 ## Description
 
-Keycloak est une solution libre de gestion des identités et des accès. Il authentifie les utilisateurs, centralise leurs
-comptes et leurs rôles, puis délivre un jeton d'accès signé. Les applications se contentent de vérifier ce jeton : elles
-ne stockent ni ne voient jamais les mots de passe.
+NestJS est un framework libre qui sert à construire le back-end d'une application web. Il est écrit en TypeScript. Il
+organise le code en modules, chacun chargé d'un sujet précis, comme les annonces ou la connexion. NestJS expose une API
+REST : il reçoit les demandes de l'interface, applique les règles métier, puis renvoie la réponse.
+
+**Définitions**
+
+- **Module** : ensemble de fichiers regroupés autour d'un même sujet.
 
 ## Rôle dans le projet
 
-- Il est la solution d'identité et d'accès (CIAM) du nouveau SI.
-- Il authentifie les visiteurs, les membres, les modérateurs, les gestionnaires, les rédacteurs et les administrateurs.
-- Il centralise les comptes, les rôles et les habilitations : l'administrateur les gère à un seul endroit.
-- Il permet au front-end et à l'API REST, découplés, de partager la même authentification.
-- Il dispose de sa propre base de données, séparée de celle des applications.
+- Il constitue le back-end de la nouvelle plateforme, exposé en API REST.
+- Il est découplé du front-end : les deux parties communiquent uniquement par l'API.
+- Il applique les règles métiers et vérifie les droits de chaque utilisateur, grâce au jeton délivré par Keycloak.
+- Il publie des événements dans NATS pour les autres services, sans attendre leur traitement.
 
 ## Fichiers et dossiers principaux
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/03-keycloak.yaml` | Démarre Keycloak dans Minikube. |
-| `k8s/config/realm-pme.json` | Décrit l'espace « pme » : rôles, applications autorisées, comptes de démonstration. |
-| `k8s/config/postgres-init.sh` | Crée la base de données de Keycloak au premier démarrage. |
-| `frontend/src/auth.ts` | Envoie le visiteur vers la page de connexion et récupère son jeton. |
-| `api/src/auth/jwt.strategy.ts` | Vérifie le jeton reçu par l'API. |
-| `scripts/token.sh` | Demande un jeton de test à Keycloak. |
-| `.env` | Contient l'identifiant et le mot de passe de la console d'administration. |
+| `api/src/main.ts` | Point d'entrée : démarre l'API et règle sa sécurité. |
+| `api/src/app.module.ts` | Module principal, qui assemble tous les autres. |
+| `api/src/listings/` | Module des annonces : réception, contrôle et enregistrement. |
+| `api/src/auth/` | Module de connexion : vérifie le jeton et le rôle de l'utilisateur. |
+| `api/src/config/` | Lit la configuration de l'API. |
+| `api/package.json` | Liste les dépendances et les commandes de l'API. |
+| `api/Dockerfile` | Fabrique l'image Docker de l'API. |
 
 ## Commandes essentielles
 
-À lancer dans un terminal, depuis le dossier du projet, Minikube démarré.
+À lancer dans un terminal, depuis le dossier du projet. `Ctrl+C` arrête une commande en cours.
 
 | Commande | Description |
 |---|---|
-| `make deploy` | Installe Keycloak avec le reste de la plateforme. |
-| `make pods` | Indique si Keycloak est prêt. Il met environ une minute à démarrer. |
-| `make keycloak` | Ouvre la console d'administration dans le navigateur. |
-| `make token KC_USER=membre` | Affiche un jeton de test pour un utilisateur. |
-| `make logs-keycloak` | Affiche les messages de Keycloak. |
+| `make install` | Installe les dépendances. |
+| `make api` | Démarre l'API et la redémarre à chaque modification du code. |
+| `make test` | Lance les tests automatiques. |
+| `make test-integration` | Teste l'API avec de vraies bases de données, Docker démarré. |
+| `make image-api` | Fabrique l'image Docker de l'API dans Minikube. |
+| `make logs-api` | Affiche le journal de l'API, mis à jour en direct. |
 
 !!! note "À savoir"
-Un compte de démonstration existe : `membre`.
+`make api` a besoin de la base de données, de NATS et de Keycloak : lancer d'abord `make port-forward`.
 
 ## Pour aller plus loin
 
-- [Site officiel de Keycloak](https://www.keycloak.org/)
-- [Documentation officielle](https://www.keycloak.org/documentation)
+- [Site officiel de NestJS](https://nestjs.com/)
+- [Documentation officielle](https://docs.nestjs.com/)

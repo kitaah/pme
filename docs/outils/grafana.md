@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Affiche les mesures des services sous forme de tableaux de bord |
 | **Version** | Grafana 11.3.1 |
-| **Adresse en local** | <http://grafana.localhost> |
+| **Adresse en local** | <https://grafana.localhost> |
 
 ## Description
 

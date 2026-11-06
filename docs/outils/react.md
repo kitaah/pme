@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Construit l'interface web que les utilisateurs voient et utilisent |
 | **Version** | React 19.3.1 |
-| **Adresse en local** | <http://pme.localhost> et <http://localhost:5173> (mode développement) |
+| **Adresse en local** | <https://pme.localhost> et <http://localhost:5173> (mode développement) |
 
 ## Description
 
