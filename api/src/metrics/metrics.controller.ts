@@ -5,7 +5,7 @@ import { registry } from './metrics';
 
 /**
  * Metriques au format Prometheus, lues par Prometheus a l'interieur du cluster.
- * Le serveur nginx du front renvoie 404 sur cette route : elle n'est jamais exposee a l'exterieur.
+ * L'ingress n'expose que /api/v1 (k8s/08-ingress.yaml) : cette route n'est jamais exposee a l'exterieur.
  */
 @Public()
 @SkipThrottle()
