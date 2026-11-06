@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Transforme les pages de documentation du projet en un site web consultable par tous |
 | **Version** | MkDocs 1.6.1 avec le thème Material 9.7.7 |
-| **Adresse en local** | <http://localhost:8000> (aperçu en direct) et <http://localhost:8083> (site final) |
+| **Adresse en local** | <http://localhost:8005> (aperçu en direct) et <http://localhost:8083> (site final) |
 
 ## Description
 
@@ -39,10 +39,10 @@ thème qui règle l'apparence du site.
 
 | Commande | Description |
 |---|---|
-| `make docs-serve` | Affiche le site et le met à jour à chaque enregistrement. |
+| `make docs-serve` | Ouvre le site dans le navigateur et le met à jour à chaque enregistrement. |
 | `make docs-check` | Vérifie qu'il n'y a ni lien cassé ni page oubliée. |
 | `make docs-image` | Fabrique la version finale du site. |
-| `make docs-run` | Affiche la version finale du site. |
+| `make docs-run` | Ouvre la version finale du site dans le navigateur. |
 
 ## Pour aller plus loin
 
