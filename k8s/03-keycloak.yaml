@@ -1,4 +1,4 @@
-# Keycloak 24 en mode dev, joint par l'ingress (k8s/08-ingress.yaml) sur https://keycloak.localhost (TLS termine a l'ingress, HTTP en interne).
+# Keycloak 26 en mode dev, joint par l'ingress (k8s/08-ingress.yaml) sur https://keycloak.localhost (TLS termine a l'ingress, HTTP en interne).
 # Le realm `pme` (roles membre / moderateur, clients pme-web et pme-cli, utilisateurs de demonstration)
 # est importe au demarrage depuis le ConfigMap `keycloak-realm` (config/realm-pme.json).
 apiVersion: apps/v1
@@ -43,28 +43,30 @@ spec:
             capabilities: { drop: [ALL] }
       containers:
         - name: keycloak
-          image: quay.io/keycloak/keycloak:24.0.0
+          image: quay.io/keycloak/keycloak:26.8.1
           args:
             - start-dev
             - --import-realm
             - --db=postgres
             - --db-url=jdbc:postgresql://postgres:5432/keycloak
-            # Keycloak est joint par l'ingress sur https://keycloak.localhost. --hostname-url fige
+            # Keycloak est joint par l'ingress sur https://keycloak.localhost. --hostname fige
             # l'URL publique : l'emetteur (iss) des jetons vaut toujours
             # https://keycloak.localhost/realms/pme, quel que soit le chemin emprunte pour atteindre
             # Keycloak. L'API peut donc lire les cles par l'adresse interne du service sans que
             # l'emetteur change.
-            - --hostname-url=https://keycloak.localhost
+            - --hostname=https://keycloak.localhost
             # Keycloak est derriere un proxy (ingress-nginx) qui termine le HTTP : il lit les
             # en-tetes X-Forwarded-* au lieu de les ignorer.
-            - --proxy=edge
+            - --proxy-headers=xforwarded
           ports:
             - containerPort: 8080
           env:
-            - name: KEYCLOAK_ADMIN
-              valueFrom:
-                secretKeyRef: { name: pme-secrets, key: keycloak-admin-username }
-            - name: KEYCLOAK_ADMIN_PASSWORD
+            # Compte d'amorcage : Keycloak 26 le considere comme temporaire (bandeau d'avertissement dans la console).
+            # Le Job k8s/03-keycloak-admin-job.yaml cree l'administrateur permanent (keycloak-admin-username) puis
+            # supprime ce compte. Le nom est donc fixe et different de l'administrateur permanent.
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: bootstrap
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef: { name: pme-secrets, key: keycloak-admin-password }
             - name: KC_DB_USERNAME
