@@ -1,11 +1,19 @@
+# Front React servi par nginx (image `nginx-unprivileged`, utilisateur 101) : sert le site et achemine /api vers l'API et la moderation.
+# Systeme de fichiers en lecture seule : nginx n'ecrit que dans /tmp (fichier PID et caches temporaires).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: pme-frontend
   labels:
     app: pme-frontend
+    app.kubernetes.io/name: pme-frontend
+    app.kubernetes.io/component: frontend
 spec:
   replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
   selector:
     matchLabels:
       app: pme-frontend
@@ -13,17 +21,31 @@ spec:
     metadata:
       labels:
         app: pme-frontend
+        app.kubernetes.io/name: pme-frontend
+        app.kubernetes.io/component: frontend
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        seccompProfile: { type: RuntimeDefault }
       containers:
         - name: frontend
           image: pme-frontend:dev
           imagePullPolicy: IfNotPresent # image construite dans Minikube (make image-frontend)
           ports:
             - containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
           resources:
             requests: { cpu: 25m, memory: 32Mi }
             limits: { cpu: 200m, memory: 64Mi }
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
             - name: config
               mountPath: /usr/share/nginx/html/config.js
               subPath: config.js
@@ -36,6 +58,8 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
       volumes:
+        - name: tmp
+          emptyDir: {}
         - name: config
           configMap:
             name: frontend-config
@@ -44,6 +68,9 @@ apiVersion: v1
 kind: Service
 metadata:
   name: pme-frontend
+  labels:
+    app.kubernetes.io/name: pme-frontend
+    app.kubernetes.io/component: frontend
 spec:
   selector:
     app: pme-frontend

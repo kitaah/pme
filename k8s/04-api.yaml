@@ -1,11 +1,19 @@
+# API REST NestJS : depose et liste les annonces, publie `listing.submitted` sur NATS JetStream.
+# Image construite dans Minikube (make image-api), executee sans privilege root (utilisateur `node`).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: pme-api
   labels:
     app: pme-api
+    app.kubernetes.io/name: pme-api
+    app.kubernetes.io/component: backend
 spec:
   replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
   selector:
     matchLabels:
       app: pme-api
@@ -13,7 +21,18 @@ spec:
     metadata:
       labels:
         app: pme-api
+        app.kubernetes.io/name: pme-api
+        app.kubernetes.io/component: backend
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      volumes:
+        - name: tmp
+          emptyDir: {}
       # Desactive l'injection automatique par Kubernetes des variables d'environnement
       # "liens Docker" d'un Service (ex. NATS_PORT=tcp://<ip>:4222) : son nom entre en
       # collision avec la variable du meme nom que l'application attend (un entier simple).
@@ -55,6 +74,13 @@ spec:
             # requetes par minute et par IP ; relevee temporairement par `make perf-prepare`
             - name: THROTTLE_LIMIT
               value: "200"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           resources:
             requests: { cpu: 100m, memory: 128Mi }
             limits: { cpu: 500m, memory: 256Mi }
@@ -75,6 +101,9 @@ apiVersion: v1
 kind: Service
 metadata:
   name: pme-api
+  labels:
+    app.kubernetes.io/name: pme-api
+    app.kubernetes.io/component: backend
 spec:
   selector:
     app: pme-api
