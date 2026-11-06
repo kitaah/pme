@@ -28,25 +28,32 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: adminer
-          image: adminer:4.8.1
+          image: adminer:6.3.0
           ports:
             - containerPort: 8080
           env:
             # Pre-remplit le champ "Serveur" de l'ecran de connexion avec le nom du Service Postgres.
             - name: ADMINER_DEFAULT_SERVER
               value: postgres
+            # Le serveur PHP integre a Adminer traite une requete a la fois : pendant une requete lente (connexion a la
+            # base, mauvais mot de passe...), il ne repond plus aux sondes et Kubernetes redemarre le conteneur
+            # (observe : "Liveness probe failed", RESTARTS > 0). Plusieurs processus gardent un travailleur libre pour les sondes.
+            - name: PHP_CLI_SERVER_WORKERS
+              value: "4"
           securityContext:
             allowPrivilegeEscalation: false
             capabilities: { drop: [ALL] }
           resources:
             requests: { cpu: 50m, memory: 64Mi }
-            limits: { cpu: 200m, memory: 128Mi }
+            limits: { cpu: 200m, memory: 192Mi }
           readinessProbe:
             httpGet: { path: /, port: 8080 }
             periodSeconds: 10
+            timeoutSeconds: 3
           livenessProbe:
             httpGet: { path: /, port: 8080 }
             periodSeconds: 20
+            timeoutSeconds: 3
 ---
 apiVersion: v1
 kind: Service
