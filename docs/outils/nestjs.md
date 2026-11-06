@@ -5,7 +5,7 @@
 | Information | Détail |
 |---|---|
 | **Rôle** | Construit le back-end de la plateforme : il reçoit les demandes de l'interface et applique les règles étier |
-| **Version** | NestJS 11.2.8 |
+| **Version** | NestJS 12.4.0 |
 | **Adresse en local** | <https://pme.localhost/api/v1> |
 
 ## Description
@@ -52,12 +52,20 @@ REST : il reçoit les demandes de l'interface, applique les règles métier, pui
 | `make logs-api` | Affiche le journal de l'API, mis à jour en direct. |
 
 !!! note "À savoir"
-    `make api` a besoin de la base de données, de NATS et de Keycloak : lancer d'abord `make port-forward`.
+`make api` a besoin de la base de données, de NATS et de Keycloak : lancer d'abord `make port-forward`.
+
+!!! note "Version de Node"
+L'API demande Node 24 ou plus récent, la version utilisée aussi dans l'image Docker. Avec nvm : `nvm install 24`,
+puis `nvm alias default 24`.
+
+!!! note "Tests avec Jest"
+NestJS 12 est publié en ESM. Les commandes `npm test` lancent donc Jest avec l'option `--experimental-vm-modules`.
+Dans WebStorm, ajouter cette option aux options de Node de la configuration Jest.
 
 !!! note "Chiffrement des connexions"
-    Dans le cluster, les variables `DB_SSL_CA` et `NATS_TLS_CA` indiquent le fichier de l'autorité locale. Si elles sont
-    absentes, l'API se connecte sans chiffrement, comme dans les tests automatiques. `make api` les définit et utilise
-    `pme-ca.crt` : lancer d'abord `make ca-cert`.
+Dans le cluster, les variables `DB_SSL_CA` et `NATS_TLS_CA` indiquent le fichier de l'autorité locale. Si elles sont
+absentes, l'API se connecte sans chiffrement, comme dans les tests automatiques. `make api` les définit et utilise
+`pme-ca.crt` : lancer d'abord `make ca-cert`.
 
 ## Pour aller plus loin
 

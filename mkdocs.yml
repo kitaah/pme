@@ -42,6 +42,7 @@ nav:
       - PostgreSQL: outils/postgresql.md
       - Prometheus: outils/prometheus.md
       - React: outils/react.md
+      - shadcn/ui: outils/shadcn-ui.md
   - Contribuer:
       - Modèle de fiche outil: outils/modele-fiche.md
 
