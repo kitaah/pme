@@ -1,4 +1,5 @@
-# Front React servi par nginx (image `nginx-unprivileged`, utilisateur 101) : sert le site et achemine /api vers l'API et la moderation.
+# Front React servi par nginx (image `nginx-unprivileged`, utilisateur 101) : sert le site (fichiers statiques).
+# L'ingress achemine /api/v1 vers l'API et la moderation (k8s/08-ingress.yaml).
 # Systeme de fichiers en lecture seule : nginx n'ecrit que dans /tmp (fichier PID et caches temporaires).
 apiVersion: apps/v1
 kind: Deployment

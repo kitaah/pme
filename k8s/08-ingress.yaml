@@ -3,7 +3,12 @@
 # et le HTTP est redirige vers le HTTPS. Derriere l'ingress, les services restent en HTTP dans le cluster.
 # Le suffixe .localhost est voulu : les navigateurs traitent ces noms comme un contexte securise.
 # keycloak-js (PKCE) en a besoin ; avec un suffixe .local, la connexion echoue.
-#   pme.localhost        -> pme-frontend (le front sert aussi /api vers l'API et la moderation)
+#   pme.localhost        -> trois chemins, le plus long l'emporte :
+#                             /api/v1/moderation -> pme-moderation
+#                             /api/v1            -> pme-api
+#                             /                  -> pme-frontend (fichiers statiques)
+#                           Seul le prefixe /api/v1 est expose : /api/metrics et /api/health restent internes
+#                           (Prometheus et les sondes Kubernetes les lisent directement sur les services).
 #   keycloak.localhost   -> keycloak
 #   adminer.localhost    -> adminer
 #   grafana.localhost    -> grafana
@@ -35,6 +40,14 @@ spec:
     - host: pme.localhost
       http:
         paths:
+          - path: /api/v1/moderation
+            pathType: Prefix
+            backend:
+              service: { name: pme-moderation, port: { number: 3001 } }
+          - path: /api/v1
+            pathType: Prefix
+            backend:
+              service: { name: pme-api, port: { number: 3000 } }
           - path: /
             pathType: Prefix
             backend:

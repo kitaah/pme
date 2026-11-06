@@ -98,10 +98,10 @@ help:
 	@echo "    make perf                     - Tests de performance k6 (charge + decouplage), apres make perf-prepare"
 	@echo ""
 	@echo "  Documentation (MkDocs, Docker requis)"
-	@echo "    make docs-serve               - Apercu en direct : http://localhost:$(DOCS_PORT)"
+	@echo "    make docs-serve               - Apercu en direct : http://localhost:$(DOCS_PORT) (ouvre le navigateur)"
 	@echo "    make docs-check               - Construction stricte (lien casse ou page hors menu = echec)"
 	@echo "    make docs-image               - Image pme-docs:dev (site statique, nginx non-root)"
-	@echo "    make docs-run                 - Sert l'image : http://localhost:$(DOCS_IMAGE_PORT)"
+	@echo "    make docs-run                 - Sert l'image : http://localhost:$(DOCS_IMAGE_PORT) (ouvre le navigateur)"
 	@echo "    make docs-stop                - Arrete l'apercu et le site servis par docs-serve et docs-run"
 	@echo "    make docs-image-test          - Tests de l'image (container-structure-test + Trivy)"
 	@echo ""
@@ -119,16 +119,19 @@ minikube-up:
 	$(MAKE) ingress
 	$(MAKE) cert-manager
 	$(MAKE) ca-cert
-	@echo "Importer $(CA_FILE) dans le navigateur (voir docs/outils/certificat-local.md), puis : make deploy"
+	@echo "Importer $(CA_FILE) dans le navigateur (voir docs/outils/cert-manager.md), puis : make deploy"
 
 minikube-down:
 	minikube stop
 
 # Ingress-nginx (addon Minikube). On attend le controleur : un "make deploy" lance trop tot echoue sur
 # le webhook d'admission, qui n'est pas encore pret.
+# Le patch ajoute la compression gzip des reponses a la ConfigMap du controleur (desactivee par defaut). Un patch
+# et non un `kubectl apply` : la ConfigMap vient de l'addon (elle contient deja hsts: "false"), le patch n'ajoute que ces cles.
 ingress:
 	minikube addons enable ingress
 	kubectl -n ingress-nginx wait --for=condition=ready pod -l app.kubernetes.io/component=controller --timeout=180s
+	kubectl -n ingress-nginx patch configmap ingress-nginx-controller --type merge -p '{"data":{"use-gzip":"true","gzip-min-length":"1024","gzip-level":"5"}}'
 
 # cert-manager (certificats TLS) : installe une fois par cluster, puis cree l'autorite locale (k8s/cert-manager/issuers.yaml).
 # Le webhook de cert-manager demarre apres ses pods : la creation des emetteurs est reessayee jusqu'a ce qu'il reponde.

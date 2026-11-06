@@ -18,8 +18,8 @@ async function bootstrap() {
   await ensureStreams(config.nats);
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Deux relais de confiance : ingress-nginx puis nginx du front.
-  app.set('trust proxy', 2);
+  // Un seul relais de confiance : ingress-nginx.
+  app.set('trust proxy', 1);
   app.use(httpMetricsMiddleware);
   app.use(helmet());
   app.setGlobalPrefix('api');
