@@ -39,6 +39,10 @@ au service qui correspond à ce nom. Il déchiffre aussi les échanges HTTPS, av
 | <https://grafana.localhost> | `grafana` | 3000 | Tableaux de bord |
 | <https://prometheus.localhost> | `prometheus` | 9090 | Collecte des métriques |
 
+Sur l'adresse de l'application, l'ingress distingue trois chemins. Le chemin `/api/v1/moderation` mène au service de
+modération. Le chemin `/api/v1` mène à l'API. Tout le reste mène au site. Les chemins `/api/metrics` et `/api/health`
+ne sont pas exposés.
+
 Le chiffrement HTTPS s'arrête à l'ingress. Derrière lui, les échanges restent en HTTP dans le cluster.
 
 ## Fichiers et dossiers principaux
@@ -50,7 +54,7 @@ Le chiffrement HTTPS s'arrête à l'ingress. Derrière lui, les échanges resten
 | `k8s/03-keycloak.yaml` | Fixe l'adresse publique de Keycloak. |
 | `k8s/config/realm-pme.json` | Liste les adresses de retour autorisées après la connexion. |
 | `k8s/config/frontend-config.js` | Indique au front l'adresse de Keycloak. |
-| `Makefile` | Contient les noms d'hôte et les commandes de l'ingress. |
+| `Makefile` | Contient les noms d'hôte, les commandes de l'ingress et le réglage de la compression. |
 | `/etc/hosts` | Associe les noms d'hôte à l'adresse de l'ordinateur. |
 
 ## Commandes essentielles
@@ -60,7 +64,7 @@ Le chiffrement HTTPS s'arrête à l'ingress. Derrière lui, les échanges resten
 | Commande | Description |
 |---|---|
 | `make minikube-up` | Crée le cluster avec les ports 80 et 443 publiés sur l'ordinateur. |
-| `make ingress` | Active l'ingress dans Minikube et attend qu'il soit prêt. |
+| `make ingress` | Active l'ingress dans Minikube, attend qu'il soit prêt et active la compression. |
 | `make cert-manager` | Installe cert-manager, qui fournit le certificat HTTPS. |
 | `make hosts` | Affiche la ligne à ajouter au fichier hosts de l'ordinateur. |
 | `make deploy` | Installe les règles d'ingress et le certificat avec le reste de la plateforme. |
