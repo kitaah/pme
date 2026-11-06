@@ -65,6 +65,9 @@ export async function ensureStreams(nats: AppConfig['nats'], attempts = 20): Pro
         pass: nats.password,
         name: 'pme-moderation-topology',
         timeout: 3000,
+        // Meme reglage TLS que NatsClient : cette connexion, ouverte avant le consommateur, passe par le
+        // meme port et doit donc etre chiffree de la meme facon.
+        ...(nats.tlsCaFile ? { tls: { caFile: nats.tlsCaFile } } : {}),
       });
       try {
         const jsm = await connection.jetstreamManager();

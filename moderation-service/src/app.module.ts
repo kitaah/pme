@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -23,6 +24,9 @@ import { ModerationModule } from './moderation/moderation.module';
           database: db.name,
           username: db.user,
           password: db.password,
+          // Connexion chiffree des que l'autorite est fournie : `rejectUnauthorized` impose que le certificat
+          // du serveur soit signe par elle ET emis pour le nom utilise dans `host` (ici `postgres`).
+          ssl: db.sslCaFile ? { ca: readFileSync(db.sslCaFile, 'utf8'), rejectUnauthorized: true } : false,
           entities: [ModerationItem],
           migrations: [CreateModerationQueue1730000000000],
           migrationsRun: true,

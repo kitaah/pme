@@ -7,6 +7,10 @@
 #
 # Stockage non persistant (emptyDir) : suffisant pour le POC. Les messages survivent a l'arret du
 # SERVICE DE MODERATION (ils restent dans le flux), pas a la perte du pod NATS.
+#
+# Connexions des clients chiffrees en TLS 1.3 exclusivement (k8s/config/nats.conf), avec un certificat
+# signe par l'autorite locale (k8s/00-internal-tls.yaml). Le port de supervision 8222 reste en HTTP simple :
+# il n'expose aucun message, et les sondes de Kubernetes comme `make queues` continuent de le lire.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -43,6 +47,12 @@ spec:
             - "--http_port=8222"
             - "--user=$(NATS_USER)"
             - "--pass=$(NATS_PASSWORD)"
+            # Le chiffrement du port des clients est decrit dans k8s/config/nats.conf (certificat, cle et
+            # version minimale de TLS), et non en options : `min_version` n'existe qu'en fichier.
+            # Le chiffrement n'exige pas de certificat des clients (ce serait --tlsverify, et il faudrait
+            # alors emettre un certificat par service). NATS ne relit pas son certificat a chaud : apres un
+            # renouvellement (90 jours), redemarrer le pod (`kubectl -n pme rollout restart deploy/nats`).
+            - "--config=/etc/nats/conf/nats.conf"
           ports:
             - name: client
               containerPort: 4222
@@ -64,6 +74,12 @@ spec:
           volumeMounts:
             - name: jetstream
               mountPath: /data/jetstream
+            - name: tls
+              mountPath: /etc/nats/tls
+              readOnly: true
+            - name: config
+              mountPath: /etc/nats/conf
+              readOnly: true
           readinessProbe:
             httpGet: { path: /healthz, port: 8222 }
             initialDelaySeconds: 3
@@ -75,6 +91,15 @@ spec:
       volumes:
         - name: jetstream
           emptyDir: {}
+        # 0440 : lisible par le proprietaire (root, qui execute nats-server dans cette image) et son groupe.
+        - name: tls
+          secret:
+            secretName: nats-tls
+            defaultMode: 0440
+        - name: config
+          configMap:
+            name: nats-config
+            defaultMode: 0440
 ---
 apiVersion: v1
 kind: Service

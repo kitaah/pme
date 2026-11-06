@@ -41,7 +41,10 @@ spec:
             - |
               KCADM=/opt/keycloak/bin/kcadm.sh
               CFG=/tmp/kcadm.config
-              login() { "$KCADM" config credentials --config "$CFG" --server http://keycloak:8080 --realm master --user "$1" --password "$ADMIN_PASSWORD" >/dev/null 2>&1; }
+              login() {
+                "$KCADM" config credentials --config "$CFG" --server http://keycloak:8080 \
+                  --realm master --user "$1" --password "$ADMIN_PASSWORD" >/dev/null 2>&1
+              }
 
               # Attend que Keycloak reponde, puis regarde quel compte est utilisable.
               ready=""

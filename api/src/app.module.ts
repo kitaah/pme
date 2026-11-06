@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -24,6 +25,9 @@ import { CreateListings1730000000000 } from './migrations/1730000000000-create-l
           database: db.name,
           username: db.user,
           password: db.password,
+          // Connexion chiffree des que l'autorite est fournie : `rejectUnauthorized` impose que le certificat
+          // du serveur soit signe par elle ET emis pour le nom utilise dans `host` (ici `postgres`).
+          ssl: db.sslCaFile ? { ca: readFileSync(db.sslCaFile, 'utf8'), rejectUnauthorized: true } : false,
           entities: [Listing],
           migrations: [CreateListings1730000000000],
           migrationsRun: true, // schema gere uniquement par migrations (jamais synchronize)

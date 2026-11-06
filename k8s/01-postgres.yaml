@@ -1,5 +1,7 @@
 # PostgreSQL 18 : une instance, trois bases (pme, moderation, keycloak) creees par postgres-init.sh.
-# Simplification du POC par rapport au projet Spring : pas de TLS interne (sslmode=require retire).
+# Connexions chiffrees : certificat signe par l'autorite locale (k8s/00-internal-tls.yaml) et TLS obligatoire
+# pour tout ce qui vient du reseau (k8s/config/postgres-hba.conf). Les clients verifient le certificat du
+# serveur (`verify-full`) grace a la ConfigMap `pme-ca` (make ca-configmap).
 # Durcissement partiel : l'entrypoint de l'image demarre en root pour initialiser le volume, puis passe a l'utilisateur
 # `postgres`. Les capacites ne sont donc pas toutes retirees (voir le namespace : `restricted` est seulement audite).
 apiVersion: v1
@@ -41,10 +43,33 @@ spec:
       automountServiceAccountToken: false
       securityContext:
         seccompProfile: { type: RuntimeDefault }
+        # PostgreSQL refuse de demarrer si sa cle privee est lisible au-dela de son proprietaire et de son groupe.
+        # Un Secret monte appartient a root : fsGroup en donne le groupe a `postgres` (GID 70 dans l'image Alpine),
+        # qui peut alors lire la cle en 0640. OnRootMismatch evite de reparcourir le volume de donnees a chaque demarrage.
+        fsGroup: 70
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: postgres
           image: postgres:18-alpine
-          args: ["postgres", "-c", "shared_buffers=64MB"]
+          args:
+            - postgres
+            - -c
+            - shared_buffers=64MB
+            # TLS : certificat et cle fournis par cert-manager, qui les renouvele seul dans le Secret `postgres-tls`.
+            # PostgreSQL ne relit ses certificats qu'au signal de rechargement : apres un renouvellement (90 jours),
+            # redemarrer le pod (`kubectl -n pme rollout restart deploy/postgres`).
+            - -c
+            - ssl=on
+            - -c
+            - ssl_cert_file=/etc/postgresql/tls/tls.crt
+            - -c
+            - ssl_key_file=/etc/postgresql/tls/tls.key
+            # Version minimale : le serveur refuse de negocier TLS 1.2 ou plus ancien (defaut : TLSv1.2).
+            - -c
+            - ssl_min_protocol_version=TLSv1.3
+            # Regles d'acces : TLS obligatoire depuis le reseau (voir le fichier).
+            - -c
+            - hba_file=/etc/postgresql/hba/pg_hba.conf
           ports:
             - containerPort: 5432
           env:
@@ -66,6 +91,12 @@ spec:
               mountPath: /var/lib/postgresql
             - name: init
               mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+            - name: tls
+              mountPath: /etc/postgresql/tls
+              readOnly: true
+            - name: hba
+              mountPath: /etc/postgresql/hba
               readOnly: true
           # Le premier demarrage initialise le volume et cree les bases (postgres-init.sh) : la startupProbe laisse
           # jusqu'a 150 s (5 s x 30) avant que la liveness ne s'applique.
@@ -91,6 +122,15 @@ spec:
           configMap:
             name: postgres-init
             defaultMode: 0555
+        # 0640 : lisible par root (proprietaire) et par le groupe `postgres` (fsGroup ci-dessus), par personne d'autre.
+        - name: tls
+          secret:
+            secretName: postgres-tls
+            defaultMode: 0640
+        - name: hba
+          configMap:
+            name: postgres-hba
+            defaultMode: 0440
 ---
 apiVersion: v1
 kind: Service

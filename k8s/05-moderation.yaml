@@ -33,6 +33,11 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
+        # Autorite locale, copiee depuis le namespace cert-manager par `make ca-configmap` : sert a verifier
+        # le certificat de PostgreSQL. En entreprise, trust-manager produit et maintient cette meme ConfigMap.
+        - name: ca
+          configMap:
+            name: pme-ca
       # Desactive l'injection automatique par Kubernetes des variables d'environnement
       # "liens Docker" d'un Service (ex. NATS_PORT=tcp://<ip>:4222) : son nom entre en
       # collision avec la variable du meme nom que l'application attend (un entier simple).
@@ -56,6 +61,10 @@ spec:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef: { name: pme-secrets, key: db-password }
+            # Chemin de l'autorite locale : sa presence active le TLS vers PostgreSQL, avec verification du nom du
+            # serveur (equivalent de sslmode=verify-full). Absente en local et dans les tests : connexion en clair.
+            - name: DB_SSL_CA
+              value: /etc/ssl/pme/ca.crt
             - name: NATS_HOST
               value: nats
             - name: NATS_USER
@@ -64,6 +73,10 @@ spec:
             - name: NATS_PASSWORD
               valueFrom:
                 secretKeyRef: { name: pme-secrets, key: nats-password }
+            # Meme autorite que pour PostgreSQL : sa presence active le TLS vers NATS, avec verification
+            # du nom du serveur. Absente en local et dans les tests : connexion en clair.
+            - name: NATS_TLS_CA
+              value: /etc/ssl/pme/ca.crt
             - name: KEYCLOAK_ISSUER
               value: https://keycloak.localhost/realms/pme
             - name: KEYCLOAK_JWKS_URI
@@ -77,6 +90,9 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            - name: ca
+              mountPath: /etc/ssl/pme
+              readOnly: true
           resources:
             requests: { cpu: 100m, memory: 128Mi }
             limits: { cpu: 500m, memory: 256Mi }

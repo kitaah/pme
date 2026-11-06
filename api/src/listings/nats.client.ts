@@ -22,6 +22,9 @@ export class NatsClient implements OnApplicationShutdown {
       pass: this.options.password,
       name: 'pme-api',
       timeout: 3000,
+      // TLS des que l'autorite est fournie : le certificat du serveur doit etre signe par elle ET emis pour
+      // le nom utilise dans `servers` (ici `nats`). Sans elle, l'option est absente : connexion en clair.
+      ...(this.options.tlsCaFile ? { tls: { caFile: this.options.tlsCaFile } } : {}),
       // Une coupure passagere du broker ne doit pas condamner la connexion pour toute la duree de vie du pod.
       maxReconnectAttempts: -1,
       reconnectTimeWait: 1000,
