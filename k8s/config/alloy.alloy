@@ -1,6 +1,6 @@
 // Configuration d'Alloy (ConfigMap `alloy-config`, generee par kustomize :
 // modifier ce fichier redemarre Alloy automatiquement).
-// Chaine : decouverte des pods du namespace -> etiquettes -> lecture des logs -> envoi a Loki.
+// Chaine : decouverte des pods du namespace -> etiquettes -> lecture des logs -> filtrage -> envoi a Loki.
 
 // 1. Decouverte : tous les pods du namespace pme (un seul namespace, voir le Role dans k8s/13-alloy.yaml).
 discovery.kubernetes "pods" {
@@ -36,10 +36,26 @@ discovery.relabel "pods" {
 // 3. Lecture : les logs sont lus par l'API Kubernetes (comme `kubectl logs`), sans acces aux fichiers du noeud.
 loki.source.kubernetes "pods" {
   targets    = discovery.relabel.pods.output
-  forward_to = [loki.write.loki.receiver]
+  forward_to = [loki.process.filtrage.receiver]
 }
 
-// 4. Envoi : au Service `loki`, par son nom dans le cluster.
+// 4. Filtrage : ecarte le bruit avant l'envoi, pour ne stocker que ce qui sert. Une regle = un cas, a documenter ici.
+//   - Adminer (serveur PHP integre) journalise chaque requete, y compris les sondes de Kubernetes (readiness et
+//     liveness, toutes les 10 a 20 s). Elles viennent du noeud, 10.244.0.1 (passerelle du reseau des pods de Minikube).
+//     Les vraies requetes arrivent de l'ingress, d'une autre adresse : elles restent journalisees.
+//     Les sondes du front sont deja ecartees a la source (access_log off, frontend/nginx.conf).
+loki.process "filtrage" {
+  forward_to = [loki.write.loki.receiver]
+
+  stage.match {
+    selector = `{app="adminer"}`
+    stage.drop {
+      expression = `\[::ffff:10\.244\.0\.1\]:\d+ `
+    }
+  }
+}
+
+// 5. Envoi : au Service `loki`, par son nom dans le cluster.
 loki.write "loki" {
   endpoint {
     url = "http://loki:3100/loki/api/v1/push"
