@@ -1,0 +1,80 @@
+# Administrateur permanent de Keycloak. Keycloak 26 ne cree au demarrage qu'un compte d'amorcage "temporaire"
+# (k8s/03-keycloak.yaml, utilisateur `bootstrap`) et affiche un avertissement tant qu'on l'utilise.
+# Ce Job, une fois Keycloak disponible :
+#   1. cree l'administrateur permanent du realm master (identifiants : keycloak-admin-* de pme-secrets) ;
+#   2. supprime le compte d'amorcage.
+# Il peut etre rejoue sans effet : si l'administrateur permanent existe deja, il s'arrete aussitot.
+# Le mot de passe d'amorcage est celui de pme-secrets (keycloak-admin-password) : le compte ne vit que quelques secondes.
+# Le Job est supprime 5 min apres sa fin (ttlSecondsAfterFinished) : un modele de Job ne peut pas etre modifie apres
+# sa creation, et ainsi chaque `make deploy` le recree avec la version d'image courante.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: keycloak-admin
+  labels:
+    app: keycloak-admin
+    app.kubernetes.io/name: keycloak-admin
+    app.kubernetes.io/component: identity
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 900
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app: keycloak-admin
+        app.kubernetes.io/name: keycloak-admin
+        app.kubernetes.io/component: identity
+    spec:
+      restartPolicy: OnFailure
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: kcadm
+          image: quay.io/keycloak/keycloak:26.8.1
+          command: ["/bin/bash", "-eu", "-c"]
+          args:
+            - |
+              KCADM=/opt/keycloak/bin/kcadm.sh
+              CFG=/tmp/kcadm.config
+              login() { "$KCADM" config credentials --config "$CFG" --server http://keycloak:8080 --realm master --user "$1" --password "$ADMIN_PASSWORD" >/dev/null 2>&1; }
+
+              # Attend que Keycloak reponde, puis regarde quel compte est utilisable.
+              ready=""
+              for ((i = 0; i < 90; i++)); do
+                if login "$ADMIN_USER"; then echo "Administrateur permanent deja present : rien a faire."; exit 0; fi
+                if login bootstrap; then ready=1; break; fi
+                echo "En attente de Keycloak"; sleep 5
+              done
+              test -n "$ready" || { echo "Keycloak injoignable ou compte d'amorcage absent"; exit 1; }
+
+              echo "Creation de l'administrateur permanent $ADMIN_USER"
+              "$KCADM" create users --config "$CFG" -r master -s username="$ADMIN_USER" -s enabled=true \
+                -s email="$ADMIN_USER@petitemaisonepouvante.local" -s emailVerified=true -s firstName=Administrateur -s lastName=PME
+              "$KCADM" set-password --config "$CFG" -r master --username "$ADMIN_USER" --new-password "$ADMIN_PASSWORD"
+              "$KCADM" add-roles --config "$CFG" -r master --uusername "$ADMIN_USER" --rolename admin
+
+              # Suppression du compte d'amorcage depuis le nouveau compte.
+              login "$ADMIN_USER"
+              id=$("$KCADM" get users --config "$CFG" -r master -q username=bootstrap -q exact=true --fields id --format csv --noquotes)
+              test -n "$id" && "$KCADM" delete "users/$id" --config "$CFG" -r master
+              echo "Compte d'amorcage supprime."
+          env:
+            - name: ADMIN_USER
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: keycloak-admin-username }
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: keycloak-admin-password }
+            - name: JAVA_OPTS
+              value: "-Xmx192m"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 192Mi }
+            limits: { cpu: 1000m, memory: 384Mi }

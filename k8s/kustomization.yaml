@@ -9,6 +9,7 @@ resources:
   - 01-postgres.yaml
   - 02-nats.yaml
   - 03-keycloak.yaml
+  - 03-keycloak-admin-job.yaml
   - 04-api.yaml
   - 05-moderation.yaml
   - 06-frontend.yaml
