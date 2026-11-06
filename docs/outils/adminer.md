@@ -5,7 +5,7 @@
 | Information | Détail |
 |---|---|
 | **Rôle** | Permet de consulter les bases PostgreSQL depuis un navigateur |
-| **Version** | Adminer 4.8.1 |
+| **Version** | Adminer 6.3.0 (image officielle, PHP 8.4) |
 | **Adresse en local** | <https://adminer.localhost> |
 
 ## Description

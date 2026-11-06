@@ -12,19 +12,22 @@
 
 Alloy est un outil libre de collecte de données de supervision. Il remplace Promtail, l'ancien outil de Loki, qui
 n'est plus maintenu. Alloy demande à Kubernetes la liste des services en cours d'exécution. Il lit ensuite leurs
-journaux, y ajoute des étiquettes et les envoie à Loki. Sa configuration décrit cette chaîne étape par étape.
+journaux, y ajoute des étiquettes, écarte ceux qui ne servent à rien et les envoie à Loki. Sa configuration décrit cette
+chaîne étape par étape.
 
 **Définitions**
 
 - **Collecteur** : outil qui lit des données à la source et les transmet à un autre outil.
 - **Étiquette** : mot-clé attaché à un journal pour le retrouver, comme le nom du service.
 - **Rôle d'accès** : liste des droits donnés à un outil dans Kubernetes. Celui d'Alloy permet seulement de lire.
+- **Sonde** : requête que Kubernetes envoie à un service à intervalles réguliers pour vérifier qu'il fonctionne.
 - **Composant** : étape de la chaîne de collecte, comme la découverte des pods, l'ajout d'étiquettes ou l'envoi à Loki.
 
 ## Rôle dans le projet
 
 - Il lit les journaux de tous les services de la plateforme.
 - Il ajoute à chaque ligne le nom du service et du pod.
+- Il écarte les lignes sans intérêt : les sondes de Kubernetes dans les journaux d'Adminer.
 - Il envoie les journaux à Loki.
 - Il suit seul les nouveaux pods créés par l'autoscaling.
 - Son interface web montre l'état de chaque composant et le trajet des journaux. Elle passe par l'ingress.
@@ -36,7 +39,7 @@ journaux, y ajoute des étiquettes et les envoie à Loki. Sa configuration décr
 |---|---|
 | `k8s/13-alloy.yaml` | Déploie Alloy, lui donne le droit de lire les pods et l'expose par un service. |
 | `k8s/08-ingress.yaml` | Rend l'interface accessible sur `alloy.localhost`. |
-| `k8s/config/alloy.alloy` | Décrit la chaîne de collecte des journaux. |
+| `k8s/config/alloy.alloy` | Décrit la chaîne de collecte : lecture, étiquettes, filtrage, envoi. |
 
 ## Commandes essentielles
 
@@ -51,6 +54,11 @@ journaux, y ajoute des étiquettes et les envoie à Loki. Sa configuration décr
 !!! note "À savoir"
     Alloy est le seul outil de supervision qui a besoin de parler à Kubernetes. Son rôle d'accès est limité au
     namespace du projet, en lecture seule.
+
+!!! note "À savoir"
+    Le filtrage se fait à deux endroits. Les sondes du front sont écartées à la source (`access_log off` dans
+    `frontend/nginx.conf`). Celles d'Adminer, dont le serveur journalise tout, sont écartées dans `alloy.alloy`, avec une
+    règle par cas. Les vraies requêtes d'Adminer, qui arrivent de l'ingress, restent dans Loki.
 
 !!! warning "Attention"
     L'interface d'Alloy n'a pas d'authentification, comme celles de Prometheus et d'Adminer. Elle convient à un poste
