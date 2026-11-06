@@ -18,6 +18,8 @@ resources:
   - 09-prometheus.yaml
   - 10-grafana.yaml
   - 11-autoscaling.yaml
+  - 12-loki.yaml
+  - 13-alloy.yaml
 # Label commun a toutes les ressources et aux modeles de pods. Les selecteurs ne changent pas (immuables).
 labels:
   - pairs:
@@ -37,15 +39,23 @@ configMapGenerator:
   - name: prometheus-config
     files:
       - prometheus.yml=config/prometheus.yml
+  - name: loki-config
+    files:
+      - loki.yml=config/loki.yml
+  - name: alloy-config
+    files:
+      - config.alloy=config/alloy.alloy
   - name: grafana-datasources
     files:
       - prometheus.yml=config/grafana-datasource.yml
+      - loki.yml=config/grafana-datasource-loki.yml
   - name: grafana-dashboards-provider
     files:
       - dashboards.yml=config/grafana-dashboards.yml
   - name: grafana-dashboards
     files:
       - pme.json=config/grafana-dashboard-pme.json
+      - logs.json=config/grafana-dashboard-logs.json
 # Point d'entree pour la future chaine CI/CD : `kustomize edit set image pme-api=<registre>/pme-api:<sha>`
 images:
   - name: pme-api

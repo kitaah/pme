@@ -11,7 +11,7 @@
         port-forward stop-forward api moderation frontend \
         smoke token queues db-listings db-moderation create-grafana-db \
         demo-stop-moderation demo-start-moderation demo-kill-api \
-        app keycloak nats adminer prometheus grafana \
+        app keycloak nats adminer prometheus grafana alloy \
         docs-serve docs-check docs-image docs-run docs-stop docs-image-test
 
 # NS sert aux commandes kubectl. Il n'est PAS propage aux manifestes : le namespace est
@@ -35,6 +35,7 @@ KEYCLOAK_HOST ?= keycloak.localhost
 ADMINER_HOST ?= adminer.localhost
 GRAFANA_HOST ?= grafana.localhost
 PROMETHEUS_HOST ?= prometheus.localhost
+ALLOY_HOST ?= alloy.localhost
 NATS_MONITOR_PORT ?= 8222
 DOCS_PORT ?= 8005
 DOCS_IMAGE_PORT ?= 8083
@@ -47,7 +48,8 @@ NATS_URL := http://localhost:$(NATS_MONITOR_PORT)
 ADMINER_URL := https://$(ADMINER_HOST)
 PROMETHEUS_URL := https://$(PROMETHEUS_HOST)
 GRAFANA_URL := https://$(GRAFANA_HOST)
-HOSTS := $(APP_HOST) $(KEYCLOAK_HOST) $(ADMINER_HOST) $(GRAFANA_HOST) $(PROMETHEUS_HOST)
+ALLOY_URL := https://$(ALLOY_HOST)
+HOSTS := $(APP_HOST) $(KEYCLOAK_HOST) $(ADMINER_HOST) $(GRAFANA_HOST) $(PROMETHEUS_HOST) $(ALLOY_HOST)
 
 # Charge .env s'il existe (POSTGRES_*, NATS_*, KEYCLOAK_ADMIN*)
 -include .env
@@ -107,7 +109,7 @@ help:
 	@echo "    make docs-stop                - Arrete l'apercu et le site servis par docs-serve et docs-run"
 	@echo "    make docs-image-test          - Tests de l'image (container-structure-test + Trivy)"
 	@echo ""
-	@echo "  Ouvrir : make app | keycloak | nats | adminer | prometheus | grafana"
+	@echo "  Ouvrir : make app | keycloak | nats | adminer | prometheus | grafana | alloy"
 
 # ---- Cluster Minikube ----
 
@@ -494,3 +496,6 @@ prometheus:
 
 grafana:
 	@xdg-open "$(GRAFANA_URL)" 2>/dev/null || open "$(GRAFANA_URL)" 2>/dev/null || echo "Ouvrir : $(GRAFANA_URL)"
+
+alloy:
+	@xdg-open "$(ALLOY_URL)" 2>/dev/null || open "$(ALLOY_URL)" 2>/dev/null || echo "Ouvrir : $(ALLOY_URL)"
