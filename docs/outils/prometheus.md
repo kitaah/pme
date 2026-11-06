@@ -5,7 +5,7 @@
 | Information | Détail |
 |---|---|
 | **Rôle** | Collecte et conserve les mesures de fonctionnement des services |
-| **Version** | Prometheus 2.55.1 |
+| **Version** | Prometheus 3.13.5 (LTS) |
 | **Adresse en local** | <https://prometheus.localhost> |
 
 ## Description
@@ -54,11 +54,11 @@ enregistre ces mesures avec leur date. Il propose le langage PromQL pour les int
 | `make pods` | Indique si Prometheus est prêt. |
 
 !!! tip "Astuce"
-    Dans la page « Graph », saisir `http_request_duration_seconds_count` pour afficher le nombre de requêtes reçues par
-    chaque service.
+Dans la page « Graph », saisir `http_request_duration_seconds_count` pour afficher le nombre de requêtes reçues par
+chaque service.
 
 !!! note "À savoir"
-    Les mesures ne sont pas écrites sur un volume. Elles disparaissent quand le conteneur Prometheus redémarre.
+Les mesures ne sont pas écrites sur un volume. Elles disparaissent quand le conteneur Prometheus redémarre.
 
 ## Pour aller plus loin
 
