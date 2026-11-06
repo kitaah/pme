@@ -49,7 +49,11 @@ Chaque application tourne avec plusieurs pods. L'ingress envoie les requêtes di
 l'autoscaler en ajoute ou en retire, la répartition suit sans rien changer. Il joue donc le rôle de répartiteur de
 charge, sans service de type `LoadBalancer`.
 
-Le chiffrement HTTPS s'arrête à l'ingress. Derrière lui, les échanges restent en HTTP dans le cluster.
+Le chiffrement HTTPS s'arrête à l'ingress. Derrière lui, les échanges avec les services restent en HTTP dans le cluster. Seules les connexions vers PostgreSQL et NATS sont chiffrées : voir leurs fiches.
+
+L'ingress accepte TLS 1.2 et TLS 1.3, et refuse les versions plus anciennes. C'est le réglage usuel d'une entrée
+publique : le projet ne maîtrise pas tous les navigateurs ni les services externes qui s'y connecteront. Les
+connexions internes vers PostgreSQL et NATS n'acceptent, elles, que TLS 1.3.
 
 ## Fichiers et dossiers principaux
 
