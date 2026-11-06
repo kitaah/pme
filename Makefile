@@ -5,7 +5,7 @@
 .PHONY: help install test test-integration image-test \
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
         perf perf-prepare perf-reset perf-load perf-decoupling \
-        minikube-up minikube-down ingress cert-manager ca-cert tunnel hosts \
+        minikube-up minikube-down ingress cert-manager ca-cert metrics-server hpa tunnel hosts \
         secrets image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         pods logs logs-api logs-moderation logs-keycloak \
         port-forward stop-forward api moderation frontend \
@@ -22,7 +22,7 @@ MINIKUBE_CPUS ?= 2
 CERT_MANAGER_VERSION ?= v1.18.2
 CA_FILE ?= pme-ca.crt
 
-# Les interfaces web passent par l'ingress en HTTPS (certificat cert-manager signe par une autorite locale), sous des
+# Les interfaces web passent par l'ingress en HTTPS (certificat cert-manager signe par ufeat(k8s): ajouter l'autoscaling, le budget de disponibilité et la collecte des métriques par podne autorite locale), sous des
 # noms d'hote .localhost (contexte securise pour les navigateurs : requis par keycloak-js).
 # Pour les joindre depuis l'ordinateur : "make tunnel" (redirige les ports 80 et 443 vers l'ingress), puis la ligne /etc/hosts de "make hosts".
 # Le navigateur doit faire confiance a l'autorite locale : "make ca-cert" ecrit pme-ca.crt, a importer une fois.
@@ -61,6 +61,8 @@ help:
 	@echo "    make minikube-down            - Arrete Minikube"
 	@echo "    make ingress                  - Active l'ingress (addon Minikube) et attend qu'il soit pret"
 	@echo "    make cert-manager             - Installe cert-manager et l'autorite locale (certificats TLS)"
+	@echo "    make metrics-server           - Active metrics-server (addon Minikube), requis par l'autoscaling"
+	@echo "    make hpa                      - Suit l'autoscaling : charge, cible et nombre de pods"
 	@echo "    make ca-cert                  - Ecrit l'autorite locale dans $(CA_FILE), a importer dans le navigateur"
 	@echo "    make tunnel                   - Redirige les ports 80 et 443 vers l'ingress (cluster cree sans --ports ; laisser ouvert, mot de passe demande)"
 	@echo "    make hosts                    - Affiche la ligne a ajouter dans /etc/hosts pour les noms .localhost"
@@ -119,6 +121,7 @@ minikube-up:
 	$(MAKE) ingress
 	$(MAKE) cert-manager
 	$(MAKE) ca-cert
+	$(MAKE) metrics-server
 	@echo "Importer $(CA_FILE) dans le navigateur (voir docs/outils/cert-manager.md), puis : make deploy"
 
 minikube-down:
@@ -132,6 +135,16 @@ ingress:
 	minikube addons enable ingress
 	kubectl -n ingress-nginx wait --for=condition=ready pod -l app.kubernetes.io/component=controller --timeout=180s
 	kubectl -n ingress-nginx patch configmap ingress-nginx-controller --type merge -p '{"data":{"use-gzip":"true","gzip-min-length":"1024","gzip-level":"5"}}'
+
+# metrics-server (addon Minikube) : fournit la charge des pods a l'autoscaler (k8s/11-autoscaling.yaml). Sans lui, la cible
+# de chaque autoscaler reste <unknown> et le nombre de pods ne change jamais. Les premieres mesures arrivent apres ~1 minute.
+metrics-server:
+	minikube addons enable metrics-server
+	kubectl -n kube-system wait --for=condition=available deployment/metrics-server --timeout=180s
+
+# Etat de l'autoscaling : charge actuelle / cible, et nombre de pods. Ctrl+C pour quitter.
+hpa:
+	kubectl -n $(NS) get hpa -w
 
 # cert-manager (certificats TLS) : installe une fois par cluster, puis cree l'autorite locale (k8s/cert-manager/issuers.yaml).
 # Le webhook de cert-manager demarre apres ses pods : la creation des emetteurs est reessayee jusqu'a ce qu'il reponde.

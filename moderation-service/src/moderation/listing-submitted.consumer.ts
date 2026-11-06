@@ -51,7 +51,7 @@ export class ListingSubmittedConsumer implements OnApplicationShutdown {
     this.logger.log(`Consommateur ${MODERATION_CONSUMER} demarre sur le flux ${LISTINGS_STREAM}`);
   }
 
-  /** Un message a la fois : l'ordre d'arrivee des annonces est conserve. */
+  /** Un message a la fois par pod. Avec plusieurs pods, JetStream repartit les messages : chaque annonce n'est traitee que par un seul. */
   private async run(messages: ConsumerMessages): Promise<void> {
     for await (const message of messages) {
       await this.handle(message);

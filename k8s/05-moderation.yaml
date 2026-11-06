@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/name: pme-moderation
     app.kubernetes.io/component: backend
 spec:
-  replicas: 1
+  # Pas de `replicas` : le nombre de pods est piloge par l'autoscaler (k8s/11-autoscaling.yaml, minimum 2).
   revisionHistoryLimit: 3
   strategy:
     type: RollingUpdate
@@ -102,6 +102,23 @@ metadata:
     app.kubernetes.io/name: pme-moderation
     app.kubernetes.io/component: backend
 spec:
+  selector:
+    app: pme-moderation
+  ports:
+    - port: 3001
+      targetPort: 3001
+---
+# Service sans adresse (headless) : son nom DNS renvoie l'adresse de chaque pod. Prometheus s'en sert pour interroger
+# chaque pod separement (k8s/config/prometheus.yml) ; via le Service normal, chaque lecture tomberait sur un pod different.
+apiVersion: v1
+kind: Service
+metadata:
+  name: pme-moderation-headless
+  labels:
+    app.kubernetes.io/name: pme-moderation
+    app.kubernetes.io/component: backend
+spec:
+  clusterIP: None
   selector:
     app: pme-moderation
   ports:

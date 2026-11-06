@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/name: pme-api
     app.kubernetes.io/component: backend
 spec:
-  replicas: 1
+  # Pas de `replicas` : le nombre de pods est piloge par l'autoscaler (k8s/11-autoscaling.yaml, minimum 2).
   revisionHistoryLimit: 3
   strategy:
     type: RollingUpdate
@@ -71,7 +71,9 @@ spec:
               value: http://keycloak:8080/realms/pme/protocol/openid-connect/certs
             - name: KEYCLOAK_ALLOWED_CLIENTS
               value: pme-web,pme-cli
-            # requetes par minute et par IP ; relevee temporairement par `make perf-prepare`
+            # Limite de debit : requetes par minute et par IP, comptees en memoire dans chaque pod. Avec plusieurs pods,
+            # la limite effective est multipliee par leur nombre (un compteur partage, par exemple Redis, la rendrait exacte).
+            # Relevee temporairement par `make perf-prepare`.
             - name: THROTTLE_LIMIT
               value: "200"
           securityContext:
@@ -105,6 +107,23 @@ metadata:
     app.kubernetes.io/name: pme-api
     app.kubernetes.io/component: backend
 spec:
+  selector:
+    app: pme-api
+  ports:
+    - port: 3000
+      targetPort: 3000
+---
+# Service sans adresse (headless) : son nom DNS renvoie l'adresse de chaque pod. Prometheus s'en sert pour interroger
+# chaque pod separement (k8s/config/prometheus.yml) ; via le Service normal, chaque lecture tomberait sur un pod different.
+apiVersion: v1
+kind: Service
+metadata:
+  name: pme-api-headless
+  labels:
+    app.kubernetes.io/name: pme-api
+    app.kubernetes.io/component: backend
+spec:
+  clusterIP: None
   selector:
     app: pme-api
   ports:

@@ -1,0 +1,111 @@
+# Montee en charge de l'API, de la moderation et du front.
+#  - HorizontalPodAutoscaler : entre 2 et 4 pods, selon l'utilisation du processeur rapportee a `resources.requests`
+#    (70 %). Il lit les mesures de metrics-server (addon Minikube, `make metrics-server`) ; sans lui, la cible reste
+#    `<unknown>` et rien ne change. Le nombre de pods n'est donc pas fixe dans les Deployments.
+#  - PodDisruptionBudget : au moins un pod reste disponible pendant une maintenance ou un vidage de noeud.
+# PostgreSQL, NATS, Keycloak, Adminer, Prometheus et Grafana restent a un seul pod : ils ne sont pas repliques ici.
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: pme-api
+  labels:
+    app.kubernetes.io/name: pme-api
+    app.kubernetes.io/component: backend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pme-api
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pme-api
+  labels:
+    app.kubernetes.io/name: pme-api
+    app.kubernetes.io/component: backend
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: pme-api
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: pme-moderation
+  labels:
+    app.kubernetes.io/name: pme-moderation
+    app.kubernetes.io/component: backend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pme-moderation
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pme-moderation
+  labels:
+    app.kubernetes.io/name: pme-moderation
+    app.kubernetes.io/component: backend
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: pme-moderation
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: pme-frontend
+  labels:
+    app.kubernetes.io/name: pme-frontend
+    app.kubernetes.io/component: frontend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pme-frontend
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pme-frontend
+  labels:
+    app.kubernetes.io/name: pme-frontend
+    app.kubernetes.io/component: frontend
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: pme-frontend
