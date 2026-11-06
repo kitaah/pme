@@ -33,7 +33,7 @@ spec:
       # pg_isready renonce a tenter la connexion ("no attempt").
       initContainers:
         - name: wait-for-postgres
-          image: postgres:16-alpine
+          image: postgres:18-alpine
           command: ["sh", "-c", "until pg_isready -h postgres -p 5432 -U postgres; do echo 'En attente de PostgreSQL'; sleep 2; done"]
           resources:
             requests: { cpu: 10m, memory: 16Mi }

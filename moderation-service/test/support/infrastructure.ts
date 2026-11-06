@@ -33,7 +33,7 @@ export async function startPostgres(database: string): Promise<PostgresInfo> {
       stop: async () => undefined,
     };
   }
-  const container = await new PostgreSqlContainer('postgres:16-alpine').withDatabase(database).start();
+  const container = await new PostgreSqlContainer('postgres:18-alpine').withDatabase(database).start();
   return {
     host: container.getHost(),
     port: container.getPort(),
