@@ -5,7 +5,7 @@
 | Information | Détail |
 |---|---|
 | **Rôle** | Stocke les données de la plateforme dans des bases relationnelles |
-| **Version** | PostgreSQL 16 |
+| **Version** | PostgreSQL 18 |
 | **Adresse en local** | `localhost:5432` (après `make port-forward`) |
 
 ## Description
@@ -55,13 +55,13 @@ ou pas du tout. Une même instance PostgreSQL peut héberger plusieurs bases ind
 | `make create-grafana-db` | Crée la base de Grafana sur un cluster déjà installé. |
 
 !!! warning "Attention"
-    `make undeploy` supprime le volume : toutes les données sont perdues.
+`make undeploy` supprime le volume : toutes les données sont perdues.
 
 !!! note "À savoir"
-    Le script de création des bases ne s'exécute qu'au premier démarrage du volume. Sur un cluster existant, la base de
-    Grafana se crée avec `make create-grafana-db`.
+Le script de création des bases ne s'exécute qu'au premier démarrage du volume. Sur un cluster existant, la base de
+Grafana se crée avec `make create-grafana-db`.
 
 ## Pour aller plus loin
 
 - [Site officiel de PostgreSQL](https://www.postgresql.org/)
-- [Documentation officielle](https://www.postgresql.org/docs/16/)
+- [Documentation officielle](https://www.postgresql.org/docs/18/)

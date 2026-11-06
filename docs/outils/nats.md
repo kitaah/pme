@@ -5,7 +5,7 @@
 | Information | Détail |
 |---|---|
 | **Rôle** | Transmet des messages entre les services de la plateforme, sans en perdre |
-| **Version** | NATS 2.10 avec JetStream |
+| **Version** | NATS 2.14 avec JetStream |
 | **Adresse en local** | <http://localhost:8222/jsz> (après `make port-forward`) |
 
 ## Description

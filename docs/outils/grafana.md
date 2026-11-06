@@ -5,7 +5,7 @@
 | Information | Détail |
 |---|---|
 | **Rôle** | Affiche les mesures des services sous forme de tableaux de bord |
-| **Version** | Grafana 11.3.1 |
+| **Version** | Grafana 12.4.13 |
 | **Adresse en local** | <https://grafana.localhost> |
 
 ## Description
@@ -59,16 +59,16 @@ connexion par identifiant et mot de passe. Il enregistre ses propres réglages d
 | `make pods` | Indique si Grafana est prêt. |
 
 !!! tip "Astuce"
-    Les identifiants se définissent dans le fichier `.env`, avec `GRAFANA_ADMIN` et `GRAFANA_ADMIN_PASSWORD`. Après un
-    changement, relancer `make deploy`.
+Les identifiants se définissent dans le fichier `.env`, avec `GRAFANA_ADMIN` et `GRAFANA_ADMIN_PASSWORD`. Après un
+changement, relancer `make deploy`.
 
 !!! note "À savoir"
-    Le tableau de bord fourni ne peut pas être enregistré depuis l'interface. Pour le modifier, éditer le fichier JSON,
-    puis lancer `make deploy`.
+Le tableau de bord fourni ne peut pas être enregistré depuis l'interface. Pour le modifier, éditer le fichier JSON,
+puis lancer `make deploy`.
 
 !!! note "À savoir"
-    Les courbes sont affichées par pod : la légende indique le service et l'adresse du pod. Après un redéploiement,
-    les anciens pods restent visibles jusqu'à la fin de la période affichée (15 minutes par défaut).
+Les courbes sont affichées par pod : la légende indique le service et l'adresse du pod. Après un redéploiement,
+les anciens pods restent visibles jusqu'à la fin de la période affichée (15 minutes par défaut).
 
 ## Pour aller plus loin
 
