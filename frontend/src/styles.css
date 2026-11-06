@@ -56,6 +56,57 @@
   --font-display: Georgia, 'Times New Roman', serif;
 }
 
+/*
+ * ---- Pont avec shadcn/ui ----
+ * Les composants shadcn/ui (src/components/ui) lisent des variables « semantiques » (--primary,
+ * --background...). Elles pointent ici vers les jetons du projet : la palette ci-dessus reste
+ * l'unique source de verite, et src/theme.test.ts continue de la controler.
+ */
+:root {
+  --background: var(--color-page);
+  --foreground: var(--color-ink);
+  --card: var(--color-panel);
+  --card-foreground: var(--color-ink);
+  --popover: var(--color-panel);
+  --popover-foreground: var(--color-ink);
+  --primary: var(--color-blood);
+  --primary-foreground: #ffffff;
+  --secondary: var(--color-inset);
+  --secondary-foreground: var(--color-ink);
+  --muted: var(--color-inset);
+  --muted-foreground: var(--color-ink-muted);
+  --accent: var(--color-inset);
+  --accent-foreground: var(--color-ink);
+  --destructive: var(--color-blood);
+  --border: var(--color-line);
+  --input: var(--color-control);
+  --ring: var(--color-focus);
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+}
+
 @layer base {
   html {
     color-scheme: light;
