@@ -1,4 +1,4 @@
-# NATS 2.10 avec JetStream (option -js) : le stockage durable des messages.
+# NATS 2.14 avec JetStream (option -js) : le stockage durable des messages.
 # Sans JetStream, NATS ne garde rien : un message publie alors que le service de moderation est
 # arrete serait perdu. JetStream apporte le flux durable, l'acquittement manuel et la remise en file.
 #
@@ -35,7 +35,7 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: nats
-          image: nats:2.10-alpine
+          image: nats:2.14-alpine
           # Kubernetes remplace $(VAR) par la variable d'environnement du conteneur declaree ci-dessous.
           args:
             - "-js"
