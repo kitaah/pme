@@ -1,5 +1,5 @@
 # Loki : conserve les logs des services et permet de les interroger (langage LogQL), depuis Grafana.
-# Les logs sont ecrits dans le conteneur (volume temporaire) : ils disparaissent au redemarrage du pod, comme les mesures de Prometheus.
+# Les logs sont ecrits dans le conteneur (volume temporaire, limite a 1 Gi) : ils disparaissent au redemarrage du pod, comme les mesures de Prometheus.
 # Aucune authentification et pas d'ingress : Loki n'a pas d'interface web, seul Grafana l'interroge (http://loki:3100).
 # Ce sont les pods Alloy (k8s/13-alloy.yaml) qui lui envoient les logs.
 apiVersion: apps/v1
@@ -63,7 +63,9 @@ spec:
           configMap:
             name: loki-config
         - name: data
-          emptyDir: {}
+          # Plafond de taille : un pic de logs (test de charge) ne peut pas remplir le disque du noeud Minikube.
+          emptyDir:
+            sizeLimit: 1Gi
 ---
 apiVersion: v1
 kind: Service
