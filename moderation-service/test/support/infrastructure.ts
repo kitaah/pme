@@ -51,7 +51,7 @@ export async function startPostgres(database: string): Promise<PostgresInfo> {
  * serveur ne garde aucun message et les flux ne peuvent pas etre declares.
  */
 export async function startNats(): Promise<NatsInfo> {
-  const container = await new NatsContainer('nats:2.10-alpine')
+  const container = await new NatsContainer('nats:2.14-alpine')
     .withJetStream()
     .withUsername('test')
     .withPass('test')
