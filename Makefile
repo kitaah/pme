@@ -5,7 +5,7 @@
 .PHONY: help install test test-integration image-test \
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
         perf perf-prepare perf-reset perf-load perf-decoupling \
-        minikube-up minikube-down ingress tunnel hosts \
+        minikube-up minikube-down ingress cert-manager ca-cert tunnel hosts \
         secrets image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         pods logs logs-api logs-moderation logs-keycloak \
         port-forward stop-forward api moderation frontend \
@@ -19,12 +19,15 @@
 NS ?= pme
 MINIKUBE_MEMORY ?= 4096
 MINIKUBE_CPUS ?= 2
+CERT_MANAGER_VERSION ?= v1.18.2
+CA_FILE ?= pme-ca.crt
 
-# Les interfaces web passent par l'ingress (HTTP simple, pas de certificat), sous des noms d'hote .localhost
-# (contexte securise pour les navigateurs, meme en HTTP : requis par keycloak-js).
-# Pour les joindre depuis l'ordinateur : "make tunnel" (redirige le port 80 vers l'ingress), puis la ligne /etc/hosts de "make hosts".
+# Les interfaces web passent par l'ingress en HTTPS (certificat cert-manager signe par une autorite locale), sous des
+# noms d'hote .localhost (contexte securise pour les navigateurs : requis par keycloak-js).
+# Pour les joindre depuis l'ordinateur : "make tunnel" (redirige les ports 80 et 443 vers l'ingress), puis la ligne /etc/hosts de "make hosts".
+# Le navigateur doit faire confiance a l'autorite locale : "make ca-cert" ecrit pme-ca.crt, a importer une fois.
 # Ces noms sont aussi ecrits dans k8s/08-ingress.yaml, k8s/03-keycloak.yaml (hostname-url), k8s/04-api.yaml et
-# k8s/05-moderation.yaml (emetteur), k8s/10-grafana.yaml, k8s/config/realm-pme.json (URL de retour) et
+# k8s/05-moderation.yaml (emetteur), k8s/10-grafana.yaml, k8s/config/realm-pme.json (URL de retour), k8s/08-certificate.yaml et
 # k8s/config/frontend-config.js : les changer ici ne suffit pas.
 # NATS et PostgreSQL restent joints par "kubectl port-forward" (voir make port-forward, qui lance aussi l'ingress).
 APP_HOST ?= pme.localhost
@@ -36,12 +39,12 @@ NATS_MONITOR_PORT ?= 8222
 DOCS_PORT ?= 8005
 DOCS_IMAGE_PORT ?= 8083
 
-APP_URL := http://$(APP_HOST)
-KEYCLOAK_URL := http://$(KEYCLOAK_HOST)
+APP_URL := https://$(APP_HOST)
+KEYCLOAK_URL := https://$(KEYCLOAK_HOST)
 NATS_URL := http://localhost:$(NATS_MONITOR_PORT)
-ADMINER_URL := http://$(ADMINER_HOST)
-PROMETHEUS_URL := http://$(PROMETHEUS_HOST)
-GRAFANA_URL := http://$(GRAFANA_HOST)
+ADMINER_URL := https://$(ADMINER_HOST)
+PROMETHEUS_URL := https://$(PROMETHEUS_HOST)
+GRAFANA_URL := https://$(GRAFANA_HOST)
 HOSTS := $(APP_HOST) $(KEYCLOAK_HOST) $(ADMINER_HOST) $(GRAFANA_HOST) $(PROMETHEUS_HOST)
 
 # Charge .env s'il existe (POSTGRES_*, NATS_*, KEYCLOAK_ADMIN*)
@@ -55,7 +58,9 @@ help:
 	@echo "    make minikube-up              - Demarre Minikube"
 	@echo "    make minikube-down            - Arrete Minikube"
 	@echo "    make ingress                  - Active l'ingress (addon Minikube) et attend qu'il soit pret"
-	@echo "    make tunnel                   - Redirige le port 80 vers l'ingress (cluster cree sans --ports, macOS, Windows ; laisser ouvert, mot de passe demande)"
+	@echo "    make cert-manager             - Installe cert-manager et l'autorite locale (certificats TLS)"
+	@echo "    make ca-cert                  - Ecrit l'autorite locale dans $(CA_FILE), a importer dans le navigateur"
+	@echo "    make tunnel                   - Redirige les ports 80 et 443 vers l'ingress (cluster cree sans --ports ; laisser ouvert, mot de passe demande)"
 	@echo "    make hosts                    - Affiche la ligne a ajouter dans /etc/hosts pour les noms .localhost"
 	@echo ""
 	@echo "  Deploiement"
@@ -105,11 +110,14 @@ help:
 # --ports publie les ports 80 et 443 du noeud (ou ecoute l'ingress) sur 127.0.0.1 de l'ordinateur : l'ingress est
 # alors joignable sans "make tunnel" ni redirection. Option prise en compte a la CREATION du cluster seulement :
 # sur un cluster existant, il faut "minikube delete" puis "make minikube-up" (les deploiements sont perdus).
-# 443 est reserve pour le HTTPS (cert-manager), afin de ne pas recreer le cluster une seconde fois.
+# Le port 443 sert le HTTPS (cert-manager).
 minikube-up:
 	minikube start --driver=docker --memory=$(MINIKUBE_MEMORY) --cpus=$(MINIKUBE_CPUS) \
 		--ports=127.0.0.1:80:80,127.0.0.1:443:443
 	$(MAKE) ingress
+	$(MAKE) cert-manager
+	$(MAKE) ca-cert
+	@echo "Importer $(CA_FILE) dans le navigateur (voir docs/outils/certificat-local.md), puis : make deploy"
 
 minikube-down:
 	minikube stop
@@ -120,12 +128,28 @@ ingress:
 	minikube addons enable ingress
 	kubectl -n ingress-nginx wait --for=condition=ready pod -l app.kubernetes.io/component=controller --timeout=180s
 
+# cert-manager (certificats TLS) : installe une fois par cluster, puis cree l'autorite locale (k8s/cert-manager/issuers.yaml).
+# Le webhook de cert-manager demarre apres ses pods : la creation des emetteurs est reessayee jusqu'a ce qu'il reponde.
+# Sur un cluster existant, cette commande suffit : il n'est pas necessaire de le recreer.
+cert-manager:
+	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml
+	kubectl -n cert-manager wait --for=condition=available deployment --all --timeout=180s
+	@for i in $$(seq 1 20); do kubectl apply -f k8s/cert-manager/issuers.yaml && break; echo "En attente du webhook cert-manager"; sleep 3; done
+	kubectl -n cert-manager wait --for=condition=ready certificate/pme-ca --timeout=60s
+
+# Ecrit l'autorite locale dans pme-ca.crt (non versionne) : a importer dans le navigateur (Parametres > Certificats >
+# Autorites) pour supprimer l'avertissement. curl, Node (make api) et make smoke s'en servent directement.
+# Un cluster recree genere une nouvelle autorite : relancer cette commande et reimporter le fichier.
+ca-cert:
+	@kubectl -n cert-manager get secret pme-ca -o jsonpath='{.data.ca\.crt}' | base64 -d > $(CA_FILE)
+	@echo "Autorite ecrite dans $(CA_FILE)"
+
 # Les navigateurs envoient toujours un nom en .localhost vers 127.0.0.1, quelle que soit la ligne /etc/hosts
-# (RFC 6761). L'ingress doit donc ecouter sur 127.0.0.1:80 : on y redirige le port 80 du controleur.
-# Port 80 = port privilegie, d'ou sudo (KUBECONFIG est transmis, sudo ne garde pas l'environnement).
+# (RFC 6761). L'ingress doit donc ecouter sur 127.0.0.1:80 et :443 : on y redirige les ports 80 et 443 du controleur.
+# Ports 80 et 443 = ports privilegies, d'ou sudo (KUBECONFIG est transmis, sudo ne garde pas l'environnement).
 # Laisser ce terminal ouvert. Fonctionne de la meme facon sous Linux, macOS et Windows.
 # "make port-forward" lance la meme redirection en arriere-plan : ne pas lancer les deux (le port 80 serait pris).
-INGRESS_FORWARD = kubectl -n ingress-nginx port-forward --address 127.0.0.1 svc/ingress-nginx-controller 80:80
+INGRESS_FORWARD = kubectl -n ingress-nginx port-forward --address 127.0.0.1 svc/ingress-nginx-controller 80:80 443:443
 tunnel:
 	sudo env KUBECONFIG="$${KUBECONFIG:-$$HOME/.kube/config}" $(INGRESS_FORWARD)
 
@@ -168,6 +192,7 @@ image-frontend:
 	minikube image build -t pme-frontend:dev ./frontend
 
 deploy: secrets
+	@kubectl get crd certificates.cert-manager.io >/dev/null 2>&1 || { echo "cert-manager est absent : lancer make cert-manager"; exit 1; }
 	kubectl apply -k k8s/
 	@echo "Deploiement lance. Suivre : make pods (Keycloak met ~1 min a demarrer)"
 
@@ -266,7 +291,7 @@ port-forward:
 	@sleep 2
 	@echo "NATS          : $(NATS_URL)/jsz?streams=1&consumers=1"
 	@echo "NATS (client) : localhost:4222 ; PostgreSQL : localhost:5432"
-	@echo "Application   : $(APP_URL) (ingress sur 127.0.0.1:80, ligne /etc/hosts de 'make hosts' requise)"
+	@echo "Application   : $(APP_URL) (ingress sur 127.0.0.1:80 et :443, ligne /etc/hosts de 'make hosts' requise)"
 	@echo "'make stop-forward' pour tout arreter."
 
 stop-forward:
@@ -279,14 +304,15 @@ stop-forward:
 # --hostname-url le fige (voir k8s/03-keycloak.yaml).
 DEV_KEYCLOAK_ENV = KEYCLOAK_ISSUER=$(KEYCLOAK_URL)/realms/pme \
 	KEYCLOAK_JWKS_URI=$(KEYCLOAK_URL)/realms/pme/protocol/openid-connect/certs \
-	KEYCLOAK_ALLOWED_CLIENTS=pme-web,pme-cli
+	KEYCLOAK_ALLOWED_CLIENTS=pme-web,pme-cli \
+	NODE_EXTRA_CA_CERTS=$(CURDIR)/$(CA_FILE)
 
-api:
+api: ca-cert
 	@cd api && DB_HOST=localhost DB_NAME=pme DB_USER='$(POSTGRES_USER)' DB_PASSWORD='$(POSTGRES_PASSWORD)' \
 		NATS_HOST=localhost NATS_USER='$(NATS_USER)' NATS_PASSWORD='$(NATS_PASSWORD)' \
 		$(DEV_KEYCLOAK_ENV) npm run start:dev
 
-moderation:
+moderation: ca-cert
 	@cd moderation-service && DB_HOST=localhost DB_NAME=moderation DB_USER='$(POSTGRES_USER)' DB_PASSWORD='$(POSTGRES_PASSWORD)' \
 		NATS_HOST=localhost NATS_USER='$(NATS_USER)' NATS_PASSWORD='$(NATS_PASSWORD)' \
 		$(DEV_KEYCLOAK_ENV) npm run start:dev
@@ -410,6 +436,8 @@ docs-image-test:
 	trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 pme-docs:dev
 
 # Performance (k6) : sur le cluster deploye, apres le deploiement en recette.
+# k6 ne lit pas l'autorite locale : la verification TLS est desactivee pour ces tests (cluster local uniquement).
+export K6_INSECURE_SKIP_TLS_VERIFY := true
 # k6 envoie tout depuis une seule IP : on releve la limitation de debit de l'API le temps du test.
 perf-prepare:
 	kubectl -n $(NS) set env deployment/pme-api THROTTLE_LIMIT=100000

@@ -66,7 +66,7 @@ spec:
                 secretKeyRef: { name: pme-secrets, key: nats-password }
             # `iss` = URL publique vue par le navigateur ; les cles sont lues via le service interne
             - name: KEYCLOAK_ISSUER
-              value: http://keycloak.localhost/realms/pme
+              value: https://keycloak.localhost/realms/pme
             - name: KEYCLOAK_JWKS_URI
               value: http://keycloak:8080/realms/pme/protocol/openid-connect/certs
             - name: KEYCLOAK_ALLOWED_CLIENTS

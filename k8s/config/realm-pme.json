@@ -42,18 +42,18 @@
       "implicitFlowEnabled": false,
       "serviceAccountsEnabled": false,
       "protocol": "openid-connect",
-      "rootUrl": "http://pme.localhost",
+      "rootUrl": "https://pme.localhost",
       "redirectUris": [
-        "http://pme.localhost/*",
+        "https://pme.localhost/*",
         "http://localhost:5173/*"
       ],
       "webOrigins": [
-        "http://pme.localhost",
+        "https://pme.localhost",
         "http://localhost:5173"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://pme.localhost/*##http://localhost:5173/*"
+        "post.logout.redirect.uris": "https://pme.localhost/*##http://localhost:5173/*"
       }
     },
     {

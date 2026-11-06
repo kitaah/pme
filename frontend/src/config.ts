@@ -12,7 +12,7 @@ declare global {
 
 /** Lue dans /config.js (charge avant l'application) : modifiable sans reconstruire l'image. */
 export const config: RuntimeConfig = window.__PME_CONFIG__ ?? {
-  keycloakUrl: 'http://keycloak.localhost',
+  keycloakUrl: 'https://keycloak.localhost',
   realm: 'pme',
   clientId: 'pme-web',
 };

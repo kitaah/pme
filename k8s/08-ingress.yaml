@@ -1,6 +1,8 @@
-# Ingress HTTP : un seul point d'entree pour les interfaces web, un nom d'hote .localhost par service.
-# Le suffixe .localhost est voulu : les navigateurs traitent ces noms comme un contexte securise, meme en HTTP.
-# keycloak-js (PKCE) en a besoin ; avec un suffixe .local, la connexion echoue tant que le HTTPS n'est pas en place.
+# Ingress HTTPS : un seul point d'entree pour les interfaces web, un nom d'hote .localhost par service.
+# Le TLS s'arrete ici (terminaison a l'ingress) : le certificat `pme-tls` vient de cert-manager (k8s/08-certificate.yaml),
+# et le HTTP est redirige vers le HTTPS. Derriere l'ingress, les services restent en HTTP dans le cluster.
+# Le suffixe .localhost est voulu : les navigateurs traitent ces noms comme un contexte securise.
+# keycloak-js (PKCE) en a besoin ; avec un suffixe .local, la connexion echoue.
 #   pme.localhost        -> pme-frontend (le front sert aussi /api vers l'API et la moderation)
 #   keycloak.localhost   -> keycloak
 #   adminer.localhost    -> adminer
@@ -11,15 +13,24 @@
 # Controleur : ingress-nginx, installe par l'addon Minikube (make ingress). Le projet ingress-nginx est
 # arrete depuis mars 2026 : acceptable pour un POC local, a remplacer en production (Traefik ou API Gateway).
 #
-# HTTP uniquement pour l'instant. Le TLS (cert-manager) viendra dans une branche separee.
+# Le navigateur doit faire confiance a l'autorite locale (make ca-cert), sinon il affiche un avertissement.
 # Les noms d'hote sont aussi ecrits dans le Makefile (APP_HOST...), k8s/03-keycloak.yaml, 04-api.yaml,
 # 05-moderation.yaml, 10-grafana.yaml, config/realm-pme.json et config/frontend-config.js : a changer ensemble.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: pme
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
   ingressClassName: nginx
+  tls:
+    - secretName: pme-tls
+      hosts:
+        - pme.localhost
+        - adminer.localhost
+        - grafana.localhost
+        - prometheus.localhost
   rules:
     - host: pme.localhost
       http:
@@ -58,8 +69,13 @@ metadata:
   name: pme-keycloak
   annotations:
     nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
   ingressClassName: nginx
+  tls:
+    - secretName: pme-tls
+      hosts:
+        - keycloak.localhost
   rules:
     - host: keycloak.localhost
       http:

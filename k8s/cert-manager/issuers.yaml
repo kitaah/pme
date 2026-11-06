@@ -1,0 +1,39 @@
+# Autorite de certification locale du POC, geree par cert-manager. Appliquee par `make cert-manager`,
+# hors de Kustomize : ces ressources sont globales au cluster et cert-manager doit etre installe avant elles.
+#
+# Chaine : emetteur auto-signe (amorce) -> certificat d'autorite `pme-ca` -> emetteur `pme-ca-issuer`,
+# qui signe les certificats de l'application (k8s/08-certificate.yaml).
+# En production, seul `pme-ca-issuer` est remplace (Let's Encrypt ou l'autorite interne de l'entreprise) :
+# le Certificate et les Ingress de l'application restent identiques.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-bootstrap
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: pme-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: pme-local-ca
+  secretName: pme-ca
+  duration: 87600h # 10 ans
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-bootstrap
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: pme-ca-issuer
+spec:
+  ca:
+    secretName: pme-ca
