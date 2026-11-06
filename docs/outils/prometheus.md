@@ -36,12 +36,12 @@ enregistre ces mesures avec leur date. Il propose le langage PromQL pour les int
 | Fichier ou dossier | Description |
 |---|---|
 | `k8s/09-prometheus.yaml` | Déploie Prometheus dans Minikube. |
-| `k8s/config/prometheus.yml` | Liste les cibles à interroger et la fréquence de collecte. |
+| `k8s/config/prometheus.yml` | Liste les cibles à interroger, chaque pod séparément, et la fréquence de collecte. |
 | `api/src/metrics/metrics.ts` | Définit les mesures de l'API. |
 | `api/src/metrics/metrics.controller.ts` | Publie les mesures de l'API sur le chemin `/api/metrics`. |
 | `moderation-service/src/metrics/metrics.ts` | Définit les mesures du service de modération. |
 | `moderation-service/src/metrics/metrics.controller.ts` | Publie les mesures du service de modération. |
-| `frontend/nginx.conf` | Bloque l'accès aux mesures depuis l'extérieur. |
+| `k8s/08-ingress.yaml` | N'expose que le chemin `/api/v1` : les mesures restent internes. |
 
 ## Commandes essentielles
 
@@ -54,11 +54,11 @@ enregistre ces mesures avec leur date. Il propose le langage PromQL pour les int
 | `make pods` | Indique si Prometheus est prêt. |
 
 !!! tip "Astuce"
-Dans la page « Graph », saisir `http_request_duration_seconds_count` pour afficher le nombre de requêtes reçues par
-chaque service.
+    Dans la page « Graph », saisir `http_request_duration_seconds_count` pour afficher le nombre de requêtes reçues par
+    chaque service.
 
 !!! note "À savoir"
-Les mesures ne sont pas écrites sur un volume. Elles disparaissent quand le conteneur Prometheus redémarre.
+    Les mesures ne sont pas écrites sur un volume. Elles disparaissent quand le conteneur Prometheus redémarre.
 
 ## Pour aller plus loin
 
