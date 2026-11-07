@@ -28,6 +28,8 @@ opossum est la bibliothèque Node.js qui fournit ce mécanisme. Le projet Spring
 - Il entoure tous les appels de l'API à PostgreSQL : dépôt d'une annonce et lecture des annonces du membre.
 - Base en panne, le circuit s'ouvre après 5 appels dont la moitié échoue. Le membre reçoit alors un 503 en quelques
   millisecondes, au lieu d'attendre le délai de connexion.
+- Tant que le circuit est fermé, un appel qui échoue renvoie déjà un 503, jamais une erreur 500 opaque.
+- Chaque pod de l'API a son propre circuit : ils s'ouvrent séparément.
 - Le circuit se referme seul quand la base revient : un appel d'essai est tenté toutes les 10 secondes.
 - Il ne réagit qu'aux pannes. Une erreur de données, comme une contrainte violée, ne l'ouvre pas.
 - Sans lui, chaque requête resterait bloquée jusqu'à 3 secondes et saturerait l'API pendant la panne.
