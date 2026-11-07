@@ -4,7 +4,7 @@
 
 .PHONY: help install test test-integration image-test \
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
-        perf perf-prepare perf-reset perf-load perf-decoupling \
+        k6-install perf perf-prepare perf-reset perf-load perf-decoupling \
         minikube-up minikube-down ingress cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
         secrets image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         pods logs logs-api logs-moderation logs-keycloak \
@@ -100,6 +100,7 @@ help:
 	@echo "    make test                     - Tests unitaires (Jest : api + moderation-service, Vitest : frontend)"
 	@echo "    make test-integration         - Tests d'integration avec PostgreSQL et NATS reels (Testcontainers, Docker requis)"
 	@echo "    make image-test               - Tests des images Docker (container-structure-test + Trivy)"
+	@echo "    make k6-install               - Installe k6 (Debian, Ubuntu, Mint) une seule fois, puis make perf-prepare"
 	@echo "    make perf                     - Tests de performance k6 (charge + decouplage), apres make perf-prepare"
 	@echo ""
 	@echo "  Documentation (MkDocs, Docker requis)"
@@ -485,6 +486,18 @@ docs-image-test:
 # k6 ne lit pas l'autorite locale : la verification TLS est desactivee pour ces tests (cluster local uniquement).
 export K6_INSECURE_SKIP_TLS_VERIFY := true
 # k6 envoie tout depuis une seule IP : on releve la limitation de debit de l'API le temps du test.
+# k6 (Grafana) : depot apt officiel, pour Debian, Ubuntu et Linux Mint. Sans effet si k6 est deja installe.
+# Demande le mot de passe sudo. Pour les autres systemes : https://grafana.com/docs/k6/latest/set-up/install-k6/
+k6-install:
+	@if command -v k6 >/dev/null 2>&1; then echo "k6 est deja installe : $$(k6 version)"; else \
+		sudo gpg -k && \
+		sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+			--keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69 && \
+		echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+			| sudo tee /etc/apt/sources.list.d/k6.list >/dev/null && \
+		sudo apt-get update && sudo apt-get install -y k6 && k6 version; \
+	fi
+
 perf-prepare:
 	kubectl -n $(NS) set env deployment/pme-api THROTTLE_LIMIT=100000
 	kubectl -n $(NS) rollout status deployment/pme-api
@@ -493,8 +506,10 @@ perf-reset:
 	kubectl -n $(NS) set env deployment/pme-api THROTTLE_LIMIT=200
 	kubectl -n $(NS) rollout status deployment/pme-api
 
+# --insecure-skip-tls-verify : le certificat de l'ingress est signe par l'autorite locale (make ca-cert), que k6 ne
+# connait pas. Reserve a ce test local : ne jamais l'utiliser face a un vrai serveur.
 perf-load:
-	k6 run -e APP_URL=$(APP_URL) -e KEYCLOAK_URL=$(KEYCLOAK_URL) tests/performance/load.js
+	k6 run --insecure-skip-tls-verify -e APP_URL=$(APP_URL) -e KEYCLOAK_URL=$(KEYCLOAK_URL) tests/performance/load.js
 
 perf-decoupling:
 	APP_URL=$(APP_URL) KEYCLOAK_URL=$(KEYCLOAK_URL) NS=$(NS) ./scripts/perf-decoupling.sh
