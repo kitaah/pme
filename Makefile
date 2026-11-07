@@ -6,7 +6,7 @@
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
         k6-install perf perf-prepare perf-reset perf-load perf-decoupling \
         minikube-up minikube-down ingress cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
-        secrets image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
+        env sealed-secrets sealed-prereqs seal image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         pods logs logs-api logs-moderation logs-keycloak \
         port-forward stop-forward api moderation frontend \
         smoke token queues db-listings db-moderation create-grafana-db \
@@ -51,9 +51,18 @@ GRAFANA_URL := https://$(GRAFANA_HOST)
 ALLOY_URL := https://$(ALLOY_HOST)
 HOSTS := $(APP_HOST) $(KEYCLOAK_HOST) $(ADMINER_HOST) $(GRAFANA_HOST) $(PROMETHEUS_HOST) $(ALLOY_HOST)
 
-# Charge .env s'il existe (POSTGRES_*, NATS_*, KEYCLOAK_ADMIN*)
+# Charge .env s'il existe (POSTGRES_*, NATS_*, KEYCLOAK_ADMIN*, GRAFANA_ADMIN*), non versionne.
 -include .env
 export
+
+# Premiere utilisation : .env est cree depuis son modele (valeurs de demonstration), puis jamais ecrase.
+# Il est prive (droits 600) car il contient les mots de passe.
+.env: | env.example
+	@umask 077 && cp env.example .env
+	@echo "$@ cree depuis env.example : remplacer les CHANGE_ME par des mots de passe avant make seal"
+
+# `make env` : cree .env s'il manque (sans rien faire sinon).
+env: .env
 
 help:
 	@echo "Commandes disponibles :"
@@ -71,9 +80,11 @@ help:
 	@echo "    make hosts                    - Affiche la ligne a ajouter dans /etc/hosts pour les noms .localhost"
 	@echo ""
 	@echo "  Deploiement"
-	@echo "    make secrets                  - Cree le Secret pme-secrets depuis .env"
+	@echo "    make env                      - Cree .env depuis env.example s'il manque (jamais ecrase)"
+	@echo "    make sealed-secrets           - Installe le controleur Sealed Secrets (fait aussi par seal si absent)"
+	@echo "    make seal                     - Re-chiffre .env dans k8s/14-pme-secrets-sealed.yaml (a versionner)"
 	@echo "    make image                    - Construit les 3 images dans Minikube"
-	@echo "    make deploy                   - secrets + ca-configmap + kubectl apply -k k8s/ (Postgres, NATS, Keycloak, API, moderation, front, ingress)"
+	@echo "    make deploy                   - secrets chiffres (generes si absents) + ca-configmap + kubectl apply -k k8s/ (Postgres, NATS, Keycloak, API, moderation, front, ingress)"
 	@echo "    make redeploy                 - image + redemarrage des 3 deployments (apres une modification du code)"
 	@echo "    make undeploy                 - Supprime le namespace (donnees comprises)"
 	@echo "    make create-grafana-db        - Cree la base grafana dans un PostgreSQL existant (make reset la cree d'office)"
@@ -203,23 +214,45 @@ hosts:
 
 # ---- Build & deploiement ----
 
-# Le Secret n'est pas versionne : il est cree depuis .env (valeurs de demonstration).
-# Le projet Spring utilisait des Sealed Secrets : a reprendre quand le POC passera a la chaine CI/CD.
-secrets:
-	@test -f .env || (echo "Fichier .env absent : cp .env.example .env" && exit 1)
-	@test -n '$(GRAFANA_ADMIN)' && test -n '$(GRAFANA_ADMIN_PASSWORD)' || (echo "GRAFANA_ADMIN et GRAFANA_ADMIN_PASSWORD absents de .env : voir .env.example" && exit 1)
-	@kubectl create namespace $(NS) --dry-run=client -o yaml | kubectl apply -f -
-	@kubectl -n $(NS) create secret generic pme-secrets \
-		--from-literal=db-username='$(POSTGRES_USER)' \
-		--from-literal=db-password='$(POSTGRES_PASSWORD)' \
-		--from-literal=nats-username='$(NATS_USER)' \
-		--from-literal=nats-password='$(NATS_PASSWORD)' \
-		--from-literal=keycloak-admin-username='$(KEYCLOAK_ADMIN)' \
-		--from-literal=keycloak-admin-password='$(KEYCLOAK_ADMIN_PASSWORD)' \
-		--from-literal=grafana-admin-username='$(GRAFANA_ADMIN)' \
-		--from-literal=grafana-admin-password='$(GRAFANA_ADMIN_PASSWORD)' \
-		--dry-run=client -o yaml | kubectl apply -f -
-	@echo "Secret pme-secrets cree dans le namespace $(NS) (valeurs lues dans .env, non affichees)"
+# ---- Secrets : Sealed Secrets ----
+# Un Secret Kubernetes n'est qu'encode en base64 : le versionner reviendrait a publier les mots de passe.
+# Le controleur Sealed Secrets (dans le cluster) detient une cle privee. `make seal` chiffre les secrets avec sa cle
+# publique : le fichier obtenu (SealedSecret) se versionne dans Git, et seul ce cluster sait le dechiffrer en Secret.
+SEALED_FILE := k8s/14-pme-secrets-sealed.yaml
+
+# Installe le controleur (namespace kube-system), une seule fois par cluster.
+# Sa version est epinglee dans k8s/sealed-secrets/kustomization.yaml (kubeseal doit rester a la meme version).
+sealed-secrets:
+	kubectl apply -k k8s/sealed-secrets
+	kubectl -n kube-system rollout status deployment/sealed-secrets-controller --timeout=120s
+
+sealed-prereqs:
+	@command -v kubeseal >/dev/null || { echo "kubeseal absent : voir la fiche Sealed Secrets (docs/outils/sealed-secrets.md)"; exit 1; }
+	@for v in POSTGRES_USER POSTGRES_PASSWORD NATS_USER NATS_PASSWORD KEYCLOAK_ADMIN KEYCLOAK_ADMIN_PASSWORD GRAFANA_ADMIN GRAFANA_ADMIN_PASSWORD; do \
+		test -n "$$(printenv $$v)" || { echo "$$v absent de .env"; exit 1; }; \
+		test "$$(printenv $$v)" != "CHANGE_ME" || { echo "$$v vaut encore CHANGE_ME dans .env : choisir un mot de passe"; exit 1; }; \
+	done
+	@kubectl -n kube-system get deployment sealed-secrets-controller >/dev/null 2>&1 || $(MAKE) --no-print-directory sealed-secrets
+
+# Les valeurs viennent de l'environnement de make (.env), jamais d'arguments de commande : elles
+# n'apparaissent ni dans la liste des processus ni dans l'historique du shell. Le fichier temporaire est prive
+# (umask 077) et supprime a la fin. A relancer apres un changement de secret ou un nouveau cluster (nouvelle cle).
+seal: .env sealed-prereqs
+	@umask 077; tmp=$$(mktemp); trap 'rm -f "$$tmp" "$(SEALED_FILE).tmp"' EXIT; \
+	printf '%s\n' \
+		"db-username=$$POSTGRES_USER" "db-password=$$POSTGRES_PASSWORD" \
+		"nats-username=$$NATS_USER" "nats-password=$$NATS_PASSWORD" \
+		"keycloak-admin-username=$$KEYCLOAK_ADMIN" "keycloak-admin-password=$$KEYCLOAK_ADMIN_PASSWORD" \
+		"grafana-admin-username=$$GRAFANA_ADMIN" "grafana-admin-password=$$GRAFANA_ADMIN_PASSWORD" > "$$tmp"; \
+	kubectl create secret generic pme-secrets --namespace $(NS) --from-env-file="$$tmp" --dry-run=client -o yaml \
+		| kubeseal --controller-name sealed-secrets-controller --controller-namespace kube-system --namespace $(NS) --format yaml \
+		> "$(SEALED_FILE).tmp" && mv "$(SEALED_FILE).tmp" "$(SEALED_FILE)"
+	@echo "$(SEALED_FILE) mis a jour (valeurs chiffrees, non affichees) : a versionner dans Git"
+
+# Fichier chiffre absent (premier deploiement) : il est genere automatiquement. Present, il n'est jamais regenere ;
+# apres un changement dans .env, lancer `make seal`.
+$(SEALED_FILE): | .env
+	@$(MAKE) --no-print-directory seal
 
 image: image-api image-moderation image-frontend
 
@@ -232,7 +265,7 @@ image-moderation:
 image-frontend:
 	minikube image build -t pme-frontend:dev ./frontend
 
-deploy: secrets ca-configmap
+deploy: ca-configmap | $(SEALED_FILE)
 	@kubectl get crd certificates.cert-manager.io >/dev/null 2>&1 || { echo "cert-manager est absent : lancer make cert-manager"; exit 1; }
 	kubectl apply -k k8s/
 	@echo "Deploiement lance. Suivre : make pods (Keycloak met ~1 min a demarrer)"
