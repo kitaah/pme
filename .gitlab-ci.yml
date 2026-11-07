@@ -1,5 +1,5 @@
-# Chaine CI/CD (GitLab CI) - tests unitaires, analyse SonarCloud, tests d'integration, tests des images Docker (puis leur publication), tests de performance.
-# Les autres etapes (qualite statique, securite) seront ajoutees une a une.
+# Chaine CI/CD (GitLab CI) - tests unitaires, analyse SonarCloud, tests d'integration, analyse des dependances, tests des images Docker (puis leur publication), tests de performance.
+# Les autres etapes (qualite statique) seront ajoutees une a une.
 # Tous les jobs sont independants (needs: []) : la duree du pipeline est celle du job le plus long.
 # Quota GitLab gratuit : 400 minutes de pipeline par mois. Peu de jobs, et un job ne tourne que si son code change.
 # Objectif : pipeline sous 5 minutes. GitLab ne plafonne pas un pipeline entier : chaque job est donc limite a 5 minutes
@@ -119,6 +119,51 @@ sonar:
   # Retirer cette ligne une fois la porte qualite reglee.
   allow_failure: true
   rules: !reference [.code-changes, rules]
+
+# ---------- Analyse des dependances : failles connues dans les fichiers package-lock.json (Trivy) ----------
+# Complete l'analyse des images : celle-ci ne voit que les paquets de production, alors que cette analyse lit aussi les
+# devDependencies (outils de build et de test). Pas de Docker ici : Trivy lit directement les fichiers du depot, le job est court.
+# Meme regles que l'analyse des images : HIGH et CRITICAL, failles corrigeables seulement, exceptions dans .trivyignore.
+# Lance automatiquement quand une dependance change, sinon a la demande.
+dependency-scan:
+  stage: quality
+  needs: []
+  image: alpine:3.22
+  variables:
+    TRIVY_VERSION: 0.71.2
+    TRIVY_CACHE_DIR: "$CI_PROJECT_DIR/.trivycache"
+    TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db:2,ghcr.io/aquasecurity/trivy-db:2
+    TRIVY_NO_PROGRESS: "true"
+    TRIVY_SKIP_VERSION_CHECK: "true"
+  cache:
+    key: trivy-db
+    paths: [.trivycache]
+  before_script:
+    - apk add --no-cache curl
+    # Trivy : version epinglee et archive verifiee par sa somme de controle (SHA-256) avant installation.
+    - |
+      (
+        cd /tmp
+        base="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}"
+        archive="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+        curl -sSfLO "$base/$archive"
+        curl -sSfLO "$base/trivy_${TRIVY_VERSION}_checksums.txt"
+        grep " $archive\$" "trivy_${TRIVY_VERSION}_checksums.txt" | sha256sum -c -
+        tar -xzf "$archive" -C /usr/local/bin trivy
+      )
+  script:
+    # 1. Analyse des trois modules (devDependencies comprises), rapport JSON conserve.
+    - trivy fs --scanners vuln --include-dev-deps --severity HIGH,CRITICAL --ignore-unfixed --format json --output trivy-dependencies.json --exit-code 0 .
+    # 2. Lecture du rapport : tableau dans le journal, et echec s'il reste une faille HIGH ou CRITICAL non justifiee (.trivyignore).
+    - trivy convert --format table --severity HIGH,CRITICAL --exit-code 1 trivy-dependencies.json
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths: [trivy-dependencies.json]
+  rules:
+    - changes: [".gitlab-ci.yml", ".trivyignore", "*/package.json", "*/package-lock.json"]
+    - when: manual
+      allow_failure: true
 
 # ---------- Tests d'integration : PostgreSQL et NATS (JetStream) reels, lances par Testcontainers ----------
 # Testcontainers a besoin d'un demon Docker : service Docker-in-Docker, detruit avec le job.
