@@ -4,6 +4,7 @@ import { AuthenticatedUser } from '../auth/authenticated-user';
 import { CreateListingDto } from './create-listing.dto';
 import { ListingCondition, ListingStatus } from './listing.enums';
 import { Listing } from './listing.entity';
+import { DatabaseCircuitBreaker } from '../common/database-circuit-breaker';
 import { ListingEventsPublisher } from './listing-events.publisher';
 import { ListingsService } from './listings.service';
 
@@ -17,21 +18,26 @@ describe('ListingsService', () => {
 
   let repository: { create: jest.Mock; save: jest.Mock; delete: jest.Mock; find: jest.Mock };
   let publisher: { publishSubmitted: jest.Mock };
+  let database: DatabaseCircuitBreaker;
   let service: ListingsService;
 
   beforeEach(() => {
     repository = {
       create: jest.fn((entity: Partial<Listing>) => entity),
       save: jest.fn(async (entity: Partial<Listing>) => ({ ...entity, id: 'listing-1', createdAt: new Date() })),
-      delete: jest.fn(),
+      delete: jest.fn().mockResolvedValue(undefined),
       find: jest.fn(),
     };
+    database = new DatabaseCircuitBreaker();
     publisher = { publishSubmitted: jest.fn().mockResolvedValue(undefined) };
     service = new ListingsService(
       repository as unknown as Repository<Listing>,
       publisher as unknown as ListingEventsPublisher,
+      database,
     );
   });
+
+  afterEach(() => database.shutdown());
 
   describe('submit', () => {
     it("enregistre l'annonce en attente de moderation puis publie l'evenement", async () => {
@@ -59,6 +65,21 @@ describe('ListingsService', () => {
       // When / Then
       await expect(service.submit(user, dto)).rejects.toBeInstanceOf(ServiceUnavailableException);
       expect(repository.delete).toHaveBeenCalledWith('listing-1');
+    });
+  });
+
+  describe('base de donnees indisponible', () => {
+    it("repond 503 sans solliciter la base quand le disjoncteur est ouvert", async () => {
+      // Given : la base tombe, des appels successifs echouent et ouvrent le circuit
+      repository.find.mockRejectedValue(new Error('connect ECONNREFUSED'));
+      for (let i = 0; i < 5; i++) {
+        await expect(service.findByOwner(user)).rejects.toThrow('ECONNREFUSED');
+      }
+      repository.find.mockClear();
+
+      // When / Then : l'appel suivant echoue vite, en 503, sans atteindre la base
+      await expect(service.findByOwner(user)).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(repository.find).not.toHaveBeenCalled();
     });
   });
 

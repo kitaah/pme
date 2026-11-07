@@ -10,7 +10,7 @@
         pods logs logs-api logs-moderation logs-keycloak \
         port-forward stop-forward api moderation frontend \
         smoke token queues db-listings db-moderation create-grafana-db \
-        demo-stop-moderation demo-start-moderation demo-kill-api \
+        demo-stop-moderation demo-start-moderation demo-kill-api demo-breaker breaker-test \
         app keycloak nats adminer prometheus grafana alloy \
         docs-serve docs-check docs-image docs-run docs-stop docs-image-test
 
@@ -90,6 +90,8 @@ help:
 	@echo "    make demo-stop-moderation     - Arrete le service de moderation (les messages restent dans NATS)"
 	@echo "    make demo-start-moderation    - Le relance : la file se vide"
 	@echo "    make demo-kill-api            - Supprime le pod de l'API : Kubernetes le recree"
+	@echo "    make demo-breaker             - Coupe PostgreSQL puis la relance : montre le disjoncteur de l'API"
+	@echo "    make breaker-test             - Meme coupure, avec verifications OK/ECHEC du disjoncteur"
 	@echo ""
 	@echo "  Developpement local"
 	@echo "    make install                  - npm ci dans api, moderation-service, frontend"
@@ -298,6 +300,12 @@ demo-stop-moderation:
 
 demo-start-moderation:
 	kubectl -n $(NS) scale deployment pme-moderation --replicas=1
+
+demo-breaker:
+	NS=$(NS) APP_URL=$(APP_URL) KEYCLOAK_URL=$(KEYCLOAK_URL) ./scripts/demo-breaker.sh
+
+breaker-test:
+	NS=$(NS) APP_URL=$(APP_URL) KEYCLOAK_URL=$(KEYCLOAK_URL) ./scripts/verify-breaker.sh
 
 demo-kill-api:
 	kubectl -n $(NS) delete pod -l app=pme-api

@@ -2,6 +2,7 @@ import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthenticatedUser } from '../auth/authenticated-user';
+import { DatabaseCircuitBreaker } from '../common/database-circuit-breaker';
 import { CreateListingDto } from './create-listing.dto';
 import { ListingStatus } from './listing.enums';
 import { Listing } from './listing.entity';
@@ -14,6 +15,7 @@ export class ListingsService {
   constructor(
     @InjectRepository(Listing) private readonly repository: Repository<Listing>,
     private readonly publisher: ListingEventsPublisher,
+    private readonly database: DatabaseCircuitBreaker,
   ) {}
 
   /**
@@ -23,15 +25,17 @@ export class ListingsService {
    * echoue en 503 : on ne laisse jamais une annonce en attente que personne ne verra passer.
    */
   async submit(user: AuthenticatedUser, dto: CreateListingDto): Promise<Listing> {
-    const listing = await this.repository.save(
-      this.repository.create({
-        ownerId: user.id,
-        ownerUsername: user.username,
-        title: dto.title,
-        description: dto.description,
-        condition: dto.condition,
-        status: ListingStatus.PENDING_MODERATION,
-      }),
+    const listing = await this.database.run(() =>
+      this.repository.save(
+        this.repository.create({
+          ownerId: user.id,
+          ownerUsername: user.username,
+          title: dto.title,
+          description: dto.description,
+          condition: dto.condition,
+          status: ListingStatus.PENDING_MODERATION,
+        }),
+      ),
     );
 
     try {
@@ -41,7 +45,7 @@ export class ListingsService {
       // La compensation peut echouer a son tour (base elle aussi tombee). On la trace sans la
       // laisser remonter : sinon elle remplacerait le 503 explicite par un 500 opaque pour le membre.
       try {
-        await this.repository.delete(listing.id);
+        await this.database.run(() => this.repository.delete(listing.id));
       } catch (rollbackError) {
         this.logger.error(`Annonce ${listing.id} non retiree apres l'echec de publication : ${String(rollbackError)}`);
       }
@@ -54,6 +58,8 @@ export class ListingsService {
 
   /** Les annonces les plus recentes du membre (pagination simple : jamais plus de `limit` lignes). */
   findByOwner(user: AuthenticatedUser, limit = 50): Promise<Listing[]> {
-    return this.repository.find({ where: { ownerId: user.id }, order: { createdAt: 'DESC' }, take: limit });
+    return this.database.run(() =>
+      this.repository.find({ where: { ownerId: user.id }, order: { createdAt: 'DESC' }, take: limit }),
+    );
   }
 }
