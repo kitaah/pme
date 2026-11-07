@@ -33,6 +33,7 @@ nav:
       - Grafana: outils/grafana.md
       - Ingress-nginx: outils/ingress-nginx.md
       - Keycloak: outils/keycloak.md
+      - k6: outils/k6.md
       - Loki: outils/loki.md
       - metrics-server: outils/metrics-server.md
       - Minikube: outils/minikube.md
