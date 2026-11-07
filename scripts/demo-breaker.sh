@@ -12,7 +12,7 @@ if [ -f "$CA_FILE" ]; then CURL_TLS=(--cacert "$CA_FILE"); else CURL_TLS=(-k); f
 
 # Etat du disjoncteur lu dans les metriques de l'API : 0 = ferme, 1 = semi-ouvert, 2 = ouvert.
 breaker_state() {
-  case "$(kubectl -n "$NS" exec deploy/pme-api -- wget -qO- http://localhost:3000/api/metrics 2>/dev/null \
+  case "$(kubectl -n "$NS" exec deploy/pme-api -- wget -qO- http://127.0.0.1:3000/api/metrics 2>/dev/null \
     | awk '/^circuit_breaker_state\{name="postgresql"\}/ {print $2}')" in
     0) echo "ferme" ;; 1) echo "semi-ouvert" ;; 2) echo "OUVERT" ;; *) echo "inconnu" ;;
   esac
