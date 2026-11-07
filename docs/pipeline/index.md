@@ -9,7 +9,7 @@
 | **Configuration** | Le fichier `.gitlab-ci.yml`, à la racine du dépôt |
 | **Déclencheur** | Chaque commit ou fusion sur la branche principale (`main`) |
 | **Durée visée** | Moins de 5 minutes par pipeline |
-| **Nombre de jobs** | 7 jobs, répartis en 5 familles de contrôles |
+| **Nombre de jobs** | 8 jobs, répartis en 6 familles de contrôles |
 
 ## Description
 
@@ -17,8 +17,8 @@ Une pipeline est une suite de tâches que GitLab lance seul, sans intervention h
 Chaque job démarre dans un conteneur neuf, fait un contrôle précis, puis publie son résultat. Si un contrôle échoue,
 la pipeline devient rouge et l'équipe le voit tout de suite.
 
-La pipeline du projet vérifie quatre choses : le code se comporte comme prévu, les services fonctionnent ensemble, les
-images Docker sont sûres, et l'API reste rapide. Une cinquième analyse note la qualité générale du code. Une fois les images contrôlées,
+La pipeline du projet vérifie cinq choses : le code se comporte comme prévu, les services fonctionnent ensemble, les
+dépendances et les images Docker sont sûres, et l'API reste rapide. Une sixième analyse note la qualité générale du code. Une fois les images contrôlées,
 elles sont publiées dans le registre de GitLab.
 
 Cette publication apporte quatre bénéfices. Chaque image est liée à un commit précis, donc traçable. L'image déployée
@@ -63,11 +63,12 @@ flowchart LR
 | `unit-tests:frontend` | Les 35 tests unitaires de l'interface. | Le code d'un module change. |
 | `sonar` | La qualité du code, la couverture et les doublons. | Le code change, sur la branche principale. |
 | `integration-tests` | Les 27 tests avec une vraie base et un vrai broker. | L'API ou la modération change. |
+| `dependency-scan` | Les failles connues dans les dépendances, devDependencies comprises. | Une dépendance change. |
 | `image-tests` | La structure et les vulnérabilités des 3 images, puis leur publication dans le registre. | Une image ou ses tests changent. |
 | `performance-tests` | La rapidité de l'API sous charge. | L'API ou les scénarios k6 changent. |
 
 !!! note "À savoir"
-Un commit qui ne touche que la documentation ne lance aucun job. Il ne consomme donc aucune minute du quota.
+    Un commit qui ne touche que la documentation ne lance aucun job. Il ne consomme donc aucune minute du quota.
 
 ## Principes de conception
 
@@ -88,6 +89,7 @@ Le détail de ces règles se trouve dans la page [Fonctionnement](fonctionnement
 | [Fonctionnement](fonctionnement.md) | Déclenchement, optimisations, quota et lecture des résultats. |
 | [Tests unitaires](tests-unitaires.md) | La liste des 66 tests unitaires. |
 | [Tests d'intégration](tests-integration.md) | La liste des 27 tests d'intégration. |
+| [Analyse des dépendances](analyse-dependances.md) | La recherche de failles dans les `package-lock.json`. |
 | [Tests des images Docker](tests-images.md) | Les 22 contrôles de structure et l'analyse Trivy. |
 | [Publication des images](publication-images.md) | Le dépôt des images vérifiées dans le registre GitLab. |
 | [Tests de performance](tests-performance.md) | Les scénarios k6 et leurs seuils. |

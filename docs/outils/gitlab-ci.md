@@ -26,8 +26,9 @@ appelée runner. Les runners de l'offre gratuite sont de petites machines Linux 
 
 ## Rôle dans le projet
 
-- Il exécute les 7 jobs de la pipeline : tests unitaires, analyse Sonar, tests d'intégration, d'images et de performance.
+- Il exécute les 8 jobs de la pipeline : tests unitaires, analyse Sonar, analyse des dépendances, tests d'intégration, d'images et de performance.
 - Il ne se lance que sur la branche principale, et seulement pour les jobs dont les fichiers ont changé.
+- Il publie les images vérifiées dans le registre de conteneurs du projet.
 - Il publie les rapports de tests et de couverture dans l'interface de GitLab.
 - Il garde les résultats de chaque pipeline, ce qui prouve le contrôle de chaque modification.
 - Sans lui, les contrôles dépendraient de la mémoire de chaque développeur.

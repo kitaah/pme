@@ -24,7 +24,7 @@ suivent la norme ISO/IEC 25010.
 | **Sécurité applicative** | Seul un membre connecté dépose une annonce, seul un modérateur lit la file. | 14 tests : contrôle des rôles, erreurs 401 et 403, jetons invalides. | `unit-tests:*`, `integration-tests` |
 | **Robustesse des entrées** | Une annonce invalide est refusée avec une erreur claire. | 5 cas refusés avec une erreur 400. | `integration-tests` |
 | **Sécurité des images** | Les images n'ont ni compte root, ni secret, ni outil de développement. | Compte non root, aucun secret, aucune source ni outil de développement dans les 3 images. | `image-tests` |
-| **Vulnérabilités** | Aucune faille grave et corrigeable ne part en production. | Analyse Trivy des 3 images. | `image-tests` |
+| **Vulnérabilités** | Aucune faille grave et corrigeable ne part en production, ni dans les outils de build. | Analyse Trivy des 3 images et des dépendances. | `image-tests`, `dependency-scan` |
 | **Performance** | 95 % des dépôts d'annonces répondent en moins de 500 ms. | Test de charge k6 avec seuils. | `performance-tests` |
 | **Accessibilité (RGAA)** | Les textes et les composants restent lisibles. | 26 contrôles de contraste. | `unit-tests:frontend` |
 | **Observabilité** | Les services publient leurs mesures et la supervision trouve le consommateur. | 11 tests. | `unit-tests:*`, `integration-tests` |

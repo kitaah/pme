@@ -62,7 +62,7 @@ quota : un job qui ne tourne pas ne coûte rien.
 
 !!! warning "Attention"
     Le job `image-tests` est le plus coûteux. Il se lance seul uniquement quand une image change. Éviter de le relancer
-    à la main sans raison.
+    à la main sans raison. Il publie aussi les images dans le registre : l'envoi allonge sa durée de quelques secondes.
 
 ## Lire un résultat
 
