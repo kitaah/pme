@@ -7,10 +7,10 @@ commandTests:
     command: "id"
     args: ["-u"]
     expectedOutput: ["^1000"]
-  - name: "Node 22 est present"
+  - name: "Node 24 est present"
     command: "node"
     args: ["--version"]
-    expectedOutput: ["^v22\\."]
+    expectedOutput: ["^v24\\."]
 
 fileExistenceTests:
   - name: "l'application compilee est presente"

@@ -1,0 +1,6 @@
+# Failles Trivy acceptees temporairement. Une ligne par faille : identifiant, puis date d'expiration obligatoire.
+# La ligne cesse de s'appliquer a cette date et le pipeline echoue de nouveau (revue periodique).
+# Chaque ligne est precedee d'un commentaire : justification, personne qui l'a validee, ticket de suivi.
+#
+# Exemple :
+# CVE-2026-00000 exp:2026-12-31
