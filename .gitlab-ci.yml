@@ -1,4 +1,4 @@
-# Chaine CI/CD (GitLab CI) - tests unitaires, analyse SonarCloud, tests d'integration, tests des images Docker, tests de performance.
+# Chaine CI/CD (GitLab CI) - tests unitaires, analyse SonarCloud, tests d'integration, tests des images Docker (puis leur publication), tests de performance.
 # Les autres etapes (qualite statique, securite) seront ajoutees une a une.
 # Tous les jobs sont independants (needs: []) : la duree du pipeline est celle du job le plus long.
 # Quota GitLab gratuit : 400 minutes de pipeline par mois. Peu de jobs, et un job ne tourne que si son code change.
@@ -162,9 +162,12 @@ integration-tests:
   rules:
     - changes: [".gitlab-ci.yml", "api/**/*", "moderation-service/**/*"]
 
-# ---------- Tests des images Docker : construction, structure (container-structure-test), vulnerabilites (Trivy) ----------
+# ---------- Tests des images Docker : construction, structure (container-structure-test), vulnerabilites (Trivy), publication ----------
 # Un seul job, un seul Docker-in-Docker : les trois images sont construites en parallele (docker-bake.hcl),
 # puis la structure et les vulnerabilites sont controlees. Memes controles que "make image-test".
+# Publication dans le registre de conteneurs GitLab en derniere etape : seulement si tous les controles ont reussi
+# (le script s'arrete a la premiere etape en echec) et seulement sur la branche principale. Une image n'est donc
+# jamais publiee sans avoir ete controlee. Pas de nouvelle construction : ce sont les images deja testees.
 # Job couteux : lance automatiquement seulement si le contenu d'une image ou ses tests changent, sinon a la demande.
 image-tests:
   stage: image
@@ -245,6 +248,17 @@ image-tests:
         trivy convert --format table --severity HIGH,CRITICAL --exit-code 1 "trivy-$svc.json" || status=1
       done
       exit $status
+    # 5. Publication dans le registre GitLab (branche principale uniquement).
+    #    Etiquette immuable : le commit (pas de "latest"). Les trois envois se font en parallele.
+    #    CI_REGISTRY_USER et CI_REGISTRY_PASSWORD sont fournis par GitLab pour la duree du job.
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
+        echo "$CI_REGISTRY_PASSWORD" | docker login --username "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+        for svc in api moderation frontend; do
+          docker tag "pme-$svc:$TAG" "$CI_REGISTRY_IMAGE/$svc:$CI_COMMIT_SHORT_SHA"
+        done
+        printf '%s\n' api moderation frontend | xargs -P 3 -I{} docker push "$CI_REGISTRY_IMAGE/{}:$CI_COMMIT_SHORT_SHA"
+      fi
   artifacts:
     when: always
     expire_in: 1 week
