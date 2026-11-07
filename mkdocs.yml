@@ -56,7 +56,9 @@ nav:
       - Contrôles:
           - Tests unitaires: pipeline/tests-unitaires.md
           - Tests d'intégration: pipeline/tests-integration.md
+          - Analyse des dépendances: pipeline/analyse-dependances.md
           - Tests des images Docker: pipeline/tests-images.md
+          - Publication des images: pipeline/publication-images.md
           - Tests de performance: pipeline/tests-performance.md
           - Analyse SonarCloud: pipeline/analyse-sonarcloud.md
   - Contribuer:
