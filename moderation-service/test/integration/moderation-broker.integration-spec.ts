@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { AckPolicy, JetStreamManager, NatsConnection, connect } from 'nats';
@@ -32,8 +33,14 @@ describe('Service de moderation avec NATS (integration)', () => {
 
   const natsConfig = () => ({ host: nats.host, port: nats.port, user: nats.user, password: nats.password });
 
+  // Un identifiant neuf par test : il sert de msgID, et la fenetre de deduplication du flux (2 min) survit a un purge.
+  let listingId: string;
+  beforeEach(() => {
+    listingId = randomUUID();
+  });
+
   const event = (overrides: Record<string, unknown> = {}) => ({
-    listingId: '33333333-3333-4333-8333-333333333333',
+    listingId,
     ownerId: '11111111-1111-4111-8111-111111111111',
     ownerUsername: 'membre',
     title: 'Figurine Pyramid Head',
