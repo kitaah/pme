@@ -53,6 +53,12 @@ spec:
               value: "3001"
             - name: DB_HOST
               value: postgres
+            # Au plus 5 connexions a PostgreSQL par pod : ce service ne fait que consommer des messages.
+            - name: DB_POOL_SIZE
+              value: "5"
+            # Tas de Node plafonne a 75 % de la limite de memoire du conteneur (256 Mi).
+            - name: NODE_OPTIONS
+              value: "--max-old-space-size=192"
             - name: DB_NAME
               value: moderation
             - name: DB_USER

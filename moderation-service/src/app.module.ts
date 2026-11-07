@@ -31,6 +31,7 @@ import { ModerationModule } from './moderation/moderation.module';
           migrations: [CreateModerationQueue1730000000000],
           migrationsRun: true,
           synchronize: false,
+          poolSize: db.poolSize, // plafond de connexions par instance : evite de saturer PostgreSQL quand l'autoscaler ajoute des pods
           retryAttempts: 10,
           retryDelay: 3000,
         };
