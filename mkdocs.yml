@@ -48,6 +48,7 @@ nav:
       - Prometheus: outils/prometheus.md
       - React: outils/react.md
       - shadcn/ui: outils/shadcn-ui.md
+      - Sealed Secrets: outils/sealed-secrets.md
       - SonarCloud: outils/sonarcloud.md
       - Trivy: outils/trivy.md
   - Pipeline CI/CD:
