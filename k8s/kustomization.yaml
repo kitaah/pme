@@ -1,4 +1,5 @@
-# `kubectl apply -k k8s/` (ou `make deploy`). Le secret `pme-secrets` n'est PAS ici : `make secrets` le cree.
+# `kubectl apply -k k8s/` (ou `make deploy`). Le secret `pme-secrets` est fourni sous forme chiffree (SealedSecret,
+# 14-pme-secrets-sealed.yaml, genere par `make seal`) : le controleur Sealed Secrets le dechiffre dans le cluster.
 # Les ConfigMaps sont generes avec un suffixe de hash : modifier le realm ou la config du front
 # declenche automatiquement un redemarrage des pods concernes.
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -22,6 +23,7 @@ resources:
   - 11-autoscaling.yaml
   - 12-loki.yaml
   - 13-alloy.yaml
+  - 14-pme-secrets-sealed.yaml
 # Label commun a toutes les ressources et aux modeles de pods. Les selecteurs ne changent pas (immuables).
 labels:
   - pairs:

@@ -1,5 +1,5 @@
 # Detection de secrets (gitleaks) : regles par defaut + faux positifs connus du POC
-# (mots de passe de demonstration du realm Keycloak, injectes ensuite par "make secrets").
+# (mots de passe de demonstration du realm Keycloak, injectes ensuite par le Secret pme-secrets (make seal)).
 [extend]
 useDefault = true
 
