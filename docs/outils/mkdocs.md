@@ -28,9 +28,9 @@ thème qui règle l'apparence du site.
 | `mkdocs.yml` | Configuration du site : titre, couleurs, menu. |
 | `docs/` | Les pages de la documentation, une par fichier. |
 | `docs/stylesheets/extra.css` | Couleurs et style des tableaux. |
-| `requirements-docs.txt` | Versions exactes de MkDocs et du thème. |
-| `Dockerfile.docs` | Fabrique l'image Docker du site. |
-| `nginx-docs.conf` | Configuration du serveur qui affiche le site. |
+| `docker/docs/requirements.txt` | Versions exactes de MkDocs et du thème. |
+| `docker/docs/Dockerfile` | Fabrique l'image Docker du site. |
+| `docker/docs/nginx.conf` | Configuration du serveur qui affiche le site. |
 | `Makefile` | Les commandes de la documentation. |
 
 ## Commandes essentielles

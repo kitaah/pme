@@ -397,7 +397,7 @@ lint-yaml:
 
 # Lint Dockerfile : hadolint (binaire ou conteneur)
 lint-docker:
-	hadolint --config .hadolint.yaml api/Dockerfile moderation-service/Dockerfile frontend/Dockerfile Dockerfile.docs
+	hadolint --config .hadolint.yaml api/Dockerfile moderation-service/Dockerfile frontend/Dockerfile docker/docs/Dockerfile
 
 # Validation des manifestes Kubernetes rendus par kustomize (schemas officiels)
 lint-k8s:
@@ -452,20 +452,20 @@ image-test:
 	done
 
 # ---- Documentation (MkDocs) ----
-# Tout passe par Docker (Dockerfile.docs) : ni Python ni venv a installer sur le poste.
+# Tout passe par Docker (docker/docs/Dockerfile) : ni Python ni venv a installer sur le poste.
 # docs-serve et docs-check utilisent l'etape "deps" (outillage seul) et montent le depot :
 # l'apercu tourne meme si un lien est casse, pour pouvoir le corriger.
 docs-serve:
-	docker build -f Dockerfile.docs --target deps -t pme-docs-deps:dev .
+	docker build -f docker/docs/Dockerfile --target deps -t pme-docs-deps:dev .
 	@( for i in $$(seq 1 90); do curl -s -o /dev/null "$(DOCS_URL)" && { xdg-open "$(DOCS_URL)" 2>/dev/null || open "$(DOCS_URL)" 2>/dev/null; break; }; sleep 1; done ) &
 	docker run --rm -it -p $(DOCS_PORT):8000 -v "$(CURDIR)":/docs pme-docs-deps:dev mkdocs serve -a 0.0.0.0:8000
 
 docs-check:
-	docker build -f Dockerfile.docs --target deps -t pme-docs-deps:dev .
+	docker build -f docker/docs/Dockerfile --target deps -t pme-docs-deps:dev .
 	docker run --rm -v "$(CURDIR)":/docs pme-docs-deps:dev mkdocs build --strict --site-dir /tmp/site
 
 docs-image:
-	docker build -f Dockerfile.docs -t pme-docs:dev .
+	docker build -f docker/docs/Dockerfile -t pme-docs:dev .
 
 docs-run:
 	@echo "Documentation : http://localhost:$(DOCS_IMAGE_PORT) (Ctrl+C pour arreter)"

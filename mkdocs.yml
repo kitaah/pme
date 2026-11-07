@@ -24,12 +24,15 @@ theme:
     - search.highlight
 
 # Un onglet par grand thème. "Outils" regroupe une fiche par outil du projet (voir outils/modele-fiche.md).
+# "Pipeline CI/CD" explique les contrôles automatiques : exigences, fonctionnement et une page par famille de tests.
 nav:
   - Accueil: index.md
   - Outils:
       - Adminer: outils/adminer.md
       - Alloy: outils/alloy.md
       - cert-manager: outils/cert-manager.md
+      - container-structure-test: outils/container-structure-test.md
+      - GitLab CI: outils/gitlab-ci.md
       - Grafana: outils/grafana.md
       - Ingress-nginx: outils/ingress-nginx.md
       - Keycloak: outils/keycloak.md
@@ -44,6 +47,18 @@ nav:
       - Prometheus: outils/prometheus.md
       - React: outils/react.md
       - shadcn/ui: outils/shadcn-ui.md
+      - SonarCloud: outils/sonarcloud.md
+      - Trivy: outils/trivy.md
+  - Pipeline CI/CD:
+      - Vue d'ensemble: pipeline/index.md
+      - Exigences qualité: pipeline/exigences-qualite.md
+      - Fonctionnement: pipeline/fonctionnement.md
+      - Contrôles:
+          - Tests unitaires: pipeline/tests-unitaires.md
+          - Tests d'intégration: pipeline/tests-integration.md
+          - Tests des images Docker: pipeline/tests-images.md
+          - Tests de performance: pipeline/tests-performance.md
+          - Analyse SonarCloud: pipeline/analyse-sonarcloud.md
   - Contribuer:
       - Modèle de fiche outil: outils/modele-fiche.md
 
