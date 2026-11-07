@@ -7,4 +7,5 @@ Documentation technique.
 | Page | Ce qu'on y trouve |
 |---|---|
 | [Outils](outils/mkdocs.md) | Une fiche par outil du projet. |
+| [Pipeline CI/CD](pipeline/index.md) | Les contrôles automatiques de qualité : tests, images Docker, performance, analyse du code. |
 | [Modèle de fiche outil](outils/modele-fiche.md) | Le modèle à suivre pour documenter chaque outil du projet |
