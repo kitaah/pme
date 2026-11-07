@@ -43,6 +43,7 @@ nav:
       - MkDocs: outils/mkdocs.md
       - NATS: outils/nats.md
       - NestJS: outils/nestjs.md
+      - opossum: outils/opossum.md
       - PostgreSQL: outils/postgresql.md
       - Prometheus: outils/prometheus.md
       - React: outils/react.md

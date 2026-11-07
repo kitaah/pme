@@ -25,6 +25,7 @@ faille avec sa gravité et la version qui la corrige. Dans la pipeline, Trivy ne
 ## Rôle dans le projet
 
 - Il analyse les trois images : API, modération et interface.
+- Il analyse aussi les dépendances des trois modules, devDependencies comprises.
 - Il bloque la pipeline si une faille HIGH ou CRITICAL est corrigeable.
 - Il ignore les failles sans correctif, sur lesquelles l'équipe ne peut rien faire.
 - Il conserve un rapport JSON par image, pour garder la trace de chaque analyse.
@@ -35,7 +36,7 @@ faille avec sa gravité et la version qui la corrige. Dans la pipeline, Trivy ne
 | Fichier ou dossier | Description |
 |---|---|
 | `.trivyignore` | Liste les exceptions : un identifiant de faille et une date d'expiration. |
-| `.gitlab-ci.yml` | Définit l'analyse dans le job `image-tests`. |
+| `.gitlab-ci.yml` | Définit les analyses dans les jobs `image-tests` et `dependency-scan`. |
 | `docker-bake.hcl` | Décrit la construction des images analysées. |
 | `api/Dockerfile` | Fabrique l'image de l'API. |
 | `moderation-service/Dockerfile` | Fabrique l'image de la modération. |
@@ -50,6 +51,7 @@ faille avec sa gravité et la version qui la corrige. Dans la pipeline, Trivy ne
 | `make image` | Construit les images à analyser. |
 | `make image-test` | Contrôle la structure puis les failles des trois images. |
 | `trivy image --severity HIGH,CRITICAL --ignore-unfixed pme-api:dev` | Analyse l'image de l'API seule. |
+| `trivy fs --scanners vuln --include-dev-deps --ignore-unfixed api` | Analyse les dépendances de l'API, devDependencies comprises. |
 
 !!! warning "Attention"
     Une exception du fichier `.trivyignore` doit toujours avoir une date d'expiration et un commentaire de justification.

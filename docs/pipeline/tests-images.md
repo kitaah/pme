@@ -70,6 +70,11 @@ Détail des 6 contrôles de l'image de l'interface :
 
 Ce job est le plus coûteux de la pipeline. Il ne se lance donc que s'il peut trouver quelque chose de nouveau.
 
+## Publication
+
+Sur la branche principale, si tous les contrôles réussissent, le job publie les trois images dans le registre GitLab.
+Voir [Publication des images](publication-images.md).
+
 ## Où voir le résultat
 
 - **Journal du job** : la construction, les contrôles de structure, puis un tableau des failles par image.

@@ -54,7 +54,7 @@ La pipeline lance **66 tests unitaires** répartis en 3 jobs, un par module. Les
 
 | Module | Seuil de lignes | Seuil de branches | Couverture mesurée |
 |---|---|---|---|
-| **API** | 40 % | 20 % | 48,1 % des lignes, 23,5 % des branches |
+| **API** | 40 % | 20 % | 50,2 % des lignes, 23,4 % des branches |
 | **Service de modération** | 40 % | 20 % | 47,7 % des lignes, 29,1 % des branches |
 | **Interface** | 50 % | 35 % | 56,3 % des lignes, 44,7 % des branches |
 
