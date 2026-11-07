@@ -19,6 +19,8 @@ export interface AppConfig {
      * et dans les tests d'integration (Testcontainers demarre un PostgreSQL sans TLS) : connexion en clair.
      */
     sslCaFile?: string;
+    /** Connexions maximum ouvertes vers PostgreSQL par instance (voir le budget dans k8s/01-postgres.yaml). */
+    poolSize: number;
   };
   nats: {
     host: string;
@@ -71,6 +73,7 @@ export function loadConfiguration(env: NodeJS.ProcessEnv = process.env): AppConf
       user: required(env, 'DB_USER'),
       password: required(env, 'DB_PASSWORD'),
       sslCaFile: env.DB_SSL_CA || undefined,
+      poolSize: num(env, 'DB_POOL_SIZE', 5),
     },
     nats: {
       host: env.NATS_HOST ?? 'localhost',

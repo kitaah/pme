@@ -48,6 +48,8 @@ spec:
             - start-dev
             - --import-realm
             - --db=postgres
+            # Pool limite a 10 connexions (100 par defaut) : voir le budget dans 01-postgres.yaml.
+            - --db-pool-max-size=10
             # sslmode=verify-full : connexion chiffree ET verification du nom du serveur contre l'autorite locale.
             - "--db-url=jdbc:postgresql://postgres:5432/keycloak?sslmode=verify-full&sslrootcert=/etc/ssl/pme/ca.crt"
             # Keycloak est joint par l'ingress sur https://keycloak.localhost. --hostname fige

@@ -32,6 +32,7 @@ import { CreateListings1730000000000 } from './migrations/1730000000000-create-l
           migrations: [CreateListings1730000000000],
           migrationsRun: true, // schema gere uniquement par migrations (jamais synchronize)
           synchronize: false,
+          poolSize: db.poolSize, // plafond de connexions par instance : evite de saturer PostgreSQL quand l'autoscaler ajoute des pods
           retryAttempts: 10,
           retryDelay: 3000,
         };

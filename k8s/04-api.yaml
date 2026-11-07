@@ -53,6 +53,13 @@ spec:
               value: "3000"
             - name: DB_HOST
               value: postgres
+            # Au plus 10 connexions a PostgreSQL par pod (4 pods maximum : voir le budget dans 01-postgres.yaml).
+            - name: DB_POOL_SIZE
+              value: "10"
+            # Tas de Node plafonne a 75 % de la limite de memoire du conteneur (256 Mi) : le ramasse-miettes
+            # se declenche avant que Kubernetes ne tue le pod (OOMKilled).
+            - name: NODE_OPTIONS
+              value: "--max-old-space-size=192"
             - name: DB_NAME
               value: pme
             - name: DB_USER
