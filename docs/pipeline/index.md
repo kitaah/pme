@@ -4,7 +4,7 @@
 
 | Information | Détail |
 |---|---|
-| **Rôle** | Vérifie automatiquement la qualité du code et des images à chaque modification de la branche principale |
+| **Rôle** | Vérifie automatiquement la qualité du code et des images à chaque modification de la branche principale, puis publie les images vérifiées dans le registre GitLab |
 | **Plateforme** | GitLab CI/CD, offre gratuite (400 minutes de calcul par mois) |
 | **Configuration** | Le fichier `.gitlab-ci.yml`, à la racine du dépôt |
 | **Déclencheur** | Chaque commit ou fusion sur la branche principale (`main`) |
@@ -18,7 +18,12 @@ Chaque job démarre dans un conteneur neuf, fait un contrôle précis, puis publ
 la pipeline devient rouge et l'équipe le voit tout de suite.
 
 La pipeline du projet vérifie quatre choses : le code se comporte comme prévu, les services fonctionnent ensemble, les
-images Docker sont sûres, et l'API reste rapide. Une cinquième analyse note la qualité générale du code.
+images Docker sont sûres, et l'API reste rapide. Une cinquième analyse note la qualité générale du code. Une fois les images contrôlées,
+elles sont publiées dans le registre de GitLab.
+
+Cette publication apporte quatre bénéfices. Chaque image est liée à un commit précis, donc traçable. L'image déployée
+est celle qui a été vérifiée, pas une reconstruction. En cas de problème, on revient à la version précédente sans rien
+reconstruire. Enfin, la pipeline fournit un résultat prêt à déployer, ce qui prépare la livraison continue.
 
 **Définitions**
 
@@ -58,11 +63,11 @@ flowchart LR
 | `unit-tests:frontend` | Les 35 tests unitaires de l'interface. | Le code d'un module change. |
 | `sonar` | La qualité du code, la couverture et les doublons. | Le code change, sur la branche principale. |
 | `integration-tests` | Les 27 tests avec une vraie base et un vrai broker. | L'API ou la modération change. |
-| `image-tests` | La structure et les vulnérabilités des 3 images. | Une image ou ses tests changent. |
+| `image-tests` | La structure et les vulnérabilités des 3 images, puis leur publication dans le registre. | Une image ou ses tests changent. |
 | `performance-tests` | La rapidité de l'API sous charge. | L'API ou les scénarios k6 changent. |
 
 !!! note "À savoir"
-    Un commit qui ne touche que la documentation ne lance aucun job. Il ne consomme donc aucune minute du quota.
+Un commit qui ne touche que la documentation ne lance aucun job. Il ne consomme donc aucune minute du quota.
 
 ## Principes de conception
 
@@ -84,6 +89,7 @@ Le détail de ces règles se trouve dans la page [Fonctionnement](fonctionnement
 | [Tests unitaires](tests-unitaires.md) | La liste des 66 tests unitaires. |
 | [Tests d'intégration](tests-integration.md) | La liste des 27 tests d'intégration. |
 | [Tests des images Docker](tests-images.md) | Les 22 contrôles de structure et l'analyse Trivy. |
+| [Publication des images](publication-images.md) | Le dépôt des images vérifiées dans le registre GitLab. |
 | [Tests de performance](tests-performance.md) | Les scénarios k6 et leurs seuils. |
 | [Analyse SonarCloud](analyse-sonarcloud.md) | La porte qualité et ses résultats. |
 
