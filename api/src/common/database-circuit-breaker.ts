@@ -1,4 +1,4 @@
-import { ServiceUnavailableException } from '@nestjs/common';
+import { Logger, ServiceUnavailableException } from '@nestjs/common';
 import CircuitBreaker from 'opossum';
 import { Gauge, Registry } from 'prom-client';
 import { QueryFailedError } from 'typeorm';
@@ -45,6 +45,7 @@ function isBusinessError(error: unknown): boolean {
  * (semi-ouvert) : s'il reussit le circuit se referme, sinon il se rouvre.
  */
 export class DatabaseCircuitBreaker {
+  private readonly logger = new Logger(DatabaseCircuitBreaker.name);
   private readonly breaker: CircuitBreaker<[() => Promise<unknown>], unknown>;
 
   constructor(
@@ -67,17 +68,23 @@ export class DatabaseCircuitBreaker {
     return this.breaker.halfOpen ? 'half-open' : 'closed';
   }
 
-  /** Execute l'appel a la base. Circuit ouvert : 503 immediat. Autre echec : l'erreur d'origine remonte. */
+  /**
+   * Execute l'appel a la base.
+   * Circuit ouvert, base injoignable ou delai depasse : 503, comme pour le broker. Chaque pod a son propre circuit,
+   * donc un pod dont le circuit est encore ferme repond lui aussi 503 (et non 500) pendant une panne.
+   * Erreur de donnees (contrainte, syntaxe) : l'erreur d'origine remonte.
+   */
   async run<T>(action: () => Promise<T>): Promise<T> {
     try {
       return (await this.breaker.fire(action)) as T;
     } catch (error) {
-      if ((error as { code?: string }).code === 'EOPENBREAKER') {
-        throw new ServiceUnavailableException(
-          'La base de données est momentanément indisponible. Réessayez dans un instant.',
-        );
+      if (isBusinessError(error)) throw error;
+      if ((error as { code?: string }).code !== 'EOPENBREAKER') {
+        this.logger.warn(`Appel a la base en echec : ${String(error)}`);
       }
-      throw error;
+      throw new ServiceUnavailableException(
+        'La base de données est momentanément indisponible. Réessayez dans un instant.',
+      );
     }
   }
 
