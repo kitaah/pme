@@ -4,68 +4,131 @@
 
 | Information | Détail |
 |---|---|
-| **Rôle** | Reçoit les requêtes web et les dirige vers le bon service du cluster |
-| **Version** | Addon « ingress » de Minikube (ingress-nginx) |
-| **Adresse en local** | <https://pme.localhost> |
+| **Rôle** | Point d'entrée unique du cluster : il reçoit les requêtes du navigateur, les déchiffre et les dirige vers le bon service |
+| **Version** | Addon « ingress » de Minikube, qui installe ingress-nginx |
+| **Adresse en local** | <https://pme.localhost> et les cinq autres noms en `.localhost` |
 
 ## Description
 
-Ingress-nginx est le contrôleur d'ingress de la communauté Kubernetes. Il s'appuie sur le serveur web NGINX. Il lit les
-règles d'ingress déclarées dans le cluster. Il lit le nom d'hôte de chaque requête reçue. Il envoie ensuite la requête
-au service qui correspond à ce nom. Il déchiffre aussi les échanges HTTPS, avec un certificat fourni par cert-manager. Un seul point d'entrée suffit alors pour plusieurs services.
+Ingress-nginx est le **contrôleur d'ingress** de la communauté Kubernetes. Il s'appuie sur le serveur web nginx, et
+son rôle est d'aiguiller le trafic qui entre dans le cluster.
+
+**Pourquoi un point d'entrée unique ?**
+Le cluster héberge plusieurs interfaces web : le site, l'API, la modération, Keycloak, Adminer, Grafana, Prometheus
+et Alloy. Sans point d'entrée commun, chacune exigerait sa propre ouverture vers l'extérieur et son propre numéro de port, à
+retenir et à transmettre. L'ingress règle le problème : il n'écoute que les ports 80 et 443, et choisit la destination
+d'après l'adresse demandée. Une seule porte, plusieurs destinations.
+
+**Comment il choisit la destination.**
+Deux informations lui suffisent. Le **nom d'hôte** d'abord, c'est-à-dire l'adresse saisie dans le navigateur :
+`grafana.localhost` mène à Grafana. Le **chemin** ensuite, pour le site principal, où trois destinations cohabitent
+sous la même adresse. La règle est celle du chemin le plus long : `/api/v1/moderation` l'emporte sur `/api/v1`, qui
+l'emporte à son tour sur `/`.
+
+```d2
+vars: {
+  d2-config: {
+    layout-engine: elk
+    theme-id: 5
+    pad: 8
+  }
+}
+direction: down
+
+# Mise en forme commune : texte lisible à la largeur de la page, angles arrondis
+classes: {
+  boite: {
+    style: {
+      font-size: 24
+      border-radius: 12
+    }
+  }
+}
+
+navigateur: "Navigateur\nHTTPS, ports 80 et 443" {class: boite}
+ingress: "Ingress\nle chiffrement s'arrête ici" {class: boite}
+
+site: "pme.localhost" {
+  class: boite
+  front: "Site\nchemin /" {class: boite}
+  api: "API\nchemin /api/v1" {class: boite}
+  moderation: "Modération\nchemin /api/v1/moderation" {class: boite}
+}
+
+autres: "Un nom d'hôte par outil\nKeycloak, Adminer, Grafana,\nPrometheus, Alloy" {class: boite}
+
+navigateur -> ingress
+ingress -> site
+ingress -> autres
+```
+
+**Le chiffrement s'arrête à l'ingress.**
+Les échanges entre le navigateur et l'ingress sont chiffrés en HTTPS, avec un certificat fourni par
+[cert-manager](cert-manager.md). L'ingress déchiffre la requête, puis la transmet en HTTP aux services du cluster :
+c'est ce qu'on appelle la **terminaison TLS**. Ce choix évite à chaque application de gérer son propre certificat.
+Deux liaisons internes font exception et restent chiffrées de bout en bout, parce qu'elles transportent des données
+sensibles : celles vers [PostgreSQL](postgresql.md) et vers [NATS](nats.md).
+
+**Il répartit aussi la charge.**
+Une application fonctionne en plusieurs exemplaires, dont le nombre varie avec la charge. L'ingress envoie les
+requêtes directement à ces exemplaires, à tour de rôle. Lorsque l'autoscaler en ajoute ou en retire, la répartition
+suit d'elle-même. Le cluster n'a donc pas besoin d'un répartiteur de charge séparé, service que seul un hébergeur
+fournirait.
+
+**Toutes les adresses ne sont pas exposées.**
+Seul le préfixe `/api/v1` est accessible depuis l'extérieur. Les adresses techniques de l'API, ses mesures et ses
+sondes de santé, restent internes au cluster : Prometheus et Kubernetes les interrogent directement, sans passer par
+l'ingress. Une adresse non exposée est une surface d'attaque en moins.
 
 **Définitions**
 
-- **Ingress** : règle Kubernetes qui associe un nom d'hôte à un service du cluster.
-- **Contrôleur d'ingress** : programme qui applique les règles d'ingress et achemine les requêtes.
-- **Nom d'hôte** : adresse lue dans le navigateur, par exemple `keycloak.localhost`.
-- **Tunnel** : liaison qui rend l'ingress du cluster accessible depuis l'ordinateur.
-- **Terminaison TLS** : l'ingress déchiffre les échanges HTTPS, puis transmet la requête en HTTP aux services.
-- **Fichier hosts** : fichier de l'ordinateur qui associe un nom d'hôte à une adresse IP.
-- **Répartition de charge** : distribution des requêtes entre plusieurs pods d'une même application, pour qu'aucun ne soit saturé.
+| Terme | Définition |
+|---|---|
+| **Chemin** | Partie de l'adresse qui suit le nom d'hôte, par exemple `/api/v1/listings`. |
+| **Contrôleur d'ingress** | Programme qui applique les règles d'ingress et achemine réellement les requêtes. |
+| **Fichier hosts** | Fichier de l'ordinateur qui associe un nom d'hôte à une adresse réseau. |
+| **Ingress** | Règle Kubernetes qui associe un nom d'hôte et un chemin à un service du cluster. |
+| **Nom d'hôte** | Adresse saisie dans le navigateur, par exemple `keycloak.localhost`. |
+| **Répartition de charge** | Distribution des requêtes entre plusieurs exemplaires d'une même application. |
+| **Terminaison TLS** | Fait de déchiffrer le HTTPS à l'entrée, puis de transmettre la requête en HTTP à l'intérieur. |
+| **TLS 1.2 et 1.3** | Versions actuelles du protocole de chiffrement. Les versions antérieures sont refusées. |
+| **Tunnel** | Liaison qui rend l'ingress joignable depuis l'ordinateur lorsque le cluster n'a pas publié ses ports. |
 
 ## Rôle dans le projet
 
-- Il est le point d'entrée des interfaces web du cluster.
-- Il dirige chaque nom d'hôte vers son service, selon le tableau ci-dessous.
-- Il chiffre les échanges avec le navigateur et redirige le HTTP vers le HTTPS.
-- Il répartit les requêtes entre les pods de l'API, de la modération et du front, à tour de rôle.
-- Il évite d'ouvrir un accès séparé pour chaque service.
-- Sans lui, chaque interface devrait être jointe par une redirection de port distincte.
+- Il est la seule porte d'entrée des interfaces web du cluster.
+- Il dirige chaque nom d'hôte vers son service, et les trois chemins du site vers leurs destinations respectives.
+- Il chiffre les échanges avec le navigateur et redirige automatiquement le HTTP vers le HTTPS.
+- Il répartit les requêtes entre les exemplaires de l'API, de la modération et du site.
+- Il n'expose que ce qui doit l'être : les mesures et les sondes de santé restent internes.
+- Sans lui, chaque interface exigerait une redirection de port distincte, à relancer à chaque session de travail.
+
+Les six noms d'hôte sont les suivants :
 
 | Adresse | Service | Port | Rôle |
 |---|---|---|---|
-| <https://pme.localhost> | `pme-frontend` | 8080 | Site React servi par nginx |
-| <https://keycloak.localhost> | `keycloak` | 8080 | Connexion et gestion des comptes |
-| <https://adminer.localhost> | `adminer` | 8080 | Consultation des bases de données |
-| <https://grafana.localhost> | `grafana` | 3000 | Tableaux de bord |
-| <https://prometheus.localhost> | `prometheus` | 9090 | Collecte des métriques |
+| <https://pme.localhost> | `pme-frontend`, `pme-api`, `pme-moderation` | 8080, 3000 et 3001 | Le site et son API, selon le chemin. |
+| <https://keycloak.localhost> | `keycloak` | 8080 | Connexion et gestion des comptes. |
+| <https://adminer.localhost> | `adminer` | 8080 | Consultation des bases de données. |
+| <https://grafana.localhost> | `grafana` | 3000 | Tableaux de bord. |
+| <https://prometheus.localhost> | `prometheus` | 9090 | Mesures brutes et état de la collecte. |
+| <https://alloy.localhost> | `alloy` | 12345 | Suivi de la collecte des journaux. |
 
-Sur l'adresse de l'application, l'ingress distingue trois chemins. Le chemin `/api/v1/moderation` mène au service de
-modération. Le chemin `/api/v1` mène à l'API. Tout le reste mène au site. Les chemins `/api/metrics` et `/api/health`
-ne sont pas exposés.
-
-Chaque application tourne avec plusieurs pods. L'ingress envoie les requêtes directement vers ces pods. Quand
-l'autoscaler en ajoute ou en retire, la répartition suit sans rien changer. Il joue donc le rôle de répartiteur de
-charge, sans service de type `LoadBalancer`.
-
-Le chiffrement HTTPS s'arrête à l'ingress. Derrière lui, les échanges avec les services restent en HTTP dans le cluster. Seules les connexions vers PostgreSQL et NATS sont chiffrées : voir leurs fiches.
-
-L'ingress accepte TLS 1.2 et TLS 1.3, et refuse les versions plus anciennes. C'est le réglage usuel d'une entrée
-publique : le projet ne maîtrise pas tous les navigateurs ni les services externes qui s'y connecteront. Les
-connexions internes vers PostgreSQL et NATS n'acceptent, elles, que TLS 1.3.
+!!! note "À savoir"
+    Ces noms d'hôte figurent aussi dans le `Makefile`, dans la configuration de Keycloak, de l'API, de la modération,
+    de Grafana et du site. En changer un impose de modifier tous ces fichiers ensemble, sans quoi la connexion échoue.
 
 ## Fichiers et dossiers principaux
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/08-ingress.yaml` | Déclare les noms d'hôte, les services visés et le certificat. |
-| `k8s/08-certificate.yaml` | Demande le certificat des cinq noms d'hôte. |
+| `k8s/08-ingress.yaml` | Déclare les noms d'hôte, les chemins, les services visés et le certificat. |
+| `k8s/08-certificate.yaml` | Demande à cert-manager le certificat des six noms d'hôte. |
 | `k8s/03-keycloak.yaml` | Fixe l'adresse publique de Keycloak. |
 | `k8s/config/realm-pme.json` | Liste les adresses de retour autorisées après la connexion. |
-| `k8s/config/frontend-config.js` | Indique au front l'adresse de Keycloak. |
-| `Makefile` | Contient les noms d'hôte, les commandes de l'ingress et le réglage de la compression. |
-| `/etc/hosts` | Associe les noms d'hôte à l'adresse de l'ordinateur. |
+| `k8s/config/frontend-config.js` | Indique au site l'adresse de Keycloak. |
+| `Makefile` | Contient les noms d'hôte et les commandes liées à l'ingress. |
+| `/etc/hosts` | Associe les six noms d'hôte à l'adresse de l'ordinateur. |
 
 ## Commandes essentielles
 
@@ -73,52 +136,39 @@ connexions internes vers PostgreSQL et NATS n'acceptent, elles, que TLS 1.3.
 
 | Commande | Description |
 |---|---|
-| `make minikube-up` | Crée le cluster avec les ports 80 et 443 publiés sur l'ordinateur. |
-| `make ingress` | Active l'ingress dans Minikube, attend qu'il soit prêt et active la compression. |
-| `make cert-manager` | Installe cert-manager, qui fournit le certificat HTTPS. |
+| `make minikube-up` | Crée le cluster en publiant les ports 80 et 443 sur l'ordinateur. |
+| `make ingress` | Active l'ingress dans le cluster et attend qu'il soit prêt. |
 | `make hosts` | Affiche la ligne à ajouter au fichier hosts de l'ordinateur. |
 | `make deploy` | Installe les règles d'ingress et le certificat avec le reste de la plateforme. |
 | `make app` | Ouvre l'application dans le navigateur. |
 | `make ca-cert` | Écrit l'autorité locale dans `pme-ca.crt`, à importer dans le navigateur. |
 | `make tunnel` | Redirige les ports 80 et 443 vers l'ingress, pour un cluster créé sans publication des ports. |
 
+La ligne à ajouter une seule fois au fichier hosts est la suivante :
+
+```
+127.0.0.1 pme.localhost keycloak.localhost adminer.localhost grafana.localhost prometheus.localhost alloy.localhost
+```
+
+Ce fichier se trouve dans `/etc/hosts` sous Linux et macOS, et dans `C:\Windows\System32\drivers\etc\hosts` sous
+Windows. Sa modification demande les droits d'administrateur.
+
+!!! note "À savoir"
+    Le suffixe `.localhost` n'est pas un détail. Les navigateurs traitent ces adresses comme un contexte sécurisé, ce
+    dont la connexion à Keycloak a besoin, et les dirigent toujours vers l'ordinateur lui-même. Un suffixe `.local`
+    ferait échouer la connexion.
+
+!!! warning "Attention"
+    Le projet ingress-nginx a cessé d'être maintenu en mars 2026. Ce choix reste acceptable pour un cluster local, mais
+    une mise en production imposerait de le remplacer, par exemple par Traefik ou par une passerelle d'API.
+
 !!! tip "Astuce"
-Le cluster publie les ports 80 et 443 sur l'ordinateur dès sa création. L'ingress est alors joignable sans autre
-commande. Le port 80 redirige vers le HTTPS sur le port 443.
-
-!!! tip "Astuce"
-La commande `make hosts` affiche la ligne à ajouter au fichier hosts. Elle associe les cinq noms à l'adresse
-`127.0.0.1`, celle de l'ordinateur lui-même. Elle s'ajoute une seule fois.
-
-    ```
-    127.0.0.1 pme.localhost keycloak.localhost adminer.localhost grafana.localhost prometheus.localhost
-    ```
-
-    Le fichier hosts se trouve dans `/etc/hosts` sous Linux et macOS. Sous Windows, il se trouve dans
-    `C:\Windows\System32\drivers\etc\hosts`. Il se modifie avec les droits administrateur.
-
-!!! note "À savoir"
-L'adresse de Minikube, donnée par `minikube ip`, n'est pas utilisée. Elle change d'un ordinateur à l'autre. Le
-cluster publie ses ports sur l'ordinateur, donc l'adresse `127.0.0.1` suffit partout.
-
-!!! note "À savoir"
-Le certificat est signé par une autorité locale. Le navigateur affiche un avertissement tant que le fichier
-`pme-ca.crt` n'est pas importé dans ses réglages. Voir la fiche cert-manager.
-
-!!! note "À savoir"
-Les noms d'hôte se terminent par `.localhost`. Les navigateurs les traitent comme des adresses sûres.
-La connexion avec Keycloak en a besoin. Ils les envoient aussi toujours vers l'ordinateur lui-même (127.0.0.1),
-d'où la publication du port 80 par le cluster.
-
-!!! note "À savoir"
-Le projet ingress-nginx a été arrêté en mars 2026. Il convient à un cluster local. En production, Traefik ou une
-passerelle d'API (API Gateway) prendront sa place.
-
-!!! note "À savoir"
-Les noms d'hôte sont aussi écrits dans la configuration de Keycloak, de l'API et du front. Pour en changer un,
-modifier tous ces fichiers ensemble.
+    Le cluster publie les ports 80 et 443 dès sa création : l'ingress est donc joignable sans autre commande, et
+    `make tunnel` ne sert que pour un cluster créé autrement. L'adresse donnée par `minikube ip` n'est jamais utilisée,
+    car elle change d'un ordinateur à l'autre.
 
 ## Pour aller plus loin
 
 - [Documentation d'ingress-nginx](https://kubernetes.github.io/ingress-nginx/)
 - [Documentation de Kubernetes sur les ingress](https://kubernetes.io/fr/docs/concepts/services-networking/ingress/)
+- [Fiche cert-manager du projet](cert-manager.md)
