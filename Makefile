@@ -468,7 +468,7 @@ port-forward:
 		sudo -v; \
 		sudo env KUBECONFIG="$${KUBECONFIG:-$$HOME/.kube/config}" sh -c 'while true; do $(INGRESS_FORWARD); sleep 2; done' >/dev/null 2>&1 & \
 	fi
-	@( while true; do kubectl -n $(NS) port-forward svc/nats $(NATS_MONITOR_PORT):8222; sleep 2; done ) &
+	@( while true; do kubectl -n $(NS) port-forward deploy/nats $(NATS_MONITOR_PORT):8222; sleep 2; done ) &
 	@( while true; do kubectl -n $(NS) port-forward svc/postgres 5432:5432; sleep 2; done ) &
 	@( while true; do kubectl -n $(NS) port-forward svc/nats 4222:4222; sleep 2; done ) &
 	@sleep 2
