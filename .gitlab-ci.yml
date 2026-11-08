@@ -1,4 +1,4 @@
-# Chaine CI/CD (GitLab CI) - tests unitaires, analyse SonarCloud, tests d'integration, analyse des dependances, tests des images Docker (puis leur publication), tests de performance.
+# Chaine CI/CD (GitLab CI) - tests unitaires, analyse SonarCloud, controle des Dockerfile (Hadolint), tests d'integration, analyse des dependances, tests des images Docker (puis leur publication), tests de performance.
 # Les autres etapes (qualite statique) seront ajoutees une a une.
 # Tous les jobs sont independants (needs: []) : la duree du pipeline est celle du job le plus long.
 # Quota GitLab gratuit : 400 minutes de pipeline par mois. Peu de jobs, et un job ne tourne que si son code change.
@@ -119,6 +119,29 @@ sonar:
   # Retirer cette ligne une fois la porte qualite reglee.
   allow_failure: true
   rules: !reference [.code-changes, rules]
+
+# ---------- Controle des Dockerfile : Hadolint (linter, sans Docker ni construction d'image) ----------
+# Regles et seuil d'echec (warning) definis dans .hadolint.yaml, partage avec `make lint-docker`.
+hadolint:
+  stage: test
+  needs: []
+  image: alpine:3.22
+  variables:
+    HADOLINT_VERSION: 2.14.0
+    HADOLINT_SHA256: 6bf226944684f56c84dd014e8b979d27425c0148f61b3bd99bcc6f39e9dc5a47
+  before_script:
+    - apk add --no-cache curl
+    # Hadolint : version epinglee et binaire verifie par sa somme de controle (SHA-256) avant installation.
+    - curl -sSfL -o /usr/local/bin/hadolint "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-linux-x86_64"
+    - echo "${HADOLINT_SHA256}  /usr/local/bin/hadolint" | sha256sum -c -
+    - chmod +x /usr/local/bin/hadolint
+  script:
+    - hadolint --version
+    - hadolint --config .hadolint.yaml --no-color api/Dockerfile moderation-service/Dockerfile frontend/Dockerfile docker/docs/Dockerfile
+  rules:
+    - changes: [".gitlab-ci.yml", ".hadolint.yaml", "api/Dockerfile", "moderation-service/Dockerfile", "frontend/Dockerfile", "docker/docs/Dockerfile"]
+    - when: manual
+      allow_failure: true
 
 # ---------- Analyse des dependances : failles connues dans les fichiers package-lock.json (Trivy) ----------
 # Complete l'analyse des images : celle-ci ne voit que les paquets de production, alors que cette analyse lit aussi les
