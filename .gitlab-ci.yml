@@ -65,9 +65,7 @@ unit-tests:api:
     MODULE: api
     JEST_JUNIT_OUTPUT_DIR: reports
     JEST_JUNIT_OUTPUT_NAME: junit.xml
-    # Temporaire : les tests du disjoncteur (DatabaseCircuitBreaker) sont exclus, ils attendent encore l'ancienne erreur
-    # au lieu du 503. Retirer l'option --testNamePattern une fois ces tests corriges.
-    TEST_ARGS: --reporters=default --reporters=jest-junit --testNamePattern=^(?!.*(DatabaseCircuitBreaker|disjoncteur)).*$
+    TEST_ARGS: --reporters=default --reporters=jest-junit
   cache:
     key: { prefix: api, files: [api/package-lock.json] }
     paths: [.npm]

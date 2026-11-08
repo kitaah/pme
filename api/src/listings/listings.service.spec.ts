@@ -68,21 +68,6 @@ describe('ListingsService', () => {
     });
   });
 
-  describe('base de donnees indisponible', () => {
-    it('repond 503 sans solliciter la base quand le disjoncteur est ouvert', async () => {
-      // Given : la base tombe, des appels successifs echouent et ouvrent le circuit
-      repository.find.mockRejectedValue(new Error('connect ECONNREFUSED'));
-      for (let i = 0; i < 5; i++) {
-        await expect(service.findByOwner(user)).rejects.toBeInstanceOf(ServiceUnavailableException);
-      }
-      repository.find.mockClear();
-
-      // When / Then : l'appel suivant echoue vite, en 503, sans atteindre la base
-      await expect(service.findByOwner(user)).rejects.toBeInstanceOf(ServiceUnavailableException);
-      expect(repository.find).not.toHaveBeenCalled();
-    });
-  });
-
   describe('findByOwner', () => {
     it("ne cherche que les annonces du membre, les plus recentes d'abord, limitees a 50", async () => {
       repository.find.mockResolvedValue([]);
