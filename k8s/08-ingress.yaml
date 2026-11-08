@@ -1,6 +1,6 @@
 # Ingress HTTPS : un seul point d'entree pour les interfaces web, un nom d'hote .localhost par service.
-# Le TLS s'arrete ici (terminaison a l'ingress) : le certificat `pme-tls` vient de cert-manager (k8s/08-certificate.yaml),
-# et le HTTP est redirige vers le HTTPS. Derriere l'ingress, les services restent en HTTP dans le cluster.
+# Le TLS s'arrete ici (terminaison a l'ingress) : le certificat `pme-tls` vient de cert-manager (k8s/08-certificate.yaml).
+# Le HTTP est redirige vers le HTTPS par Traefik (k8s/traefik/values.yaml). Derriere l'ingress, les services restent en HTTP dans le cluster.
 # Le suffixe .localhost est voulu : les navigateurs traitent ces noms comme un contexte securise.
 # keycloak-js (PKCE) en a besoin ; avec un suffixe .local, la connexion echoue.
 #   pme.localhost        -> trois chemins, le plus long l'emporte :
@@ -16,8 +16,10 @@
 #   alloy.localhost      -> alloy (interface de suivi de la collecte des logs)
 # Loki, NATS, PostgreSQL et MkDocs n'ont pas d'ingress (Loki n'est interroge que par Grafana) : NATS et PostgreSQL restent joints par "make port-forward".
 #
-# Controleur : ingress-nginx, installe par l'addon Minikube (make ingress). Le projet ingress-nginx est
-# arrete depuis mars 2026 : acceptable pour un POC local, a remplacer en production (Traefik ou API Gateway).
+# Controleur : Traefik, installe par Helm (make ingress). Il remplace ingress-nginx, archive en mars 2026.
+# Les anciennes annotations nginx.ingress.kubernetes.io/* n'existent plus : la redirection vers HTTPS est faite par
+# Traefik pour tous les noms, et la taille des en-tetes de Keycloak (erreur 502 avec nginx, tampon de 16 Ko) n'est
+# plus un sujet, Traefik n'ayant pas ce tampon. HSTS et compression : k8s/08-middlewares.yaml.
 #
 # Le navigateur doit faire confiance a l'autorite locale (make ca-cert), sinon il affiche un avertissement.
 # Les noms d'hote sont aussi ecrits dans le Makefile (APP_HOST...), k8s/03-keycloak.yaml, 04-api.yaml,
@@ -27,13 +29,15 @@ kind: Ingress
 metadata:
   name: pme
   annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # <namespace>-<nom>@kubernetescrd : la chaine HSTS + compression de k8s/08-middlewares.yaml.
+    traefik.ingress.kubernetes.io/router.middlewares: pme-web-defaults@kubernetescrd
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik
   tls:
     - secretName: pme-tls
       hosts:
         - pme.localhost
+        - keycloak.localhost
         - adminer.localhost
         - grafana.localhost
         - prometheus.localhost
@@ -54,6 +58,13 @@ spec:
             pathType: Prefix
             backend:
               service: { name: pme-frontend, port: { number: 8080 } }
+    - host: keycloak.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: keycloak, port: { number: 8080 } }
     - host: adminer.localhost
       http:
         paths:
@@ -82,27 +93,3 @@ spec:
             pathType: Prefix
             backend:
               service: { name: alloy, port: { number: 12345 } }
----
-# Keycloak a son propre Ingress : les cookies et jetons de la connexion depassent la taille d'en-tete
-# par defaut d'ingress-nginx (erreur 502 apres la saisie du mot de passe). Le tampon est agrandi ici seulement.
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: pme-keycloak
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-spec:
-  ingressClassName: nginx
-  tls:
-    - secretName: pme-tls
-      hosts:
-        - keycloak.localhost
-  rules:
-    - host: keycloak.localhost
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service: { name: keycloak, port: { number: 8080 } }

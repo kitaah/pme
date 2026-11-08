@@ -130,6 +130,10 @@ Cela n'est pas seulement déclaré, c'est vérifié à chaque passage de la pipe
   avec le même compte, créé à l'initialisation du serveur. Chacun peut donc lire et modifier les données des autres, y
   compris les comptes de Keycloak. Un compte par base, avec les seuls droits nécessaires, est le premier correctif à
   apporter.
+- **Le disque reste modifiable pour la plupart des composants.** Seuls l'API, la modération et l'interface l'ont en
+  lecture seule. PostgreSQL, Keycloak, Grafana, Adminer, NATS, Prometheus, Loki et Alloy écrivent à plusieurs endroits
+  (données, fichiers de travail, extensions) qu'il faudrait recenser et monter un à un, avec un essai composant par
+  composant. Keycloak en mode développement reconstruit même une partie de son code au démarrage.
 - **Les trois composants d'infrastructure gardent le compte de leur image**, comme expliqué ci-dessus. Un durcissement
   plus poussé reviendrait à reconstruire ces images.
 - **Pas de contrôle à l'admission.** Rien n'empêche de déployer dans le cluster un pod qui ne respecterait aucune de ces

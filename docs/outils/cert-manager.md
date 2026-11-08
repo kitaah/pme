@@ -89,7 +89,7 @@ panne arrive toujours au mauvais moment.
 ## Rôle dans le projet
 
 - Il crée l'autorité locale du cluster, une seule fois, et la conserve pendant dix ans.
-- Il fournit un certificat unique valable pour les six noms d'hôte de l'[ingress](ingress-nginx.md).
+- Il fournit un certificat unique valable pour les six noms d'hôte de l'[ingress](traefik.md).
 - Il fournit les certificats internes de [PostgreSQL](postgresql.md) et de [NATS](nats.md).
 - Il renouvelle chaque certificat quinze jours avant son expiration, sans intervention.
 - Il rend la configuration transposable : en production, seul l'émetteur change, par exemple pour Let's Encrypt ou
@@ -165,4 +165,4 @@ Pour l'importer dans Chrome, Chromium ou Brave :
 
 - [Documentation de cert-manager](https://cert-manager.io/docs/)
 - [Documentation de Kubernetes sur les ingress et le TLS](https://kubernetes.io/fr/docs/concepts/services-networking/ingress/#tls)
-- [Fiche ingress-nginx du projet](ingress-nginx.md)
+- [Fiche Traefik du projet](traefik.md)

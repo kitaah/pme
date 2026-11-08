@@ -120,6 +120,9 @@ du job. Côté images, un contrôle de structure vérifie qu'aucun fichier `.env
 - **Aucun audit** : personne ne sait quel composant a lu quel secret, ni quand.
 - **La clé privée du contrôleur n'est pas sauvegardée** : c'est sans conséquence ici, puisque `.env` permet de tout
   resceller, mais ce serait un point critique dans un environnement durable.
+- **Les valeurs du POC sont faibles et connues.** Le modèle `env.example` impose de remplacer `CHANGE_ME`, mais les
+  mots de passe retenus en local (`pme`) sont courts, et les comptes `membre` et `moderateur` du realm ont des mots de
+  passe versionnés dans le dépôt. Une mise en service exigerait des valeurs générées et propres à chaque environnement.
 - **Un seul jeu de secrets** : les mêmes valeurs servent à toutes les bases et à tous les services. Le chapitre
   [Durcissement](durcissement.md) revient sur ce point pour PostgreSQL.
 

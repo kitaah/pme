@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Fait fonctionner toute la plateforme sur un ordinateur, en reproduisant l'environnement de serveurs utilisé en production |
 | **Version** | Minikube 1.39.0 |
-| **Adresse en local** | Aucune : on accède aux applications par l'[ingress](ingress-nginx.md), à l'adresse <https://pme.localhost> |
+| **Adresse en local** | Aucune : on accède aux applications par l'[ingress](traefik.md), à l'adresse <https://pme.localhost> |
 
 ## Description
 
@@ -76,7 +76,7 @@ ordinateur.docker.minikube.ingress -> ordinateur.docker.minikube.pme
 
 Chaque flèche indique le sens d'une demande : le navigateur s'adresse à l'ingress, qui la transmet aux applications du
 namespace `pme`. Celles-ci s'appuient sur PostgreSQL, NATS et Keycloak, et les outils d'observabilité les surveillent.
-L'ingress expose aussi les interfaces de Keycloak, de Grafana, de Prometheus et d'Adminer (voir sa fiche).
+L'ingress expose aussi les interfaces de Keycloak, de Grafana, de Prometheus et d'Adminer (voir [sa fiche](traefik.md)).
 
 **Fonctionnement.**
 L'exécution de la plateforme se déroule en trois étapes :
@@ -123,7 +123,7 @@ plusieurs étapes et exécution sans droits `root`. Ce contrôle se lance sur l'
 
 | Terme | Définition |
 |---|---|
-| **Addon** | Composant facultatif que Minikube ajoute au cluster sur demande. Le projet utilise `ingress` et `metrics-server`. |
+| **Addon** | Composant facultatif que Minikube ajoute au cluster sur demande. Le projet utilise `metrics-server`. L'ingress n'en est plus un : [Traefik](traefik.md) est installé à part, avec Helm. |
 | **API** | Interface par laquelle des programmes échangent des informations. Ici, l'API est le service qui traite les demandes de l'interface. |
 | **Autoscaling** | Ajustement automatique du nombre de réplicas d'une application selon la charge : Kubernetes en ajoute quand l'usage augmente et en retire quand il baisse. |
 | **Cluster** | Ensemble de machines reliées entre elles, qui fonctionnent comme un seul système pour exécuter des applications. Ici, il se limite à un nœud. |
@@ -184,7 +184,7 @@ Le cluster est créé avec les paramètres suivants :
 | Mémoire | 4 096 Mo | Mémoire vive allouée au cluster. La variable `MINIKUBE_MEMORY` permet de la modifier. |
 | Processeurs | 2 cœurs | Puissance de calcul allouée au cluster. La variable `MINIKUBE_CPUS` permet de la modifier. |
 | Ports publiés | 80 et 443 sur `127.0.0.1` | L'adresse `127.0.0.1` désigne l'ordinateur lui-même. L'ingress est ainsi joignable depuis le navigateur, sans redirection de port. |
-| Addons activés | `ingress` et `metrics-server` | Le premier fournit le point d'entrée du cluster. Le second mesure la charge des pods, ce qui permet l'ajustement automatique de leur nombre. |
+| Addons activés | `metrics-server` | Mesure la charge des pods, ce qui permet l'ajustement automatique de leur nombre. Le point d'entrée du cluster, Traefik, n'est pas un addon : il est installé avec Helm. |
 
 !!! note "À savoir"
     Le cluster ne compte qu'un nœud. Les réplicas d'une application s'exécutent donc sur la même machine : ils
@@ -215,7 +215,7 @@ Le cluster est créé avec les paramètres suivants :
 
 | Commande | Description |
 |---|---|
-| `make minikube-up` | Crée et démarre le cluster, publie les ports 80 et 443, active l'ingress et metrics-server, installe cert-manager et extrait le certificat de l'autorité de certification locale. |
+| `make minikube-up` | Crée et démarre le cluster, publie les ports 80 et 443, installe l'ingress Traefik avec Helm, active metrics-server, installe cert-manager et extrait le certificat de l'autorité de certification locale. |
 | `make image` | Construit les trois images (API, modération, interface) directement dans le cluster. |
 | `make lint-docker` | Lance Hadolint sur les quatre Dockerfile du projet. La commande échoue dès qu'une règle de gravité `warning` ou `error` est enfreinte. |
 | `make deploy` | Applique les manifestes et déploie toute la plateforme. |

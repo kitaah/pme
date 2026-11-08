@@ -58,7 +58,7 @@ spec:
             # Keycloak. L'API peut donc lire les cles par l'adresse interne du service sans que
             # l'emetteur change.
             - --hostname=https://keycloak.localhost
-            # Keycloak est derriere un proxy (ingress-nginx) qui termine le HTTP : il lit les
+            # Keycloak est derriere un proxy (Traefik) qui termine le HTTP : il lit les
             # en-tetes X-Forwarded-* au lieu de les ignorer.
             - --proxy-headers=xforwarded
           ports:

@@ -162,8 +162,9 @@ depuis un autre pod avec `sslmode=disable` est rejetée par le serveur, avant m�
 | `k8s/cert-manager/issuers.yaml` | Déclare l'autorité locale et son émetteur. |
 | `k8s/08-certificate.yaml` | Certificat unique des six noms d'hôte de l'ingress. |
 | `k8s/00-internal-tls.yaml` | Certificats de PostgreSQL et de NATS. |
-| `k8s/08-ingress.yaml` | Termine le TLS et redirige le HTTP vers le HTTPS. |
-| `Makefile` (cible `ingress`) | Active l'en-tête HSTS dans la configuration du contrôleur d'ingress. |
+| `k8s/08-ingress.yaml` | Termine le TLS avec le certificat de cert-manager. |
+| `k8s/08-middlewares.yaml` | Ajoute l'en-tête HSTS aux réponses de l'ingress. |
+| `k8s/traefik/values.yaml` | Redirige le HTTP vers le HTTPS pour tous les noms d'hôte. |
 | `k8s/config/postgres-hba.conf` | Impose le TLS et SCRAM-SHA-256 à toute connexion venant du cluster. |
 | `k8s/config/nats.conf` | Active le TLS de NATS et fixe la version minimale à 1.3. |
 

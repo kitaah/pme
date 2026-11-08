@@ -35,7 +35,6 @@ nav:
       - container-structure-test: outils/container-structure-test.md
       - GitLab CI: outils/gitlab-ci.md
       - Grafana: outils/grafana.md
-      - Ingress-nginx: outils/ingress-nginx.md
       - Jest: outils/jest.md
       - k6: outils/k6.md
       - Keycloak: outils/keycloak.md
@@ -55,6 +54,7 @@ nav:
       - Supertest: outils/supertest.md
       - Testcontainers: outils/testcontainers.md
       - Testing Library: outils/testing-library.md
+      - Traefik: outils/traefik.md
       - Trivy: outils/trivy.md
       - Vitest: outils/vitest.md
   - Pipeline CI/CD:

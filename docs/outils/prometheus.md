@@ -66,7 +66,7 @@ service, chaque relevé tomberait sur un exemplaire différent et les compteurs 
 courbes incohérentes.
 
 **Les mesures ne sortent pas du cluster.**
-L'adresse qui publie les mesures n'est pas exposée par l'[ingress](ingress-nginx.md) : seul Prometheus, à l'intérieur
+L'adresse qui publie les mesures n'est pas exposée par l'[ingress](traefik.md) : seul Prometheus, à l'intérieur
 du cluster, peut la lire. Ces pages révéleraient sinon le détail du fonctionnement interne de la plateforme.
 
 **Définitions**
