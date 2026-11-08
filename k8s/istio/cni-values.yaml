@@ -2,9 +2,10 @@
 # Seules les valeurs qui different des valeurs par defaut du chart sont listees.
 profile: ambient
 
-global:
-  # Avec le pilote Docker, Minikube monte les dossiers du CNI a un chemin different de celui d'un cluster standard.
-  platform: minikube
+# Pas de `global.platform: minikube` : cette valeur fait monter a l'agent le dossier /var/run/docker/netns, celui du
+# moteur Docker. Minikube utilise containerd, qui range les espaces reseau des pods dans /var/run/netns (valeur par
+# defaut du chart). Avec la valeur "minikube", l'agent ne voit aucun espace reseau et tous les pods restent bloques
+# en ContainerCreating ("failed to open netns ... no such file or directory").
 
 resources:
   requests:
