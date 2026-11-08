@@ -69,11 +69,11 @@ describe('ListingsService', () => {
   });
 
   describe('base de donnees indisponible', () => {
-    it("repond 503 sans solliciter la base quand le disjoncteur est ouvert", async () => {
+    it('repond 503 sans solliciter la base quand le disjoncteur est ouvert', async () => {
       // Given : la base tombe, des appels successifs echouent et ouvrent le circuit
       repository.find.mockRejectedValue(new Error('connect ECONNREFUSED'));
       for (let i = 0; i < 5; i++) {
-        await expect(service.findByOwner(user)).rejects.toThrow('ECONNREFUSED');
+        await expect(service.findByOwner(user)).rejects.toBeInstanceOf(ServiceUnavailableException);
       }
       repository.find.mockClear();
 
