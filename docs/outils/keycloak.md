@@ -90,6 +90,7 @@ sans rien demander à Keycloak.
 - Il enregistre ses données dans la base `keycloak` de [PostgreSQL](postgresql.md), par une connexion chiffrée et
   vérifiée.
 - Il remplace, au déploiement, son compte administrateur temporaire par un compte permanent, puis supprime le premier.
+- Il impose une politique de mots de passe : 12 caractères au moins, avec majuscule, minuscule et chiffre.
 - Sans lui, personne ne peut se connecter : ni dépôt d'annonce, ni modération, ni accès aux tableaux de bord.
 
 Le realm `pme` contient les comptes de démonstration suivants :

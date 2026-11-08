@@ -105,7 +105,7 @@ connus sont les suivants. Chacun est repris, avec son contexte, dans la page con
 | **Un seul compte PostgreSQL** | Les quatre bases partagent le même compte : aucune séparation des droits. | [Durcissement](durcissement.md) |
 | **Outils d'exploitation sans authentification** | Adminer, Prometheus et Alloy sont joignables sans mot de passe propre. | [Authentification](authentification.md) |
 | **Autorité de certification locale** | Les certificats ne sont reconnus qu'après import manuel dans le navigateur. | [Chiffrement](chiffrement.md) |
-| **Ni politique de mot de passe, ni second facteur** | Un mot de passe faible reste accepté par Keycloak. | [Authentification](authentification.md) |
+| **Pas de second facteur** | La connexion repose sur le seul mot de passe, dont la politique impose 12 caractères mais n'écarte pas les mots de passe courants. | [Authentification](authentification.md) |
 | **Aucune journalisation des accès** | Les journaux applicatifs ne constituent pas une piste d'audit. | [Application](application.md) |
 | **Analyse des failles non planifiée** | Une faille publiée sans changement du code n'est vue qu'au contrôle suivant. | [Analyse des dépendances](../pipeline/analyse-dependances.md) |
 

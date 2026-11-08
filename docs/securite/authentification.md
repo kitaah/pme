@@ -76,6 +76,7 @@ etapes: "" {
 | **Jeton (JWT)** | Document signé contenant l'identité et les rôles d'une personne, joint à chaque requête. |
 | **OpenID Connect** | Protocole standard de connexion, construit au-dessus d'OAuth 2. |
 | **PKCE** | Extension d'OAuth 2 qui protège le flux de connexion des applications incapables de garder un secret. |
+| **Politique de mots de passe** | Règles qu'un mot de passe doit respecter pour être accepté : longueur, types de caractères. |
 | **Realm** | Espace cloisonné de Keycloak : ses propres comptes, rôles et applications. |
 | **Resource server** | Application qui ne gère aucun compte et se contente de vérifier les jetons qu'on lui présente. |
 
@@ -122,6 +123,12 @@ le jeton reste l'adresse publique vue par le navigateur. Les deux adresses diff�
 pas besoin de faire confiance au certificat de l'autorité locale pour vérifier une signature. Les clés sont gardées en
 mémoire dix minutes, et le nombre d'appels est plafonné à dix par minute.
 
+**La politique de mots de passe**
+Le realm `pme` impose une politique à tout mot de passe défini après le déploiement : 12 caractères au moins, avec une
+majuscule, une minuscule et un chiffre, et différent de l'identifiant. Elle est posée par le même travail de
+déploiement que l'administrateur, juste après l'import du realm. Les comptes de démonstration, importés avant, gardent
+leurs mots de passe courts : la politique ne s'applique qu'au prochain changement.
+
 **L'administrateur de Keycloak**
 Keycloak 26 ne crée au démarrage qu'un compte d'amorçage temporaire. Un travail de déploiement crée l'administrateur
 permanent à partir des secrets du cluster, puis **supprime le compte d'amorçage**. Il ne reste donc aucun compte par
@@ -134,8 +141,9 @@ défaut une fois le déploiement terminé.
 
 ## Ce qui n'est pas couvert
 
-- **Aucune politique de mot de passe** : Keycloak accepte un mot de passe court ou courant. Une politique de longueur et
-  de complexité se déclare dans le realm, et devrait l'être avant toute ouverture à de vrais membres.
+- **Politique de mots de passe limitée à la forme** : longueur et types de caractères. Rien n'interdit un mot de passe
+  courant ou déjà divulgué (« Azertyuiop123 »), et il n'y a ni historique ni expiration. Les comptes de démonstration
+  ne la respectent pas.
 - **Aucun second facteur** : la connexion repose sur le seul mot de passe. Keycloak sait gérer un code à usage unique,
   mais il n'est pas activé.
 - **Le flux par mot de passe reste permis pour `pme-cli`** : il est commode pour les scripts, mais il suppose que le mot
@@ -178,7 +186,7 @@ Pour vérifier le refus par défaut, trois appels suffisent :
 | Fichier ou dossier | Description |
 |---|---|
 | `k8s/config/realm-pme.json` | Déclare le realm, les rôles, les deux applications et les comptes de démonstration. |
-| `k8s/03-keycloak-admin-job.yaml` | Crée l'administrateur permanent et supprime le compte d'amorçage. |
+| `k8s/03-keycloak-admin-job.yaml` | Crée l'administrateur permanent, supprime le compte d'amorçage et pose la politique de mots de passe. |
 | `api/src/auth/jwt.strategy.ts` | Vérifie la signature, l'émetteur, la date et l'application émettrice. |
 | `api/src/auth/jwt-auth.guard.ts` | Garde globale : exige un jeton sauf sur les routes marquées publiques. |
 | `api/src/auth/roles.guard.ts` | Contrôle des rôles, erreur 403 en cas de refus. |
