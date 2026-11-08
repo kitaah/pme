@@ -68,9 +68,11 @@ filtres: "" {
 |---|---|
 | **Content-Security-Policy (CSP)** | En-tête qui liste les sources de contenu que le navigateur a le droit de charger et de contacter. |
 | **CORS** | Mécanisme du navigateur qui décide si une page d'un site peut appeler un autre site. |
+| **Cross-Origin-Opener-Policy** | En-tête qui isole une page des fenêtres ouvertes par d'autres sites, pour qu'elles ne puissent pas la manipuler. |
 | **Injection SQL** | Attaque qui glisse des instructions dans une valeur, pour les faire exécuter par la base. |
 | **Injection de script (XSS)** | Attaque qui fait exécuter un script étranger dans la page d'un autre site. |
 | **Limitation de débit** | Plafond du nombre de requêtes acceptées sur une période donnée. |
+| **Permissions-Policy** | En-tête qui liste les fonctions du navigateur (caméra, micro, géolocalisation) auxquelles la page n'a pas droit. |
 | **Problem Details** | Format normalisé de réponse d'erreur d'une API, décrit par la RFC 9457. |
 | **Requête paramétrée** | Requête où les valeurs sont transmises à part de l'instruction : elles ne peuvent donc pas en modifier le sens. |
 
@@ -105,7 +107,10 @@ en faire confiance à davantage permettrait à un client de falsifier son adress
 | Où | En-têtes |
 |---|---|
 | **API** | Posés par Helmet 8 : une dizaine d'en-têtes, dont le refus de la détection automatique du type de contenu et la limitation de l'affichage dans un cadre. |
-| **Interface** | Posés par nginx : `nosniff`, refus de l'affichage dans un cadre, transmission du référent limitée au site lui-même, et politique de contenu (`Content-Security-Policy`). |
+| **Interface** | Posés par nginx : `nosniff`, refus de l'affichage dans un cadre, transmission du référent limitée au site lui-même, politique de contenu (`Content-Security-Policy`), retrait des fonctions du navigateur inutiles (`Permissions-Policy`) et isolation de la page des autres fenêtres (`Cross-Origin-Opener-Policy`). |
+
+nginx ne signale plus sa version dans ses réponses (`server_tokens off`), ce qui évite d'indiquer à un attaquant quelles
+failles connues viser.
 
 **Politique de contenu de l'interface**
 Le navigateur ne charge et n'exécute que ce que cette politique autorise. Un script injecté dans une page, venu d'un
