@@ -167,7 +167,7 @@ dans Keycloak, sans toucher aux données métier.
 
 | Commande | Description |
 |---|---|
-| `make smoke` | Déroule un parcours complet, dont un refus en 400 et un refus en 403. |
+| `make smoke` | Déroule un parcours complet, dont un refus en 400 et un refus en 403, puis supprime l'annonce qu'il a déposée. |
 | `make test-integration` | Rejoue les cas de validation et d'autorisation avec une vraie base. |
 | `make perf` | Mesure le comportement sous charge, limite de débit relevée pour la durée du test. |
 | `curl -k -I https://pme.localhost/` | Affiche les en-têtes de sécurité posés par nginx, dont `content-security-policy`. |
