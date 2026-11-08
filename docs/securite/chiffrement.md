@@ -5,9 +5,9 @@
 | Information | Détail |
 |---|---|
 | **Rôle** | Rend illisible et infalsifiable tout ce qui circule, du navigateur jusqu'à la base de données |
-| **Outil** | [cert-manager](../outils/cert-manager.md) 1.18.2, autorité de certification locale |
+| **Outils** | [cert-manager](../outils/cert-manager.md) 1.18.2, autorité de certification locale ; [Istio](../outils/istio.md) 1.30.0, maillage en mode ambient |
 | **Portée externe** | HTTPS sur les six noms d'hôte, HTTP redirigé vers HTTPS, en-tête HSTS de sept jours |
-| **Portée interne** | TLS jusqu'à PostgreSQL et jusqu'à NATS, avec vérification du nom du serveur |
+| **Portée interne** | mTLS entre tous les pods du namespace `pme` et de l'ingress par [Istio](../outils/istio.md), puis TLS jusqu'à PostgreSQL et jusqu'à NATS, avec vérification du nom du serveur |
 | **Certificats** | Clés ECDSA P-256, valables 90 jours, renouvelées 15 jours avant l'échéance |
 
 ## Description
@@ -30,13 +30,21 @@ l'organisation ou une autorité publique.
 
 **Où s'arrête le chiffrement externe.**
 Le TLS du site se termine à l'ingress : c'est lui qui présente le certificat au navigateur et déchiffre la requête. Il
-la transmet ensuite en HTTP simple au service concerné, à l'intérieur du cluster. Ce choix, courant, simplifie la
-configuration ; il suppose que le réseau interne du cluster est de confiance, ce qui n'est vrai que pour un cluster
-local à un seul nœud.
+la transmet ensuite en HTTP simple au service concerné, à l'intérieur du cluster. Ce choix est courant. Le trajet
+interne reste protégé : [Istio](../outils/istio.md), en mode ambient, chiffre en mTLS chaque connexion entre l'ingress
+et les services, et refuse toute connexion qui ne vient pas du maillage. Les applications n'en savent rien : elles
+parlent toujours en HTTP, et c'est un proxy installé sur le nœud (ztunnel) qui chiffre le trajet.
 
 **Pourquoi les bases de données font exception.**
-Les échanges avec PostgreSQL et NATS, eux, sont chiffrés de bout en bout, même à l'intérieur du cluster. C'est là que
-circulent les mots de passe de connexion et l'intégralité des données : le gain est réel, et le coût nul.
+Les échanges avec PostgreSQL et NATS, eux, sont chiffrés de bout en bout par les applications elles-mêmes, même à
+l'intérieur du cluster. C'est là que circulent les mots de passe de connexion et l'intégralité des données : le gain
+est réel, et le coût nul. Le maillage enveloppe ces connexions d'une seconde couche, sans les remplacer : la
+vérification du nom du serveur, que seule l'application peut faire, est conservée.
+
+**Deux autorités distinctes.**
+Les certificats du maillage ne viennent pas de cert-manager. Le plan de contrôle d'Istio, istiod, émet les siens, de
+courte durée, et les renouvelle seul. L'autorité locale de cert-manager reste réservée au certificat public de
+l'ingress et à ceux de PostgreSQL et de NATS.
 
 ```d2
 vars: {
@@ -64,7 +72,7 @@ chaine: "" {
 
   navigateur: "1. Navigateur" {class: boite}
   https: "2. Ingress — HTTPS, le chiffrement s'arrête ici" {class: boite}
-  services: "3. API et modération — HTTP interne" {class: boite}
+  services: "3. API et modération — HTTP, chiffré par le maillage (mTLS)" {class: boite}
   donnees: "4. PostgreSQL et NATS — TLS, nom du serveur vérifié" {class: boite}
 }
 ```
@@ -76,6 +84,7 @@ chaine: "" {
 | **Autorité de certification** | Entité qui signe des certificats. Un client ne fait confiance à un certificat que s'il fait confiance à son autorité. |
 | **Certificat** | Document qui associe un nom de serveur à une clé publique, et que signe une autorité. |
 | **ECDSA** | Famille d'algorithmes de signature à courbes elliptiques : des clés plus courtes que RSA, pour une sécurité équivalente. |
+| **mTLS** | TLS mutuel : le client et le serveur présentent chacun un certificat. C'est le mode du maillage Istio. |
 | **HSTS** | En-tête de réponse qui demande au navigateur de n'utiliser que HTTPS pour un site pendant une durée donnée. |
 | **SCRAM-SHA-256** | Méthode d'authentification de PostgreSQL qui ne fait jamais circuler le mot de passe, même chiffré. |
 | **Terminaison TLS** | Endroit où le chiffrement s'arrête et où la requête redevient lisible. |
@@ -98,6 +107,7 @@ chaine: "" {
 
 | Échange | Protection |
 |---|---|
+| **Entre pods** | mTLS par le maillage Istio : chaque connexion est chiffrée et chaque pod porte une identité. Le mode strict refuse toute connexion qui n'arrive pas en mTLS, par exemple celle d'un pod placé hors du maillage. |
 | **Vers PostgreSQL** | TLS obligatoire côté serveur : les règles d'accès n'acceptent que des connexions chiffrées, et le mot de passe est contrôlé par SCRAM-SHA-256, qui ne le fait jamais circuler. |
 | **Vers NATS** | TLS, avec une version minimale fixée à **1.3**. Sans ce réglage, le serveur accepterait encore TLS 1.2. |
 | **Vérification du nom** | L'API, le service de modération, Keycloak et Grafana vérifient que le certificat présenté a bien été émis pour le serveur qu'ils appellent, et non seulement qu'il est signé par l'autorité. |
@@ -112,22 +122,36 @@ l'image, et la boucle locale en IPv4 et IPv6, utilisée par les sondes de Kubern
 n'est joignable que depuis le pod lui-même.
 
 !!! note "À savoir"
-    Les certificats internes ne servent qu'à authentifier le **serveur**. Les clients, eux, ne présentent pas de
-    certificat : ils s'identifient par leur mot de passe. Une authentification mutuelle, où chaque partie prouve son
-    identité par un certificat, serait l'étape suivante.
+    Les certificats de PostgreSQL et de NATS ne servent qu'à authentifier le **serveur**. Les clients, eux, ne
+    présentent pas de certificat à ces serveurs : ils s'identifient par leur mot de passe. L'authentification mutuelle
+    existe en revanche entre les pods, au niveau du maillage. Elle est vérifiée dans les journaux de ztunnel, où chaque
+    connexion porte l'identité de sa source et de sa destination (voir les commandes de vérification).
 
 ## Ce qui n'est pas couvert
 
 - **L'autorité est locale** : son certificat doit être importé une fois dans le navigateur, sans quoi celui-ci affiche
   un avertissement. C'est le fonctionnement attendu, et non un défaut : un navigateur qui ferait confiance à une
   autorité inconnue serait le vrai problème.
-- **Le trafic interne du site reste en HTTP** : entre l'ingress et les services, la requête circule en clair. Un cluster
-  multi-nœuds, ou partagé, justifierait un maillage de services chiffrant tous les échanges.
-- **Le port de supervision de NATS reste en HTTP simple** : il n'expose que des compteurs, pas de données, mais il
-  échappe à la règle générale. Il n'est cependant plus joignable par les autres pods : le service du cluster ne le
-  publie plus, et seuls le pod lui-même et les sondes de Kubernetes y accèdent.
-- **Aucune authentification mutuelle** : un client qui connaît le mot de passe de PostgreSQL peut s'y connecter, d'où
-  qu'il vienne. Faute de politique réseau, cela signifie : depuis n'importe quel pod du namespace.
+- **L'autorité du maillage est créée par istiod lui-même** : sa clé privée est stockée dans le cluster, dans le
+  namespace `istio-system`. C'est acceptable pour un POC ; en production, on brancherait l'autorité interne de
+  l'organisation.
+- **Le maillage chiffre les échanges, mais n'en filtre pas l'accès** : un pod du namespace peut toujours appeler un
+  autre pod du maillage. Des politiques d'autorisation d'Istio, ou des politiques réseau, restreindraient qui parle à qui.
+- **Une seule identité pour tout le namespace** : tous les pods du namespace `pme` utilisent le compte de service
+  `default`, donc la même identité (`spiffe://cluster.local/ns/pme/sa/default`). Le chiffrement n'en est pas affecté,
+  mais une règle du type « seule l'API peut joindre PostgreSQL » ne pourrait pas encore s'écrire : il faudrait d'abord
+  créer un compte de service par composant.
+- **Le maillage dépend d'un réglage de l'ordinateur** : ztunnel plante si la limite `inotify` du système est trop
+  basse. `make inotify` la relève, avec le mot de passe `sudo`. Sans ztunnel prêt, un namespace déjà enrôlé en mode
+  strict devient inaccessible (voir la fiche [Istio](../outils/istio.md)).
+- **Le port de supervision de NATS reste en HTTP simple côté application** : il n'expose que des compteurs, pas de
+  données. Le service du cluster ne le publie plus, mais, faute de politique réseau, rien n'empêche un pod du maillage de
+  l'appeler par l'adresse du pod ; l'échange est alors chiffré par le maillage. Le mode strict refuse en revanche les
+  pods extérieurs au maillage. Seuls le pod lui-même et les sondes de Kubernetes lisent ce port en clair.
+- **Aucune autorisation par identité** : un client qui connaît le mot de passe de PostgreSQL peut s'y connecter, d'où
+  qu'il vienne. Faute de politique réseau ou de politique d'autorisation, cela signifie : depuis n'importe quel pod du
+  namespace. Le maillage authentifie les pods, mais aucune règle n'utilise encore cette identité pour restreindre
+  l'accès à PostgreSQL ou à NATS.
 - **HSTS de courte durée, sans prechargement** : la durée est de sept jours, et non d'un an. Un HSTS actif interdit de
   passer outre l'alerte du certificat : après un changement d'autorité locale, le navigateur bloque le site tant qu'il
   retient la règle. La toute première visite d'un navigateur reste servie par la redirection, faute de liste de
@@ -142,6 +166,13 @@ n'est joignable que depuis le pod lui-même.
 | `make ca-cert` | Écrit le certificat de l'autorité locale, à importer dans le navigateur. |
 | `kubectl -n pme get certificate` | Affiche les certificats du cluster, leur état et leur validité. |
 | `make ca-configmap` | Copie l'autorité dans le namespace, pour que les applications vérifient les certificats. |
+| `make mesh-check` | Vérifie le maillage : un pod hors du maillage est refusé, et les échanges portent des identités. |
+| `kubectl -n istio-system logs ds/ztunnel --tail=500 \| grep src.identity` | Affiche les connexions chiffrées vues par ztunnel, avec l'identité de la source et de la destination. |
+
+Dans les journaux de ztunnel, une connexion chiffrée par le maillage se reconnaît à deux indices : l'adresse de
+destination utilise le port **15008**, celui du tunnel entre nœuds, et les champs `src.identity` et `dst.identity`
+contiennent une identité de la forme `spiffe://cluster.local/ns/pme/sa/default`. La connexion de l'ingress vers l'API
+et celle de Prometheus vers l'API ont été vérifiées de cette façon.
 
 Pour vérifier que PostgreSQL refuse réellement une connexion en clair, il suffit d'essayer : une connexion ouverte
 depuis un autre pod avec `sslmode=disable` est rejetée par le serveur, avant même la vérification du mot de passe.
@@ -162,6 +193,9 @@ depuis un autre pod avec `sslmode=disable` est rejetée par le serveur, avant m�
 | `k8s/cert-manager/issuers.yaml` | Déclare l'autorité locale et son émetteur. |
 | `k8s/08-certificate.yaml` | Certificat unique des six noms d'hôte de l'ingress. |
 | `k8s/00-internal-tls.yaml` | Certificats de PostgreSQL et de NATS. |
+| `k8s/istio/` | Réglages des quatre charts Helm d'Istio, avec des ressources réduites pour Minikube. |
+| `k8s/namespace.yaml` | Porte le label qui enrôle le namespace `pme` dans le maillage. |
+| `k8s/16-mesh-mtls.yaml` | Impose le mode strict : toute connexion hors mTLS est refusée. |
 | `k8s/08-ingress.yaml` | Termine le TLS avec le certificat de cert-manager. |
 | `k8s/08-middlewares.yaml` | Ajoute l'en-tête HSTS aux réponses de l'ingress. |
 | `k8s/traefik/values.yaml` | Redirige le HTTP vers le HTTPS pour tous les noms d'hôte. |
@@ -171,5 +205,6 @@ depuis un autre pod avec `sslmode=disable` est rejetée par le serveur, avant m�
 ## Pour aller plus loin
 
 - [Fiche cert-manager du projet](../outils/cert-manager.md)
+- [Fiche Istio du projet](../outils/istio.md)
 - [Les méthodes d'authentification de PostgreSQL](https://www.postgresql.org/docs/current/auth-pg-hba-conf.html)
 - [Recommandations de l'ANSSI sur TLS](https://cyber.gouv.fr/publications/recommandations-de-securite-relatives-tls)

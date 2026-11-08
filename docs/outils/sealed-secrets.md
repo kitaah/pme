@@ -106,9 +106,8 @@ Le projet applique par ailleurs quelques règles d'hygiène, qui valent indépen
 | `k8s/14-pme-secrets-sealed.yaml` | Contient les huit valeurs chiffrées. C'est le fichier versionné. |
 | `.env` | Contient les identifiants et les mots de passe en clair. Ce fichier est exclu de Git. |
 | `env.example` | Sert de modèle pour `.env`. Il est versionné et ne contient aucune vraie valeur. |
-| `k8s/sealed-secrets/kustomization.yaml` | Épingle la version du contrôleur, installé séparément. |
 | `k8s/kustomization.yaml` | Ajoute le fichier chiffré aux manifestes déployés. |
-| `Makefile` | Définit les commandes `sealed-secrets` et `seal`. |
+| `Makefile` | Définit les commandes `kubeseal`, `sealed-secrets` et `seal`, et la version commune aux deux outils (`KUBESEAL_VERSION`). |
 
 ## Commandes essentielles
 
@@ -118,13 +117,14 @@ Le projet applique par ailleurs quelques règles d'hygiène, qui valent indépen
 |---|---|
 | `make deploy` | Déploie la plateforme et génère le fichier chiffré s'il manque. |
 | `make seal` | Chiffre à nouveau le contenu de `.env` après un changement de mot de passe. |
-| `make sealed-secrets` | Installe le contrôleur seul. |
+| `make kubeseal` | Installe l'outil `kubeseal` en version 0.41.2 s'il est absent. Linux uniquement. |
+| `make sealed-secrets` | Installe le contrôleur seul, à la même version. |
 | `kubectl -n pme get secret pme-secrets` | Vérifie que le contrôleur a bien recréé le Secret. |
 | `kubectl -n pme get sealedsecret` | Affiche l'état du fichier chiffré. |
 
 La mise en place se fait une fois par poste et par cluster :
 
-1. Installer `kubeseal` en version 0.41.2, la même que le contrôleur.
+1. Lancer `make kubeseal`, qui installe l'outil `kubeseal` en version 0.41.2 s'il est absent (mot de passe administrateur demandé). Le contrôleur est installé à la même version.
 2. Lancer n'importe quelle commande `make` : le fichier `.env` est créé à partir de `env.example`, sans jamais écraser
    un fichier existant.
 3. Remplacer chaque valeur `CHANGE_ME` par un vrai mot de passe. `make seal` refuse de chiffrer le modèle tel quel.
@@ -133,7 +133,7 @@ La mise en place se fait une fois par poste et par cluster :
 
 !!! note "À savoir"
     Le contrôleur vit dans un autre namespace que la plateforme, et la définition d'un SealedSecret doit exister avant
-    le fichier chiffré. Il est donc installé à part, par `make sealed-secrets`, avec sa version épinglée.
+    le fichier chiffré. Il est donc installé à part, par `make sealed-secrets`, à la version `KUBESEAL_VERSION` du `Makefile`.
 
 !!! tip "Astuce"
     Pour changer un mot de passe, modifier `.env` puis lancer `make seal`, qui chiffre de nouveau le fichier.

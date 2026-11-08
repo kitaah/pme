@@ -1,0 +1,10 @@
+# Reglages du chart Helm ztunnel (proxy par noeud qui chiffre en mTLS les echanges des pods du mesh), installe par `make istio`.
+# Seules les valeurs qui different des valeurs par defaut du chart sont listees.
+
+# Les valeurs par defaut du chart (512 Mi de memoire demandes) depassent le budget de Minikube.
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 256Mi

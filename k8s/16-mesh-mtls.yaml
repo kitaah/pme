@@ -1,0 +1,17 @@
+# Chiffrement des echanges entre pods : mTLS strict dans le namespace pme.
+# Le namespace est enrole dans le mesh Istio (mode ambient) par le label de k8s/namespace.yaml : ztunnel chiffre alors
+# chaque connexion entre deux pods du mesh, et chaque pod recoit une identite (certificat SPIFFE, emis par istiod).
+# Le namespace de Traefik est enrole par `make istio`, sinon l'ingress ne pourrait plus joindre les services.
+#
+# STRICT : toute connexion qui n'arrive pas en mTLS est refusee. Un pod hors du mesh (par exemple un pod d'un autre
+# namespace) ne peut donc plus joindre les services de pme (voir `make mesh-check`).
+# Ce qui n'est pas bloque : les sondes de Kubernetes (ztunnel les laisse passer), `kubectl exec` et
+# `kubectl port-forward` (make queues, make db-*, make port-forward).
+# Sans mesh installe (`make istio`), cette ressource n'existe pas et le deploiement echoue : installer le mesh d'abord.
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+spec:
+  mtls:
+    mode: STRICT

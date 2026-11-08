@@ -67,7 +67,8 @@ courbes incohérentes.
 
 **Les mesures ne sortent pas du cluster.**
 L'adresse qui publie les mesures n'est pas exposée par l'[ingress](traefik.md) : seul Prometheus, à l'intérieur
-du cluster, peut la lire. Ces pages révéleraient sinon le détail du fonctionnement interne de la plateforme.
+du cluster, peut la lire. Ces pages révéleraient sinon le détail du fonctionnement interne de la plateforme. Les
+relevés de Prometheus passent par le maillage [Istio](istio.md), qui les chiffre en mTLS.
 
 **Définitions**
 

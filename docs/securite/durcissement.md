@@ -8,7 +8,7 @@
 | **Portée** | Les onze déploiements du namespace `pme` |
 | **Mesures clés** | Aucun droit d'administrateur, capacités retirées, disque en lecture seule, aucun jeton de cluster |
 | **Contrôles automatiques** | Hadolint, container-structure-test (22 contrôles), Trivy |
-| **Limite connue** | Aucune politique réseau : les pods peuvent tous se joindre |
+| **Limite connue** | Aucune politique réseau : les pods peuvent tous se joindre, même si leurs échanges sont chiffrés par le maillage |
 
 ## Description
 
@@ -77,7 +77,7 @@ comparaison: "" {
 | **Politique réseau** | Règle Kubernetes qui décide quels pods peuvent se parler. |
 | **root** | Compte administrateur d'un système Linux, qui peut tout faire. |
 | **seccomp** | Mécanisme du noyau Linux qui limite les appels système qu'un programme peut utiliser. |
-| **Service account** | Identité d'un pod auprès du cluster. Son jeton permet d'appeler l'API de Kubernetes. |
+| **Service account** | Identité d'un pod auprès du cluster. Son jeton permet d'appeler l'API de Kubernetes, et le maillage Istio en tire l'identité du pod. |
 
 ## Ce qui est en place
 
@@ -116,9 +116,9 @@ Cela n'est pas seulement déclaré, c'est vérifié à chaque passage de la pipe
 | [Trivy](../pipeline/analyse-dependances.md) | Les failles connues des paquets livrés et des dépendances de développement. |
 
 !!! note "À savoir"
-PostgreSQL, NATS et Adminer ne fixent pas d'identifiant d'exécution : leurs images démarrent en administrateur puis
-abandonnent elles-mêmes ces droits pour leur propre compte. C'est le fonctionnement prévu par leurs éditeurs ; les
-autres réglages, eux, leur sont bien appliqués.
+    PostgreSQL, NATS et Adminer ne fixent pas d'identifiant d'exécution : leurs images démarrent en administrateur puis
+    abandonnent elles-mêmes ces droits pour leur propre compte. C'est le fonctionnement prévu par leurs éditeurs ; les
+    autres réglages, eux, leur sont bien appliqués.
 
 ## Ce qui n'est pas couvert
 
@@ -126,19 +126,20 @@ autres réglages, eux, leur sont bien appliqués.
   namespace d'ouvrir une connexion vers PostgreSQL, NATS ou n'importe quel autre service. L'interface, qui ne sert que
   des fichiers, pourrait techniquement joindre la base. Des règles de type NetworkPolicy, déclarant qui a le droit de
   parler à qui, fermeraient cette porte. Minikube le permet, à condition d'activer un greffon réseau qui les applique.
+  Le maillage [Istio](../outils/istio.md) chiffre ces échanges, mais il ne les filtre pas : une règle d'autorisation par
+  composant demanderait en plus un compte de service par composant, car tous les pods partagent aujourd'hui le même.
 - **Un seul compte PostgreSQL pour quatre bases.** L'API, le service de modération, Keycloak et Grafana se connectent
-  avec le même compte, créé à l'initialisation du serveur. Ce compte est un superutilisateur : chacun des quatre peut
-  donc lire et modifier les données des autres, y compris les comptes de Keycloak. La correction se fait en deux temps.
-  Le premier est un compte par composant, limité à sa base, sans droit d'administration, avec des règles d'accès du
-  serveur qui refusent toute autre combinaison. Le second sépare, pour chaque base, le compte **propriétaire**, qui
-  crée et modifie les tables, du compte d'**exécution**, limité à la lecture et à l'écriture des données. Si l'API est
-  compromise, elle ne peut alors ni supprimer ni modifier le schéma. Cette séparation suppose de décider qui joue les
-  migrations : aujourd'hui, l'API et la modération les jouent elles-mêmes au démarrage (`migrationsRun`), avec leur
-  seul compte. Il faudrait les confier à une étape de déploiement dédiée, qui utilise le compte propriétaire.
+  avec le même compte, créé à l'initialisation du serveur. Chacun peut donc lire et modifier les données des autres, y
+  compris les comptes de Keycloak. Un compte par base, avec les seuls droits nécessaires, est le premier correctif à
+  apporter.
 - **Le disque reste modifiable pour la plupart des composants.** Seuls l'API, la modération et l'interface l'ont en
   lecture seule. PostgreSQL, Keycloak, Grafana, Adminer, NATS, Prometheus, Loki et Alloy écrivent à plusieurs endroits
   (données, fichiers de travail, extensions) qu'il faudrait recenser et monter un à un, avec un essai composant par
   composant. Keycloak en mode développement reconstruit même une partie de son code au démarrage.
+- **Les composants du maillage sont privilégiés.** Pour rediriger le trafic des pods, ztunnel et istio-cni
+  s'exécutent avec des droits élevés sur le nœud (capacités réseau et système), dans le namespace `istio-system`. Le
+  durcissement de cette page ne s'y applique pas, et leurs images ne passent pas par les contrôles de la pipeline. Une
+  faille dans l'un d'eux aurait une portée bien plus large que dans une application du projet.
 - **Les trois composants d'infrastructure gardent le compte de leur image**, comme expliqué ci-dessus. Un durcissement
   plus poussé reviendrait à reconstruire ces images.
 - **Pas de contrôle à l'admission.** Rien n'empêche de déployer dans le cluster un pod qui ne respecterait aucune de ces
@@ -160,13 +161,13 @@ Pour vérifier le disque en lecture seule, essayer d'écrire un fichier dans le 
 sauf dans l'espace temporaire monté à cet effet.
 
 !!! warning "Attention"
-Le disque en lecture seule casse tout composant qui écrit ailleurs que dans son espace temporaire : un cache, un
-fichier de session, un journal sur disque. C'est à vérifier avant d'activer le réglage sur un nouveau service, pas
-après.
+    Le disque en lecture seule casse tout composant qui écrit ailleurs que dans son espace temporaire : un cache, un
+    fichier de session, un journal sur disque. C'est à vérifier avant d'activer le réglage sur un nouveau service, pas
+    après.
 
 !!! tip "Astuce"
-`kubectl -n pme get pod <nom> -o yaml` affiche les réglages réellement appliqués à un pod, y compris ceux qu'il
-hérite du niveau du pod. C'est la source de vérité, plus fiable que la relecture du manifeste.
+    `kubectl -n pme get pod <nom> -o yaml` affiche les réglages réellement appliqués à un pod, y compris ceux qu'il
+    hérite du niveau du pod. C'est la source de vérité, plus fiable que la relecture du manifeste.
 
 ## Fichiers principaux
 

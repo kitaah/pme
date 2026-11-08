@@ -35,6 +35,7 @@ nav:
       - container-structure-test: outils/container-structure-test.md
       - GitLab CI: outils/gitlab-ci.md
       - Grafana: outils/grafana.md
+      - Istio: outils/istio.md
       - Jest: outils/jest.md
       - k6: outils/k6.md
       - Keycloak: outils/keycloak.md
