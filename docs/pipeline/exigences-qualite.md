@@ -23,7 +23,7 @@ suivent la norme ISO/IEC 25010.
 | **Fiabilité** | Une annonce déposée n'est jamais perdue, même si un service tombe. | 17 tests : reprises, doublons, messages en échec, panne du broker. | `unit-tests:*`, `integration-tests` |
 | **Sécurité applicative** | Seul un membre connecté dépose une annonce, seul un modérateur lit la file. | 14 tests : contrôle des rôles, erreurs 401 et 403, jetons invalides. | `unit-tests:*`, `integration-tests` |
 | **Robustesse des entrées** | Une annonce invalide est refusée avec une erreur claire. | 5 cas refusés avec une erreur 400. | `integration-tests` |
-| **Sécurité des images** | Les images n'ont ni compte root, ni secret, ni outil de développement. | Compte non root, aucun secret, aucune source ni outil de développement dans les 3 images. | `image-tests` |
+| **Sécurité des images** | Les images n'ont ni compte root, ni secret, ni outil de développement. | Compte non root, aucun secret, aucune source ni outil de développement dans les 3 images, et Dockerfile conformes aux règles Hadolint. | `image-tests`, `hadolint` |
 | **Vulnérabilités** | Aucune faille grave et corrigeable ne part en production, ni dans les outils de build. | Analyse Trivy des 3 images et des dépendances. | `image-tests`, `dependency-scan` |
 | **Performance** | 95 % des dépôts d'annonces répondent en moins de 500 ms. | Test de charge k6 avec seuils. | `performance-tests` |
 | **Accessibilité (RGAA)** | Les textes et les composants restent lisibles. | 26 contrôles de contraste. | `unit-tests:frontend` |

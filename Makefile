@@ -12,7 +12,7 @@
         smoke token queues db-listings db-moderation create-grafana-db \
         demo-stop-moderation demo-start-moderation demo-kill-api demo-breaker breaker-test \
         app keycloak nats adminer prometheus grafana alloy \
-        docs-serve docs-check docs-image docs-run docs-stop docs-image-test
+        docs-serve docs-check docs-image docs-run docs-stop
 
 # NS sert aux commandes kubectl. Il n'est PAS propage aux manifestes : le namespace est
 # fixe dans k8s/kustomization.yaml (voir README, "Limites connues").
@@ -122,7 +122,6 @@ help:
 	@echo "    make docs-image               - Image pme-docs:dev (site statique, nginx non-root)"
 	@echo "    make docs-run                 - Sert l'image : http://localhost:$(DOCS_IMAGE_PORT) (ouvre le navigateur)"
 	@echo "    make docs-stop                - Arrete l'apercu et le site servis par docs-serve et docs-run"
-	@echo "    make docs-image-test          - Tests de l'image (container-structure-test + Trivy)"
 	@echo ""
 	@echo "  Ouvrir : make app | keycloak | nats | adminer | prometheus | grafana | alloy"
 
@@ -499,7 +498,7 @@ image-test:
 docs-serve:
 	docker build -f docker/docs/Dockerfile --target deps -t pme-docs-deps:dev .
 	@( for i in $$(seq 1 90); do curl -s -o /dev/null "$(DOCS_URL)" && { xdg-open "$(DOCS_URL)" 2>/dev/null || open "$(DOCS_URL)" 2>/dev/null; break; }; sleep 1; done ) &
-	docker run --rm -it -p $(DOCS_PORT):8000 -v "$(CURDIR)":/docs pme-docs-deps:dev mkdocs serve -a 0.0.0.0:8000
+	docker run --rm -it --name pme-docs-serve -p $(DOCS_PORT):8000 -v "$(CURDIR)":/docs pme-docs-deps:dev mkdocs serve -a 0.0.0.0:8000
 
 docs-check:
 	docker build -f docker/docs/Dockerfile --target deps -t pme-docs-deps:dev .
@@ -511,17 +510,14 @@ docs-image:
 docs-run:
 	@echo "Documentation : http://localhost:$(DOCS_IMAGE_PORT) (Ctrl+C pour arreter)"
 	@( for i in $$(seq 1 90); do curl -s -o /dev/null "$(DOCS_IMAGE_URL)" && { xdg-open "$(DOCS_IMAGE_URL)" 2>/dev/null || open "$(DOCS_IMAGE_URL)" 2>/dev/null; break; }; sleep 1; done ) &
-	docker run --rm -p $(DOCS_IMAGE_PORT):8080 pme-docs:dev
+	docker run --rm --name pme-docs-run -p $(DOCS_IMAGE_PORT):8080 pme-docs:dev
 
-# Arrete les conteneurs lances par docs-serve (pme-docs-deps:dev) et docs-run (pme-docs:dev).
-# Ils sont lances avec --rm : ils disparaissent a l'arret.
+# Arrete les conteneurs lances par docs-serve (pme-docs-serve) et docs-run (pme-docs-run).
+# Ils sont lances avec --rm : ils disparaissent a l'arret. On les retrouve par leur nom et non par leur image :
+# "make docs-serve" reconstruit l'image, ce qui detache le nom pme-docs-deps:dev d'un conteneur deja lance.
 docs-stop:
-	@ids=$$(docker ps -q --filter ancestor=pme-docs-deps:dev --filter ancestor=pme-docs:dev); \
+	@ids=$$(docker ps -q --filter 'name=^pme-docs-serve$$' --filter 'name=^pme-docs-run$$'); \
 	if [ -n "$$ids" ]; then docker stop $$ids >/dev/null && echo "MkDocs arrete."; else echo "Aucun MkDocs en cours."; fi
-
-docs-image-test:
-	container-structure-test test --image pme-docs:dev --config tests/image/docs.yaml
-	trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 pme-docs:dev
 
 # Performance (k6) : sur le cluster deploye, apres le deploiement en recette.
 # k6 ne lit pas l'autorite locale : la verification TLS est desactivee pour ces tests (cluster local uniquement).

@@ -9,49 +9,87 @@
 | **Configuration** | Le fichier `.gitlab-ci.yml`, à la racine du dépôt |
 | **Déclencheur** | Chaque commit ou fusion sur la branche principale (`main`) |
 | **Durée visée** | Moins de 5 minutes par pipeline |
-| **Nombre de jobs** | 8 jobs, répartis en 6 familles de contrôles |
+| **Nombre de jobs** | 9 jobs, répartis en 7 familles de contrôles |
 
 ## Description
 
-Une pipeline est une suite de tâches que GitLab lance seul, sans intervention humaine. Chaque tâche s'appelle un job.
-Chaque job démarre dans un conteneur neuf, fait un contrôle précis, puis publie son résultat. Si un contrôle échoue,
-la pipeline devient rouge et l'équipe le voit tout de suite.
+Une **pipeline** est une suite de tâches que GitLab lance seul, sans intervention humaine. Chaque tâche s'appelle un
+**job**. Chaque job démarre dans un conteneur neuf, fait un contrôle précis, puis publie son résultat. Si un contrôle
+échoue, la pipeline devient rouge et l'équipe le voit tout de suite.
 
-La pipeline du projet vérifie cinq choses : le code se comporte comme prévu, les services fonctionnent ensemble, les
-dépendances et les images Docker sont sûres, et l'API reste rapide. Une sixième analyse note la qualité générale du code. Une fois les images contrôlées,
-elles sont publiées dans le registre de GitLab.
+**Le problème : des contrôles qui dépendent de la mémoire.**
+Avant chaque mise en ligne, il faudrait relancer les tests, vérifier les images, relire les dépendances, mesurer la
+vitesse de l'API. Réalisés à la main, ces contrôles sont longs, et chacun finit par en oublier un quand le temps manque.
+Une régression passe alors inaperçue jusqu'à ce qu'un membre la rencontre. La pipeline remplace la mémoire par une
+procédure : les mêmes contrôles, dans les mêmes conditions, à chaque modification.
 
-Cette publication apporte quatre bénéfices. Chaque image est liée à un commit précis, donc traçable. L'image déployée
-est celle qui a été vérifiée, pas une reconstruction. En cas de problème, on revient à la version précédente sans rien
+**Ce qu'elle vérifie.**
+Six choses : le code se comporte comme prévu, les services fonctionnent ensemble, les Dockerfile respectent les bonnes
+pratiques, les dépendances sont sûres, les images Docker sont sûres, et l'API reste rapide. Une septième analyse note la
+qualité générale du code. Une fois les images contrôlées, elles sont publiées dans le registre de GitLab.
+
+**Pourquoi publier les images.**
+Cette publication apporte quatre bénéfices. Chaque image est liée à un commit précis, donc traçable. L'image déployée est
+celle qui a été vérifiée, pas une reconstruction. En cas de problème, on revient à la version précédente sans rien
 reconstruire. Enfin, la pipeline fournit un résultat prêt à déployer, ce qui prépare la livraison continue.
 
 **Définitions**
 
-- **Pipeline** : ensemble des jobs lancés pour un commit.
-- **Job** : tâche de la pipeline, par exemple « lancer les tests de l'API ».
-- **Runner** : machine de GitLab qui exécute les jobs.
-- **Artefact** : fichier produit par un job et conservé, comme un rapport de tests.
-- **Seuil** : limite à respecter, par exemple une couverture minimale. Si elle n'est pas atteinte, le job échoue.
+| Terme | Définition |
+|---|---|
+| **Artefact** | Fichier produit par un job et conservé, comme un rapport de tests. |
+| **Job** | Tâche de la pipeline, par exemple « lancer les tests de l'API ». |
+| **Pipeline** | Ensemble des jobs lancés pour un commit. |
+| **Runner** | Machine de GitLab qui exécute les jobs. |
+| **Seuil** | Limite à respecter, par exemple une couverture minimale. Si elle n'est pas atteinte, le job échoue. |
 
 ## Rôle dans le projet
 
 - Elle contrôle chaque exigence de qualité du projet par au moins un test. Voir la page [Exigences qualité](exigences-qualite.md).
 - Elle empêche une régression d'arriver sur la branche principale sans que l'équipe la voie.
 - Elle garde une trace de chaque contrôle : rapports de tests, couverture, analyse des vulnérabilités.
+- Elle publie les images vérifiées, prêtes à être déployées.
 - Sans elle, les contrôles dépendraient de la mémoire de chaque développeur.
 
-## Schéma de la pipeline
+Les jobs n'attendent pas les uns les autres : ils démarrent ensemble. Seule l'analyse SonarCloud attend les rapports de
+couverture des tests unitaires. La durée de la pipeline est donc celle du job le plus long.
 
-Les jobs n'attendent pas les uns les autres : ils démarrent ensemble. Seule l'analyse SonarCloud attend les rapports
-de couverture des tests unitaires. La durée de la pipeline est donc celle du job le plus long.
+```d2
+vars: {
+  d2-config: {
+    layout-engine: elk
+    theme-id: 5
+    pad: 8
+  }
+}
+direction: right
 
-```mermaid
-flowchart LR
-    A["Commit sur main"] --> B["Tests unitaires<br/>API, modération, interface"]
-    A --> C["Tests d'intégration<br/>PostgreSQL et NATS réels"]
-    A --> D["Tests des images Docker<br/>structure et vulnérabilités"]
-    A --> E["Tests de performance<br/>k6"]
-    B --> F["Analyse SonarCloud<br/>qualité et couverture"]
+# Mise en forme commune : texte lisible à la largeur de la page, angles arrondis
+classes: {
+  boite: {
+    style: {
+      font-size: 24
+      border-radius: 12
+    }
+  }
+}
+
+commit: "Commit\nsur main" {class: boite}
+
+jobs: "Jobs lancés ensemble" {
+  grid-columns: 2
+  unitaires: "Tests unitaires\n3 jobs" {class: boite}
+  hadolint: "Contrôle des\nDockerfile" {class: boite}
+  dependances: "Analyse des\ndépendances" {class: boite}
+  integration: "Tests\nd'intégration" {class: boite}
+  images: "Tests et publication\ndes images" {class: boite}
+  performance: "Tests de\nperformance" {class: boite}
+}
+
+sonar: "Analyse SonarCloud\nqualité et couverture" {class: boite}
+
+commit -> jobs
+jobs.unitaires -> sonar: "rapports de\ncouverture"
 ```
 
 ## Les jobs
@@ -62,26 +100,26 @@ flowchart LR
 | `unit-tests:moderation-service` | Les 17 tests unitaires du service de modération. | Le code d'un module change. |
 | `unit-tests:frontend` | Les 35 tests unitaires de l'interface. | Le code d'un module change. |
 | `sonar` | La qualité du code, la couverture et les doublons. | Le code change, sur la branche principale. |
+| `hadolint` | Les bonnes pratiques des 4 Dockerfile du projet. | Un Dockerfile ou `.hadolint.yaml` change. |
 | `integration-tests` | Les 27 tests avec une vraie base et un vrai broker. | L'API ou la modération change. |
 | `dependency-scan` | Les failles connues dans les dépendances, devDependencies comprises. | Une dépendance change. |
 | `image-tests` | La structure et les vulnérabilités des 3 images, puis leur publication dans le registre. | Une image ou ses tests changent. |
 | `performance-tests` | La rapidité de l'API sous charge. | L'API ou les scénarios k6 changent. |
 
-!!! note "À savoir"
-    Un commit qui ne touche que la documentation ne lance aucun job. Il ne consomme donc aucune minute du quota.
-
 ## Principes de conception
 
-- **Indépendance** : les jobs n'ont pas de dépendance entre eux, sauf Sonar.
-- **Économie** : un job ne tourne que si les fichiers qu'il contrôle ont changé.
-- **Reproductibilité** : chaque outil a une version précise. Les programmes téléchargés sont vérifiés par leur somme de contrôle.
-- **Traçabilité** : les rapports sont conservés une semaine dans GitLab.
-- **Sobriété** : un nouveau commit annule la pipeline devenue inutile. Un job s'arrête après 5 minutes.
-- **Fiabilité** : un job n'est relancé qu'en cas de panne du runner, jamais après un échec de test.
+| Principe | Application |
+|---|---|
+| **Indépendance** | Les jobs n'ont pas de dépendance entre eux, sauf Sonar. |
+| **Économie** | Un job ne tourne que si les fichiers qu'il contrôle ont changé. |
+| **Reproductibilité** | Chaque outil a une version précise. Les programmes téléchargés sont vérifiés par leur somme de contrôle. |
+| **Traçabilité** | Les rapports sont conservés une semaine dans GitLab. |
+| **Sobriété** | Un nouveau commit annule la pipeline devenue inutile. Un job s'arrête après 5 minutes. |
+| **Fiabilité** | Un job n'est relancé qu'en cas de panne du runner, jamais après un échec de test. |
 
 Le détail de ces règles se trouve dans la page [Fonctionnement](fonctionnement.md).
 
-## Les contrôles à lire
+## Les pages de cette section
 
 | Page | Ce qu'on y trouve |
 |---|---|
@@ -89,6 +127,7 @@ Le détail de ces règles se trouve dans la page [Fonctionnement](fonctionnement
 | [Fonctionnement](fonctionnement.md) | Déclenchement, optimisations, quota et lecture des résultats. |
 | [Tests unitaires](tests-unitaires.md) | La liste des 66 tests unitaires. |
 | [Tests d'intégration](tests-integration.md) | La liste des 27 tests d'intégration. |
+| [Contrôle des Dockerfile](controle-dockerfile.md) | Les règles Hadolint appliquées aux 4 Dockerfile. |
 | [Analyse des dépendances](analyse-dependances.md) | La recherche de failles dans les `package-lock.json`. |
 | [Tests des images Docker](tests-images.md) | Les 22 contrôles de structure et l'analyse Trivy. |
 | [Publication des images](publication-images.md) | Le dépôt des images vérifiées dans le registre GitLab. |
@@ -97,20 +136,32 @@ Le détail de ces règles se trouve dans la page [Fonctionnement](fonctionnement
 
 ## Contrôles prévus
 
-D'autres contrôles existent déjà sur le poste de travail. Ils seront ajoutés à la pipeline, un par un.
+D'autres contrôles existent déjà sur l'ordinateur de chaque développeur. Ils seront ajoutés à la pipeline, un par un.
 
 | Contrôle | Commande locale |
 |---|---|
 | Règles du code et complexité (ESLint) | `make lint` |
 | Mise en forme du code (Prettier) | `make format-check` |
 | Fichiers YAML (yamllint) | `make lint-yaml` |
-| Dockerfile (Hadolint) | `make lint-docker` |
 | Manifestes Kubernetes (kubeconform) | `make lint-k8s` |
 | Secrets oubliés dans le code (gitleaks) | `make secrets-scan` |
 | Dépendances vulnérables (npm audit) | `make audit` |
 | Tous les contrôles ci-dessus | `make quality` |
 
+!!! note "À savoir"
+Un commit qui ne touche que la documentation ne lance aucun job. Il ne consomme donc aucune minute du quota.
+
+!!! warning "Attention"
+La pipeline ne se lance que sur la branche principale. Un commit poussé sur une autre branche n'est contrôlé par
+aucun job : lancer les commandes locales avant de fusionner.
+
+!!! tip "Astuce"
+Chaque contrôle de la pipeline a son équivalent sur l'ordinateur, à lancer avant d'envoyer le code. Cela évite un
+aller-retour de plusieurs minutes et économise le quota mensuel. Les commandes sont listées dans la fiche
+[GitLab CI](../outils/gitlab-ci.md).
+
 ## Pour aller plus loin
 
 - [Fichier de la pipeline sur GitLab](https://gitlab.com/kitaah/pme/-/blob/main/.gitlab-ci.yml)
 - [Documentation de GitLab CI/CD](https://docs.gitlab.com/ci/)
+- [Fiche GitLab CI du projet](../outils/gitlab-ci.md)

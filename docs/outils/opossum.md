@@ -4,92 +4,167 @@
 
 | Information | Détail |
 |---|---|
-| **Rôle** | Protège l'API quand PostgreSQL est indisponible, grâce à un disjoncteur |
+| **Rôle** | Protège l'API lorsque PostgreSQL ne répond plus, en coupant les appels au lieu de les laisser s'accumuler |
 | **Version** | opossum 9 |
-| **Adresse en local** | aucune |
+| **Adresse en local** | Aucune |
 
 ## Description
 
-Un disjoncteur (circuit breaker) fonctionne comme celui d'une installation électrique. Tant que tout va bien, il laisse
-passer le courant. Quand les pannes s'accumulent, il coupe le circuit pour éviter d'aggraver le problème. Puis il
-laisse passer un seul appel d'essai pour savoir si le service est revenu.
+opossum est une bibliothèque open source qui fournit un **disjoncteur**, en anglais *circuit breaker*. C'est un
+mécanisme de résilience : il ne répare pas la panne, il empêche ses conséquences de se propager.
 
-opossum est la bibliothèque Node.js qui fournit ce mécanisme. Le projet Spring utilise Resilience4j pour le même usage.
+**Le problème : une panne qui se propage.**
+Lorsqu'une base de données ne répond plus, chaque demande qui lui est adressée reste en attente jusqu'à expiration du
+délai, trois secondes ici. Pendant ce temps, l'API mobilise de la mémoire et des connexions pour une demande qui est
+déjà perdue. Les demandes s'accumulent, l'API ralentit, puis cesse de répondre à son tour, y compris pour les
+opérations qui n'ont pas besoin de la base. Une panne limitée à un composant finit ainsi par arrêter toute la
+plateforme.
+
+**La solution : couper rapidement.**
+Le disjoncteur fonctionne comme celui d'une installation électrique. Tant que tout va bien, il laisse passer. Quand
+les échecs s'accumulent, il coupe : les demandes suivantes échouent immédiatement, sans même solliciter la base. Le
+membre reçoit une réponse claire en quelques millisecondes — « le service est momentanément indisponible » — au lieu
+d'attendre trois secondes pour le même résultat. Après une pause, le disjoncteur laisse passer un seul appel d'essai
+pour savoir si la base est revenue.
+
+```d2
+vars: {
+  d2-config: {
+    layout-engine: elk
+    theme-id: 5
+    pad: 8
+  }
+}
+# Mise en forme commune : texte lisible à la largeur de la page, angles arrondis
+classes: {
+  boite: {
+    style: {
+      font-size: 24
+      border-radius: 12
+    }
+  }
+}
+
+# Les trois états, dans l'ordre où ils se succèdent
+etats: "" {
+  grid-columns: 3
+  style.opacity: 0
+
+  ferme: "1. Circuit fermé" {
+    grid-rows: 2
+    class: boite
+    quoi: "Les appels atteignent la base" {class: boite}
+    membre: "Le membre reçoit sa réponse" {class: boite}
+  }
+
+  ouvert: "2. Circuit ouvert" {
+    grid-rows: 2
+    class: boite
+    quoi: "Trop d'échecs :\nla base n'est plus sollicitée" {class: boite}
+    membre: "Erreur 503 immédiate" {class: boite}
+  }
+
+  semi: "3. Circuit semi-ouvert" {
+    grid-rows: 2
+    class: boite
+    quoi: "Après 10 secondes,\nun appel d'essai" {class: boite}
+    membre: "Essai réussi : retour à 1\nEssai échoué : retour à 2" {class: boite}
+  }
+}
+```
+
+**Toutes les erreurs ne se valent pas.**
+Le disjoncteur ne réagit qu'aux pannes : base injoignable, connexion refusée, délai dépassé. Une erreur de données,
+comme une contrainte violée ou une requête mal formée, ne l'ouvre pas : la base a répondu, elle fonctionne donc
+normalement. Sans cette distinction, quelques saisies invalides suffiraient à couper l'accès à une base en parfait
+état.
+
+**Un disjoncteur par exemplaire.**
+Chaque pod de l'API possède son propre disjoncteur, avec son propre décompte. Ils s'ouvrent donc séparément. Pour que
+le membre reçoive malgré tout une réponse cohérente, un appel qui échoue alors que le circuit est encore fermé renvoie
+déjà une erreur 503, et non une erreur 500 : le code de réponse ne dépend pas du pod qui a reçu la demande.
 
 **Définitions**
 
-- **Circuit fermé** : fonctionnement normal, les appels passent.
-- **Circuit ouvert** : les appels échouent aussitôt, sans solliciter la base.
-- **Circuit semi-ouvert** : un appel d'essai est autorisé pour tester le retour du service.
-- **Erreur 503** : réponse HTTP « service indisponible », au format RFC 9457 dans l'API.
+| Terme | Définition |
+|---|---|
+| **Circuit fermé** | Fonctionnement normal : les appels atteignent la base. |
+| **Circuit ouvert** | Les appels échouent aussitôt, sans solliciter la base. |
+| **Circuit semi-ouvert** | Un seul appel d'essai est autorisé, pour vérifier si le service est revenu. |
+| **Disjoncteur** | Mécanisme qui interrompt les appels vers un service en panne, puis teste périodiquement son retour. |
+| **Erreur 503** | Réponse HTTP « service momentanément indisponible », au format Problem Details dans l'API. |
+| **Résilience** | Capacité d'un système à continuer de fonctionner, même en mode dégradé, pendant une panne partielle. |
 
 ## Rôle dans le projet
 
-- Il entoure tous les appels de l'API à PostgreSQL : dépôt d'une annonce et lecture des annonces du membre.
-- Base en panne, le circuit s'ouvre après 5 appels dont la moitié échoue. Le membre reçoit alors un 503 en quelques
-  millisecondes, au lieu d'attendre le délai de connexion.
-- Tant que le circuit est fermé, un appel qui échoue renvoie déjà un 503, jamais une erreur 500 opaque.
-- Chaque pod de l'API a son propre circuit : ils s'ouvrent séparément.
-- Le circuit se referme seul quand la base revient : un appel d'essai est tenté toutes les 10 secondes.
-- Il ne réagit qu'aux pannes. Une erreur de données, comme une contrainte violée, ne l'ouvre pas.
-- Sans lui, chaque requête resterait bloquée jusqu'à 3 secondes et saturerait l'API pendant la panne.
+- Il entoure tous les appels de l'API à PostgreSQL : dépôt d'une annonce et consultation des annonces du membre.
+- Il transforme une attente de trois secondes en une réponse immédiate dès que la base est en panne, ce qui évite la
+  saturation de l'API.
+- Il renvoie toujours la même erreur au membre, que le circuit soit ouvert ou que l'appel vienne d'échouer.
+- Il se referme seul lorsque la base revient : aucune intervention ni redémarrage n'est nécessaire.
+- Il publie son état sous forme de mesure, ce qui rend la coupure visible dans [Grafana](grafana.md).
+- Sans lui, une panne de la base rendrait toute l'API inutilisable pendant plusieurs minutes, au lieu de dégrader
+  seulement les fonctions qui en dépendent.
 
-## Réglages
+Ses réglages sont les suivants :
 
 | Réglage | Valeur | Effet |
 |---|---|---|
-| **Délai d'un appel** | 3 secondes | Un appel plus long compte comme un échec. |
-| **Volume minimal** | 5 appels | Le circuit n'est évalué qu'à partir de ce nombre d'appels. |
-| **Seuil d'échecs** | 50 % | À partir de cette part d'échecs, le circuit s'ouvre. |
-| **Pause avant essai** | 10 secondes | Durée pendant laquelle le circuit reste ouvert. |
+| **Délai d'un appel** | 3 secondes | Au-delà, l'appel est compté comme un échec. |
+| **Volume minimal** | 5 appels | En dessous, le disjoncteur ne se prononce pas : quelques échecs isolés ne coupent rien. |
+| **Seuil d'échecs** | 50 % | À partir de cette proportion d'échecs, le circuit s'ouvre. |
+| **Pause avant essai** | 10 secondes | Durée pendant laquelle le circuit reste ouvert avant l'appel d'essai. |
 
-## Observer l'état
+L'état du circuit est publié dans la mesure `circuit_breaker_state{name="postgresql"}`, lue par
+[Prometheus](prometheus.md) :
 
-L'API publie la mesure `circuit_breaker_state{name="postgresql"}` pour Prometheus.
-
-| Valeur | Etat |
+| Valeur | État |
 |---|---|
 | 0 | Fermé |
 | 1 | Semi-ouvert |
 | 2 | Ouvert |
 
-## Protocole de vérification
-
-La commande `make breaker-test` déroule le protocole sur le cluster Minikube. Elle remet toujours la base en service,
-même si elle est interrompue.
-
-1. **Etat initial** : l'API répond 200 et le circuit est fermé (0).
-2. **Coupure** : la base est arrêtée. Des appels sont envoyés jusqu'à l'ouverture du circuit (2).
-3. **Circuit ouvert** : un appel reçoit un 503 en moins d'une seconde.
-4. **Remise en service** : la base est relancée. L'API répond de nouveau 200 et le circuit se referme (0).
-
-La commande `make demo-breaker` fait la même coupure sans vérification : elle affiche seulement le code, la durée et
-l'état du circuit à chaque appel. Elle sert à montrer le mécanisme.
-
-!!! warning "Attention"
-    Ces commandes coupent PostgreSQL pendant une à deux minutes. À lancer sur le cluster de démonstration, jamais
-    pendant un test de charge.
+!!! note "À savoir"
+    Ce mécanisme correspond à celui que la bibliothèque Resilience4j assure dans le monde Java. Le projet initial, écrit
+    avec Spring Boot, l'utilisait au même endroit : opossum en est l'équivalent pour Node.
 
 ## Fichiers et dossiers principaux
 
 | Fichier ou dossier | Description |
 |---|---|
 | `api/src/common/database-circuit-breaker.ts` | Contient le disjoncteur, ses réglages et sa mesure. |
-| `api/src/listings/listings.service.ts` | Fait passer les appels à la base par le disjoncteur. |
+| `api/src/listings/listings.service.ts` | Fait passer par le disjoncteur tous les appels à la base. |
 | `api/src/listings/listings.module.ts` | Crée le disjoncteur et publie sa mesure. |
-| `scripts/verify-breaker.sh` | Déroule le protocole de vérification, avec résultats OK ou ECHEC. |
+| `scripts/verify-breaker.sh` | Déroule le protocole de vérification et affiche un résultat OK ou ÉCHEC. |
 | `scripts/demo-breaker.sh` | Montre le disjoncteur en action, sans vérification. |
 
 ## Commandes essentielles
 
+À lancer dans un terminal, depuis le dossier du projet, la plateforme déployée.
+
 | Commande | Description |
 |---|---|
-| `make breaker-test` | Coupe PostgreSQL, vérifie le circuit, remet la base. |
-| `make demo-breaker` | Montre le circuit s'ouvrir puis se refermer. |
-| `cd api && npm install` | Installe les dépendances de l'API, opossum compris. |
+| `make breaker-test` | Coupe PostgreSQL, vérifie le comportement du circuit, puis remet la base en service. |
+| `make demo-breaker` | Montre le circuit s'ouvrir puis se refermer, sans vérification. |
+| `make logs-api` | Affiche le journal de l'API, où chaque échec d'appel à la base est tracé. |
+
+La vérification se déroule en quatre étapes, que `make breaker-test` enchaîne automatiquement :
+
+1. **État initial** : l'API répond 200 et le circuit est fermé.
+2. **Coupure** : la base est arrêtée, puis des appels sont envoyés jusqu'à l'ouverture du circuit.
+3. **Circuit ouvert** : un appel reçoit une erreur 503 en moins d'une seconde.
+4. **Remise en service** : la base est relancée, l'API répond de nouveau 200 et le circuit se referme.
+
+!!! warning "Attention"
+    Ces deux commandes coupent réellement PostgreSQL pendant une à deux minutes. À réserver au cluster local, et à ne
+    jamais lancer pendant un test de charge ou une démonstration.
+
+!!! tip "Astuce"
+    `make breaker-test` remet toujours la base en service, même si elle est interrompue en cours de route. En cas de
+    doute, `make pods` confirme que PostgreSQL est de nouveau prêt.
 
 ## Pour aller plus loin
 
 - [Dépôt officiel d'opossum](https://github.com/nodeshift/opossum)
-- [Le patron Circuit Breaker](https://martinfowler.com/bliki/CircuitBreaker.html)
+- [Le patron Circuit Breaker, par Martin Fowler](https://martinfowler.com/bliki/CircuitBreaker.html)
 - [Fiche PostgreSQL du projet](postgresql.md)
