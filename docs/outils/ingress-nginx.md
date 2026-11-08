@@ -99,6 +99,7 @@ l'ingress. Une adresse non exposée est une surface d'attaque en moins.
 - Il est la seule porte d'entrée des interfaces web du cluster.
 - Il dirige chaque nom d'hôte vers son service, et les trois chemins du site vers leurs destinations respectives.
 - Il chiffre les échanges avec le navigateur et redirige automatiquement le HTTP vers le HTTPS.
+- Il ajoute l'en-tête HSTS à ses réponses : pendant sept jours, le navigateur n'utilise plus que HTTPS pour ces noms.
 - Il répartit les requêtes entre les exemplaires de l'API, de la modération et du site.
 - Il n'expose que ce qui doit l'être : les mesures et les sondes de santé restent internes.
 - Sans lui, chaque interface exigerait une redirection de port distincte, à relancer à chaque session de travail.
