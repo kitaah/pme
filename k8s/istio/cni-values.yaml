@@ -1,0 +1,12 @@
+# Reglages du chart Helm istio-cni (agent par noeud qui redirige le trafic des pods vers ztunnel), installe par `make istio`.
+# Seules les valeurs qui different des valeurs par defaut du chart sont listees.
+profile: ambient
+
+global:
+  # Avec le pilote Docker, Minikube monte les dossiers du CNI a un chemin different de celui d'un cluster standard.
+  platform: minikube
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi

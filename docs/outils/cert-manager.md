@@ -66,7 +66,8 @@ alors avec le message « Impossible de joindre le serveur d'authentification ».
 L'autorité signe d'abord le certificat public, celui que présente l'ingress aux navigateurs pour les six noms d'hôte.
 Elle signe aussi les certificats internes de PostgreSQL et de NATS, qui chiffrent les échanges à l'intérieur du
 cluster. Dans ce second cas, ce sont les applications, et non le navigateur, qui vérifient le certificat et le nom du
-serveur.
+serveur. Les certificats d'identité des pods, eux, sont émis par le maillage [Istio](istio.md) et ne passent pas par
+cert-manager.
 
 **Le renouvellement est automatique.**
 Un certificat a une durée de vie limitée : 90 jours ici. cert-manager le remplace quinze jours avant son expiration,

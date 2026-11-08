@@ -1,0 +1,16 @@
+# Reglages du chart Helm istiod (plan de controle d'Istio), installe par `make istio`, version epinglee dans le Makefile.
+# Seules les valeurs qui different des valeurs par defaut du chart sont listees.
+
+# Mode ambient : pas de proxy dans chaque pod, un petit composant par noeud (ztunnel) chiffre les echanges.
+profile: ambient
+
+pilot:
+  # Un seul exemplaire suffit sur un cluster a un noeud : l'autoscaler du chart n'a pas d'interet ici.
+  autoscaleEnabled: false
+  # Les valeurs par defaut du chart (2 Gi de memoire demandes) depassent le budget de Minikube.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi

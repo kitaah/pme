@@ -72,7 +72,9 @@ ingress -> autres
 **Le chiffrement s'arrête à l'ingress.**
 Les échanges entre le navigateur et Traefik sont chiffrés en HTTPS, avec un certificat fourni par
 [cert-manager](cert-manager.md). Traefik déchiffre la requête, puis la transmet en HTTP aux services du cluster :
-c'est ce qu'on appelle la **terminaison TLS**. Ce choix évite à chaque application de gérer son propre certificat.
+c'est ce qu'on appelle la **terminaison TLS**. Ce choix évite à chaque application de gérer son propre certificat. Ce
+dernier trajet n'est pas en clair pour autant : le namespace de Traefik est enrôlé dans le maillage
+[Istio](istio.md), qui chiffre en mTLS la connexion de l'ingress vers les pods.
 Deux liaisons internes font exception et restent chiffrées de bout en bout, parce qu'elles transportent des données
 sensibles : celles vers [PostgreSQL](postgresql.md) et vers [NATS](nats.md).
 
@@ -116,6 +118,7 @@ bord, n'est pas exposée non plus.
 - Il est la seule porte d'entrée des interfaces web du cluster.
 - Il dirige chaque nom d'hôte vers son service, et les trois chemins du site vers leurs destinations respectives.
 - Il chiffre les échanges avec le navigateur et redirige automatiquement le HTTP vers le HTTPS.
+- Il appartient au maillage Istio : sans cela, le mode strict du namespace `pme` refuserait ses connexions vers les services.
 - Il ajoute l'en-tête HSTS à ses réponses : pendant sept jours, le navigateur n'utilise plus que HTTPS pour ces noms.
 - Il compresse les réponses de plus de 1 Ko.
 - Il répartit les requêtes entre les exemplaires de l'API, de la modération et du site.
@@ -161,6 +164,7 @@ Les six noms d'hôte sont les suivants :
 | `make minikube-up` | Crée le cluster en publiant les ports 80 et 443 sur l'ordinateur, puis installe Traefik. |
 | `make helm` | Installe Helm sur l'ordinateur s'il est absent. Le mot de passe administrateur est demandé. |
 | `make ingress` | Installe ou met à jour Traefik dans le cluster et attend qu'il soit prêt. |
+| `make istio` | Installe le maillage Istio et enrôle le namespace de Traefik (voir [Istio](istio.md)). À lancer après `make ingress`. |
 | `make hosts` | Affiche la ligne à ajouter au fichier hosts de l'ordinateur. |
 | `make deploy` | Installe les règles d'ingress, les middlewares et le certificat avec le reste de la plateforme. |
 | `make app` | Ouvre l'application dans le navigateur. |

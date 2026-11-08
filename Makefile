@@ -5,8 +5,8 @@
 .PHONY: help install test test-integration image-test \
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
         k6-install perf perf-prepare perf-reset perf-load perf-decoupling \
-        minikube-up minikube-down helm ingress cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
-        env sealed-secrets sealed-prereqs seal image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
+        minikube-up minikube-down helm ingress inotify istio mesh-check cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
+        env kubeseal sealed-secrets sealed-prereqs seal image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         pods logs logs-api logs-moderation logs-keycloak \
         port-forward stop-forward api moderation frontend \
         smoke token queues db-listings db-moderation create-grafana-db \
@@ -17,13 +17,22 @@
 # NS sert aux commandes kubectl. Il n'est PAS propage aux manifestes : le namespace est
 # fixe dans k8s/kustomization.yaml (voir README, "Limites connues").
 NS ?= pme
-MINIKUBE_MEMORY ?= 4096
+MINIKUBE_MEMORY ?= 5120
 MINIKUBE_CPUS ?= 2
 CERT_MANAGER_VERSION ?= v1.18.2
 # Version du chart Helm de Traefik (le controleur d'ingress). Epinglee : une montee de version se decide, elle ne se subit pas.
 TRAEFIK_CHART_VERSION ?= 41.3.0
 # Version de Helm installee par `make helm` (outil en ligne de commande qui installe le chart de Traefik).
 HELM_VERSION ?= v4.3.0
+# Version d'Istio installee par `make istio` (les quatre charts Helm : base, istiod, cni, ztunnel). A verifier avec
+# `helm search repo istio/istiod --versions | head` si Helm ne la trouve pas.
+ISTIO_VERSION ?= 1.30.0
+
+# Version de Sealed Secrets : celle de l'outil kubeseal (make kubeseal) ET du controleur (make sealed-secrets), qui doivent rester identiques.
+KUBESEAL_VERSION ?= 0.41.2
+
+# Plafond d'instances inotify exige par ztunnel (voir la cible `inotify`). Linux par defaut : 128.
+INOTIFY_INSTANCES ?= 1024
 TRAEFIK_NS ?= traefik
 CA_FILE ?= pme-ca.crt
 
@@ -81,12 +90,16 @@ help:
 	@echo "    make metrics-server           - Active metrics-server (addon Minikube), requis par l'autoscaling"
 	@echo "    make hpa                      - Suit l'autoscaling : charge, cible et nombre de pods"
 	@echo "    make ca-cert                  - Ecrit l'autorite locale dans $(CA_FILE), a importer dans le navigateur"
+	@echo "    make inotify                  - Releve la limite inotify de l'ordinateur (sudo) : requis par Istio, sans effet si deja suffisante"
+	@echo "    make istio                    - Installe Istio (mode ambient) : chiffre en mTLS les echanges entre pods"
+	@echo "    make mesh-check               - Verifie le mTLS : un pod hors du mesh est refuse, les echanges portent des identites"
 	@echo "    make ca-configmap             - Copie l'autorite locale dans le namespace $(NS) (verification du TLS de PostgreSQL)"
 	@echo "    make tunnel                   - Redirige les ports 80 et 443 vers l'ingress (cluster cree sans --ports ; laisser ouvert, mot de passe demande)"
 	@echo "    make hosts                    - Affiche la ligne a ajouter dans /etc/hosts pour les noms .localhost"
 	@echo ""
 	@echo "  Deploiement"
 	@echo "    make env                      - Cree .env depuis env.example s'il manque (jamais ecrase)"
+	@echo "    make kubeseal                 - Installe kubeseal $(KUBESEAL_VERSION) sur l'ordinateur s'il est absent (requis par make seal)"
 	@echo "    make sealed-secrets           - Installe le controleur Sealed Secrets (fait aussi par seal si absent)"
 	@echo "    make seal                     - Re-chiffre .env dans k8s/14-pme-secrets-sealed.yaml (a versionner)"
 	@echo "    make image                    - Construit les 3 images dans Minikube"
@@ -142,6 +155,7 @@ minikube-up: scripts-perms
 	minikube start --driver=docker --memory=$(MINIKUBE_MEMORY) --cpus=$(MINIKUBE_CPUS) \
 		--ports=127.0.0.1:80:80,127.0.0.1:443:443
 	$(MAKE) ingress
+	$(MAKE) istio
 	$(MAKE) cert-manager
 	$(MAKE) ca-cert
 	$(MAKE) metrics-server
@@ -172,6 +186,52 @@ ingress:
 	helm repo add traefik https://traefik.github.io/charts --force-update
 	helm upgrade --install traefik traefik/traefik --version $(TRAEFIK_CHART_VERSION) \
 		--namespace $(TRAEFIK_NS) --create-namespace --values k8s/traefik/values.yaml --wait --timeout 3m
+
+# Prerequis de l'ordinateur pour Istio : ztunnel surveille ses certificats avec inotify. Minikube (pilote Docker) partage
+# le noyau de l'ordinateur, dont la limite par defaut (128 instances) est vite atteinte : ztunnel plante alors avec
+# "Too many open files". La cible ne fait rien si la limite est deja suffisante ; sinon elle la releve (sudo) et la
+# rend permanente dans /etc/sysctl.d. Reglage Linux uniquement.
+inotify:
+	@cur=$$(sysctl -n fs.inotify.max_user_instances 2>/dev/null || echo 0); \
+	if [ "$$cur" -ge $(INOTIFY_INSTANCES) ]; then \
+		echo "inotify : limite suffisante ($$cur instances)"; \
+	else \
+		echo "inotify : limite de $$cur instances, relevee a $(INOTIFY_INSTANCES) (mot de passe sudo demande)"; \
+		sudo sysctl fs.inotify.max_user_instances=$(INOTIFY_INSTANCES) && \
+		echo 'fs.inotify.max_user_instances=$(INOTIFY_INSTANCES)' | sudo tee /etc/sysctl.d/99-inotify.conf >/dev/null && \
+		sudo sysctl --system >/dev/null; \
+	fi
+
+# Istio en mode ambient : chiffre en mTLS les echanges entre pods, sans modifier les pods ni ajouter de proxy dans chacun.
+# Quatre charts Helm, installes dans l'ordre : base (definitions des ressources), istiod (plan de controle, emet les
+# identites), cni (agent par noeud qui redirige le trafic) et ztunnel (proxy par noeud qui chiffre). Reglages : k8s/istio/.
+# Le namespace de Traefik est enrole ici (il est cree par `make ingress`, a lancer avant) : sans cela, l'ingress ne
+# pourrait plus joindre les services, car le namespace pme refuse les connexions hors mesh (k8s/16-mesh-mtls.yaml).
+# Le namespace pme, lui, est enrole par le label de k8s/namespace.yaml.
+# Sur un cluster existant, cette commande suffit : il n'est pas necessaire de le recreer.
+istio: inotify
+	@command -v helm >/dev/null || { echo "helm absent : lancer make helm"; exit 1; }
+	@kubectl get namespace $(TRAEFIK_NS) >/dev/null 2>&1 || { echo "Namespace $(TRAEFIK_NS) absent : lancer make ingress d'abord"; exit 1; }
+	helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
+	helm upgrade --install istio-base istio/base --version $(ISTIO_VERSION) \
+		--namespace istio-system --create-namespace --wait --timeout 3m
+	helm upgrade --install istiod istio/istiod --version $(ISTIO_VERSION) \
+		--namespace istio-system --values k8s/istio/istiod-values.yaml --wait --timeout 5m
+	helm upgrade --install istio-cni istio/cni --version $(ISTIO_VERSION) \
+		--namespace istio-system --values k8s/istio/cni-values.yaml --wait --timeout 3m
+	helm upgrade --install ztunnel istio/ztunnel --version $(ISTIO_VERSION) \
+		--namespace istio-system --values k8s/istio/ztunnel-values.yaml --wait --timeout 3m
+	kubectl label namespace $(TRAEFIK_NS) istio.io/dataplane-mode=ambient --overwrite
+
+# Verifie le chiffrement entre pods. Un pod hors du mesh (namespace default) essaie de joindre l'interface : il doit
+# etre refuse (pas de code HTTP 200). Puis les derniers echanges vus par ztunnel : chaque ligne montre l'identite
+# (spiffe://...) de la source et de la destination, preuve que la connexion est en mTLS.
+mesh-check:
+	@echo "Pod hors du mesh vers l'interface (attendu : echec de la connexion) :"
+	@kubectl -n default run mesh-hors --rm -i --quiet --restart=Never --image=curlimages/curl -- \
+		curl -sS -m 5 -o /dev/null -w "HTTP %{http_code}\n" http://pme-frontend.pme.svc.cluster.local:8080 || true
+	@echo "Derniers echanges chiffres vus par ztunnel (identites spiffe) :"
+	@kubectl -n istio-system logs ds/ztunnel --tail=300 | grep spiffe | tail -5 || true
 
 # metrics-server (addon Minikube) : fournit la charge des pods a l'autoscaler (k8s/11-autoscaling.yaml). Sans lui, la cible
 # de chaque autoscaler reste <unknown> et le nombre de pods ne change jamais. Les premieres mesures arrivent apres ~1 minute.
@@ -204,7 +264,10 @@ ca-cert:
 # verifier le certificat du serveur. Un Secret ne se partage pas entre namespaces, d'ou cette copie ; en entreprise,
 # trust-manager (projet cert-manager) produit la MEME ConfigMap et la met a jour tout seul a chaque renouvellement.
 # Relancer cette commande apres "make cert-manager" sur un cluster recree (nouvelle autorite).
+# Le namespace est applique d'abord : sur un cluster neuf, il n'existe pas encore (il n'est cree que par `kubectl apply -k`,
+# qui passe apres cette cible). Il porte deja ses labels (securite des pods, maillage Istio), que l'apply suivant conserve.
 ca-configmap:
+	@kubectl apply -f k8s/namespace.yaml >/dev/null
 	@kubectl -n cert-manager get secret pme-ca >/dev/null 2>&1 || (echo "Autorite locale absente : lancer make cert-manager" && exit 1)
 	@tmp=$$(mktemp) && \
 		kubectl -n cert-manager get secret pme-ca -o jsonpath='{.data.ca\.crt}' | base64 -d > $$tmp && \
@@ -236,14 +299,29 @@ hosts:
 # publique : le fichier obtenu (SealedSecret) se versionne dans Git, et seul ce cluster sait le dechiffrer en Secret.
 SEALED_FILE := k8s/14-pme-secrets-sealed.yaml
 
-# Installe le controleur (namespace kube-system), une seule fois par cluster.
-# Sa version est epinglee dans k8s/sealed-secrets/kustomization.yaml (kubeseal doit rester a la meme version).
+# kubeseal (outil qui chiffre les secrets) : installe une seule fois par ordinateur, dans /usr/local/bin (d'ou le mot de
+# passe administrateur). Sans effet si la bonne version est deja installee. Linux uniquement ; ailleurs, voir
+# https://github.com/bitnami/sealed-secrets/releases. Le binaire est telecharge en HTTPS depuis la page des versions du projet.
+kubeseal:
+	@if command -v kubeseal >/dev/null && kubeseal --version 2>/dev/null | grep -q "$(KUBESEAL_VERSION)"; then \
+		echo "kubeseal deja installe : $$(kubeseal --version)"; \
+	else \
+		test "$$(uname -s)" = "Linux" || { echo "Installation automatique reservee a Linux : voir la fiche Sealed Secrets"; exit 1; }; \
+		case "$$(uname -m)" in x86_64) arch=amd64;; aarch64|arm64) arch=arm64;; *) echo "Architecture non geree : $$(uname -m)"; exit 1;; esac; \
+		dir=$$(mktemp -d); trap 'rm -rf "$$dir"' EXIT; \
+		curl -fsSL -o "$$dir/kubeseal.tar.gz" "https://github.com/bitnami/sealed-secrets/releases/download/v$(KUBESEAL_VERSION)/kubeseal-$(KUBESEAL_VERSION)-linux-$$arch.tar.gz" && \
+		tar -xzf "$$dir/kubeseal.tar.gz" -C "$$dir" kubeseal && \
+		sudo install -m 755 "$$dir/kubeseal" /usr/local/bin/kubeseal && \
+		echo "kubeseal installe : $$(kubeseal --version)"; \
+	fi
+
+# Installe le controleur (namespace kube-system), une seule fois par cluster, a la meme version que kubeseal.
 sealed-secrets:
-	kubectl apply -k k8s/sealed-secrets
+	kubectl apply -f "https://github.com/bitnami/sealed-secrets/releases/download/v$(KUBESEAL_VERSION)/controller.yaml"
 	kubectl -n kube-system rollout status deployment/sealed-secrets-controller --timeout=120s
 
 sealed-prereqs:
-	@command -v kubeseal >/dev/null || { echo "kubeseal absent : voir la fiche Sealed Secrets (docs/outils/sealed-secrets.md)"; exit 1; }
+	@{ command -v kubeseal >/dev/null && kubeseal --version 2>/dev/null | grep -q "$(KUBESEAL_VERSION)"; } || { echo "kubeseal $(KUBESEAL_VERSION) absent : lancer make kubeseal"; exit 1; }
 	@for v in POSTGRES_USER POSTGRES_PASSWORD NATS_USER NATS_PASSWORD KEYCLOAK_ADMIN KEYCLOAK_ADMIN_PASSWORD GRAFANA_ADMIN GRAFANA_ADMIN_PASSWORD; do \
 		test -n "$$(printenv $$v)" || { echo "$$v absent de .env"; exit 1; }; \
 		test "$$(printenv $$v)" != "CHANGE_ME" || { echo "$$v vaut encore CHANGE_ME dans .env : choisir un mot de passe"; exit 1; }; \
@@ -282,6 +360,7 @@ image-frontend:
 	minikube image build -t pme-frontend:dev ./frontend
 
 deploy: ca-configmap | $(SEALED_FILE)
+	@kubectl get crd sealedsecrets.bitnami.com >/dev/null 2>&1 || { echo "Sealed Secrets est absent (cluster neuf) : lancer make seal, qui l'installe et rechiffre .env avec la cle du nouveau cluster"; exit 1; }
 	@kubectl get crd certificates.cert-manager.io >/dev/null 2>&1 || { echo "cert-manager est absent : lancer make cert-manager"; exit 1; }
 	@kubectl get crd middlewares.traefik.io >/dev/null 2>&1 || { echo "Traefik est absent : lancer make ingress"; exit 1; }
 	kubectl apply -k k8s/

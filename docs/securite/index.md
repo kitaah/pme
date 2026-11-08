@@ -57,7 +57,7 @@ couches: "" {
   style.opacity: 0
 
   identite: "1. Identité — Keycloak, jeton signé, rôles" {class: boite}
-  echanges: "2. Échanges — HTTPS, TLS interne, mots de passe chiffrés" {class: boite}
+  echanges: "2. Échanges — HTTPS, mTLS entre pods, TLS vers les bases" {class: boite}
   application: "3. Application — validation, limitation de débit, en-têtes" {class: boite}
   conteneurs: "4. Conteneurs — sans droits d'administrateur, disque en lecture seule" {class: boite}
   secrets: "5. Secrets — chiffrés dans Git, déchiffrés par le cluster seul" {class: boite}
@@ -80,7 +80,7 @@ Chaque mesure est détaillée dans la page de sa couche.
 | Couche | Mesures principales | Page |
 |---|---|---|
 | **Identité et accès** | Connexion par Keycloak, jeton signé vérifié par l'API, deux rôles, refus par défaut, protection contre les essais répétés. | [Authentification](authentification.md) |
-| **Échanges** | HTTPS sur tous les noms d'hôte, TLS jusqu'à PostgreSQL et NATS, certificats renouvelés seuls. | [Chiffrement](chiffrement.md) |
+| **Échanges** | HTTPS sur tous les noms d'hôte, mTLS entre les pods par Istio, TLS jusqu'à PostgreSQL et NATS, certificats renouvelés seuls. | [Chiffrement](chiffrement.md) |
 | **Secrets** | Mots de passe chiffrés avant d'entrer dans Git, déchiffrables par le seul cluster, recherche de secrets oubliés. | [Secrets](secrets.md) |
 | **Conteneurs et cluster** | Aucun droit d'administrateur, disque en lecture seule, capacités retirées, images sans outils de développement. | [Durcissement](durcissement.md) |
 | **Application** | Validation stricte des entrées, limitation de débit, en-têtes de sécurité, erreurs qui ne révèlent rien. | [Défenses applicatives](application.md) |
@@ -92,7 +92,8 @@ porte qualité de SonarCloud signale en plus les secrets oubliés et les failles
 !!! note "À savoir"
     Aucune mesure de cette section ne dépend d'une action manuelle au moment du déploiement. Tout est déclaré dans le
     dépôt : les manifestes Kubernetes, la configuration de Keycloak et le fichier de la pipeline. Un déploiement depuis
-    un dépôt neuf reproduit donc exactement le même niveau de sécurité.
+    un dépôt neuf reproduit donc exactement le même niveau de sécurité. Seul le maillage suppose un réglage de
+    l'ordinateur (la limite `inotify`), que `make inotify` applique, avec le mot de passe `sudo`.
 
 ## Ce qui n'est pas couvert
 
@@ -101,7 +102,7 @@ connus sont les suivants. Chacun est repris, avec son contexte, dans la page con
 
 | Priorité | Limite | Conséquence | Page |
 |---|---|---|---|
-| **Haute** | **Aucune politique réseau** | Tout pod du namespace peut joindre n'importe quel autre, y compris la base. | [Durcissement](durcissement.md) |
+| **Haute** | **Aucune politique réseau** | Tout pod du namespace peut joindre n'importe quel autre, y compris la base. Le maillage chiffre ces échanges mais ne les filtre pas. | [Durcissement](durcissement.md) |
 | **Haute** | **Un seul compte PostgreSQL** | Les quatre bases partagent le même compte : aucune séparation des droits. | [Durcissement](durcissement.md) |
 | **Haute** | **Outils d'exploitation sans authentification** | Adminer, Prometheus et Alloy sont joignables sans mot de passe propre. | [Authentification](authentification.md) |
 | **Haute** | **Pas de second facteur** | La connexion repose sur le seul mot de passe, dont la politique impose 12 caractères mais n'écarte pas les mots de passe courants. | [Authentification](authentification.md) |
@@ -109,14 +110,16 @@ connus sont les suivants. Chacun est repris, avec son contexte, dans la page con
 | **Moyenne** | **Aucune journalisation des accès** | Les journaux applicatifs ne constituent pas une piste d'audit. | [Application](application.md) |
 | **Moyenne** | **Analyse des failles non planifiée** | Une faille publiée sans changement du code n'est vue qu'au contrôle suivant. | [Analyse des dépendances](../pipeline/analyse-dependances.md) |
 | **Moyenne** | **Aucun chiffrement au repos** | Les données de la base sont écrites en clair sur le disque du nœud. | [Chiffrement](chiffrement.md) |
+| **Moyenne** | **Composants du maillage privilégiés** | ztunnel et istio-cni s'exécutent avec des droits élevés sur le nœud, hors du durcissement appliqué aux pods du projet. | [Durcissement](durcissement.md) |
 | **Moyenne** | **Valeurs de démonstration faibles** | Mots de passe `pme`, `membre` et `moderateur` connus et versionnés. | [Secrets](secrets.md) |
 | **Moyenne** | **Pas de rotation ni d'audit des secrets** | Rien n'impose de changer un mot de passe ni ne trace qui l'a lu. | [Secrets](secrets.md) |
 | **Moyenne** | **Disque modifiable sur la plupart des composants** | Un code étranger pourrait déposer un programme dans PostgreSQL, Keycloak, Grafana, etc. | [Durcissement](durcissement.md) |
 | **Moyenne** | **Pas de contrôle à l'admission, ni de signature des images** | Rien n'empêche de déployer un pod non conforme ou une image qui ne vient pas de la pipeline. | [Durcissement](durcissement.md) |
-| **Basse** | **Trafic interne du site en HTTP** | Entre l'ingress et les services, les échanges circulent en clair dans le cluster. | [Chiffrement](chiffrement.md) |
+| **Moyenne** | **Une seule identité de maillage pour tout le namespace** | Les pods partagent le compte de service `default` : le maillage chiffre leurs échanges mais ne peut pas distinguer l'API de Prometheus ou d'Adminer. | [Chiffrement](chiffrement.md) |
 | **Basse** | **Autorité de certification locale** | Les certificats ne sont reconnus qu'après import manuel dans le navigateur. | [Chiffrement](chiffrement.md) |
 | **Basse** | **HSTS court, sans préchargement** | La première visite d'un navigateur n'est protégée que par la redirection. | [Chiffrement](chiffrement.md) |
-| **Basse** | **Port de supervision de NATS en HTTP** | Non joignable par les autres pods, mais sans chiffrement. | [Chiffrement](chiffrement.md) |
+| **Basse** | **Port de supervision de NATS en HTTP** | Il n'expose que des compteurs. Entre pods, l'échange est chiffré par le maillage ; seul son accès local reste en clair. | [Chiffrement](chiffrement.md) |
+| **Basse** | **Maillage dépendant d'un réglage de l'ordinateur** | Si la limite `inotify` est trop basse, ztunnel plante ; `make inotify` la relève. | [Istio](../outils/istio.md) |
 | **Basse** | **Révocation différée et flux par mot de passe** | Un jeton reste valable jusqu'à 15 minutes ; `pme-cli` utilise le flux déconseillé. | [Authentification](authentification.md) |
 | **Basse** | **Débit limité par exemplaire, sans détection d'abus** | La limite réelle dépend du nombre d'exemplaires de l'API. | [Application](application.md) |
 

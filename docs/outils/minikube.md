@@ -59,6 +59,7 @@ ordinateur: Ordinateur {
       label.near: bottom-left
       class: boite
       ingress: "Ingress\nports 80 et 443" {class: boite}
+      istio: "Maillage Istio\nchiffre les échanges" {class: boite}
       pme: "Namespace pme" {
         label.near: bottom-left
         class: boite
@@ -71,12 +72,15 @@ ordinateur: Ordinateur {
   }
 }
 ordinateur.navigateur -> ordinateur.docker.minikube.ingress
-ordinateur.docker.minikube.ingress -> ordinateur.docker.minikube.pme
+ordinateur.docker.minikube.ingress -> ordinateur.docker.minikube.pme: "mTLS"
+ordinateur.docker.minikube.istio -> ordinateur.docker.minikube.pme
 ```
 
 Chaque flèche indique le sens d'une demande : le navigateur s'adresse à l'ingress, qui la transmet aux applications du
 namespace `pme`. Celles-ci s'appuient sur PostgreSQL, NATS et Keycloak, et les outils d'observabilité les surveillent.
 L'ingress expose aussi les interfaces de Keycloak, de Grafana, de Prometheus et d'Adminer (voir [sa fiche](traefik.md)).
+Le maillage [Istio](istio.md) chiffre en mTLS les échanges entre l'ingress et les applications, ainsi qu'entre les
+applications elles-mêmes.
 
 **Fonctionnement.**
 L'exécution de la plateforme se déroule en trois étapes :
@@ -160,13 +164,13 @@ plusieurs étapes et exécution sans droits `root`. Ce contrôle se lance sur l'
     - **Autoscaling** : l'interface, l'API et le service de modération passent automatiquement de 2 à 4 réplicas lorsque l'usage moyen du processeur dépasse 70 %. Lors d'une maintenance, au moins un réplica de chaque reste disponible.
     - **Contrôle de santé** : chaque composant déclare ses limites de mémoire et de processeur, ainsi que des sondes de santé qui indiquent à Kubernetes quand le relancer ou lui envoyer du trafic.
     - **Sécurité** : les trois applications s'exécutent sans droits `root`, avec un système de fichiers en lecture seule et sans aucune capacité Linux supplémentaire. Le namespace applique la règle `baseline` et vérifie en plus la règle plus stricte `restricted` en mode audit : elle signale les écarts sans les bloquer.
-    - **Chiffrement** : les connexions à PostgreSQL et à NATS sont chiffrées par des certificats que [cert-manager](cert-manager.md) émet pour le cluster.
+    - **Chiffrement** : les connexions à PostgreSQL et à NATS sont chiffrées par des certificats que [cert-manager](cert-manager.md) émet pour le cluster. Le maillage [Istio](istio.md) chiffre en plus tous les échanges entre pods.
     - **Données** : PostgreSQL stocke ses données sur un volume persistant de 1 Go. Elles survivent au redémarrage du pod, mais disparaissent avec le namespace (`make undeploy`) ou avec le cluster (`minikube delete`).
 - Il exécute des images construites localement : `make image` les fabrique dans le cluster avec l'étiquette `:dev`, sans passer par un registre. Les manifestes demandent à Kubernetes d'utiliser l'image déjà présente (`imagePullPolicy: IfNotPresent`).
 - Le passage à un cluster de production n'exige donc pas de réécrire les manifestes : il suffit de les adapter, notamment l'émetteur des certificats et l'origine des images.
 - Sans lui, aucun composant ne s'exécute : le projet n'a plus d'environnement ni d'orchestrateur.
 
-Le cluster exécute les composants suivants, tous dans le namespace `pme` :
+Le cluster exécute les composants suivants. Tous sont dans le namespace `pme`, sauf l'ingress (namespace `traefik`) et le maillage (namespace `istio-system`) :
 
 | Groupe | Composants | Rôle |
 |---|---|---|
@@ -175,13 +179,14 @@ Le cluster exécute les composants suivants, tous dans le namespace `pme` :
 | Authentification | [Keycloak](keycloak.md) | Gère les comptes, la connexion et les rôles. |
 | Observabilité | [Prometheus](prometheus.md), [Loki](loki.md), [Alloy](alloy.md), [Grafana](grafana.md) | Collectent, conservent et affichent les mesures et les journaux. |
 | Administration | [Adminer](adminer.md) | Permet de consulter les bases depuis un navigateur. |
+| Maillage | [Istio](istio.md) | Chiffre en mTLS les échanges entre pods, sans modifier les applications. |
 
 Le cluster est créé avec les paramètres suivants :
 
 | Paramètre | Valeur | Explication |
 |---|---|---|
 | Pilote | `docker` | Le nœud fonctionne dans un conteneur Docker, sans machine virtuelle. |
-| Mémoire | 4 096 Mo | Mémoire vive allouée au cluster. La variable `MINIKUBE_MEMORY` permet de la modifier. |
+| Mémoire | 5 120 Mo | Mémoire vive allouée au cluster. La variable `MINIKUBE_MEMORY` permet de la modifier. Avec Istio, la plateforme occupe environ 3,2 Go au repos : 5 120 Mo laissent de la marge aux pics (démarrage de Keycloak, montée de l'autoscaler). |
 | Processeurs | 2 cœurs | Puissance de calcul allouée au cluster. La variable `MINIKUBE_CPUS` permet de la modifier. |
 | Ports publiés | 80 et 443 sur `127.0.0.1` | L'adresse `127.0.0.1` désigne l'ordinateur lui-même. L'ingress est ainsi joignable depuis le navigateur, sans redirection de port. |
 | Addons activés | `metrics-server` | Mesure la charge des pods, ce qui permet l'ajustement automatique de leur nombre. Le point d'entrée du cluster, Traefik, n'est pas un addon : il est installé avec Helm. |
@@ -198,7 +203,9 @@ Le cluster est créé avec les paramètres suivants :
 | `Makefile` | Regroupe les commandes de création du cluster, de construction des images et de déploiement. |
 | `k8s/` | Contient les manifestes, à raison d'un fichier par composant à déployer. |
 | `k8s/kustomization.yaml` | Liste les manifestes déployés ensemble et génère les ConfigMaps à partir de `k8s/config/`. |
-| `k8s/namespace.yaml` | Crée le namespace `pme` et lui applique la règle de sécurité `baseline`. |
+| `k8s/namespace.yaml` | Crée le namespace `pme`, lui applique la règle de sécurité `baseline` et l'enrôle dans le maillage Istio. |
+| `k8s/istio/` | Contient les réglages des charts Helm d'Istio (voir [Istio](istio.md)). |
+| `k8s/16-mesh-mtls.yaml` | Impose le mode strict du maillage : toute connexion hors mTLS est refusée. |
 | `k8s/config/` | Contient les fichiers de configuration fournis aux composants : PostgreSQL, NATS, Grafana, Alloy et interface. |
 | `k8s/14-pme-secrets-sealed.yaml` | Contient les mots de passe chiffrés, sous une forme qui peut être versionnée dans Git sans risque (voir [Sealed Secrets](sealed-secrets.md)). |
 | `k8s/11-autoscaling.yaml` | Définit, pour l'interface, l'API et la modération, l'autoscaling et le nombre minimal de réplicas disponibles. |
@@ -215,7 +222,10 @@ Le cluster est créé avec les paramètres suivants :
 
 | Commande | Description |
 |---|---|
-| `make minikube-up` | Crée et démarre le cluster, publie les ports 80 et 443, installe l'ingress Traefik avec Helm, active metrics-server, installe cert-manager et extrait le certificat de l'autorité de certification locale. |
+| `make minikube-up` | Crée et démarre le cluster, publie les ports 80 et 443, installe l'ingress Traefik avec Helm, relève si besoin la limite `inotify` de l'ordinateur, installe le maillage Istio, active metrics-server, installe cert-manager et extrait le certificat de l'autorité de certification locale. |
+| `make inotify` | Relève la limite `inotify` de l'ordinateur si elle est trop basse (mot de passe `sudo` demandé). Elle est nécessaire à Istio. |
+| `make istio` | Installe ou met à jour le maillage Istio sur un cluster existant, sans le recréer. |
+| `make mesh-check` | Vérifie le chiffrement entre pods (voir [Istio](istio.md)). |
 | `make image` | Construit les trois images (API, modération, interface) directement dans le cluster. |
 | `make lint-docker` | Lance Hadolint sur les quatre Dockerfile du projet. La commande échoue dès qu'une règle de gravité `warning` ou `error` est enfreinte. |
 | `make deploy` | Applique les manifestes et déploie toute la plateforme. |
@@ -232,12 +242,20 @@ Lors du premier démarrage, l'enchaînement est le suivant :
 4. `make deploy` déploie la plateforme.
 5. `make pods` permet de suivre le démarrage. Keycloak met environ une minute à devenir disponible.
 
+!!! note "Limite `inotify`"
+    Minikube partage le noyau de l'ordinateur. Avec Istio, la limite d'instances `inotify` par défaut (128) est
+    dépassée et ztunnel plante avec l'erreur `Too many open files`. `make istio` lance donc d'abord `make inotify`, qui
+    porte la limite à 1024 de façon permanente. Ce réglage concerne Linux ; sous un autre système, il faut ajuster la
+    limite équivalente à la main.
+
 !!! warning "Attention"
     `make undeploy` supprime aussi les données (annonces, comptes). À réserver au cas où l'on souhaite repartir de zéro.
 
 !!! tip "Astuce"
     L'option `--ports` n'est prise en compte qu'à la création du cluster. Pour l'appliquer à un cluster existant, il
-    faut d'abord le supprimer avec `minikube delete`, puis relancer `make minikube-up`. Les déploiements sont alors perdus.
+    faut d'abord le supprimer avec `minikube delete`, puis relancer `make minikube-up`. Les déploiements sont alors
+    perdus, et le fichier de mots de passe chiffrés doit être refait avec `make seal` avant `make deploy` (voir
+    [Sealed Secrets](sealed-secrets.md)).
 
 ## Pour aller plus loin
 

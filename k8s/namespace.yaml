@@ -1,6 +1,8 @@
 # Pod Security Admission : `baseline` est impose (aucun conteneur privilegie ni acces a l'hote).
 # `restricted` est seulement audite : il signale dans les journaux de l'API Kubernetes ce qui reste a durcir
 # (PostgreSQL demarre en root pour initialiser son volume), sans rien bloquer.
+# Le label istio.io/dataplane-mode enrole le namespace dans le mesh Istio (mode ambient) : les echanges entre pods
+# sont chiffres en mTLS par ztunnel, sans modifier les pods. Voir k8s/16-mesh-mtls.yaml et `make istio`.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -8,3 +10,4 @@ metadata:
   labels:
     pod-security.kubernetes.io/enforce: baseline
     pod-security.kubernetes.io/audit: restricted
+    istio.io/dataplane-mode: ambient
