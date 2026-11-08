@@ -66,8 +66,10 @@ filtres: "" {
 
 | Terme | Définition |
 |---|---|
+| **Content-Security-Policy (CSP)** | En-tête qui liste les sources de contenu que le navigateur a le droit de charger et de contacter. |
 | **CORS** | Mécanisme du navigateur qui décide si une page d'un site peut appeler un autre site. |
 | **Injection SQL** | Attaque qui glisse des instructions dans une valeur, pour les faire exécuter par la base. |
+| **Injection de script (XSS)** | Attaque qui fait exécuter un script étranger dans la page d'un autre site. |
 | **Limitation de débit** | Plafond du nombre de requêtes acceptées sur une période donnée. |
 | **Problem Details** | Format normalisé de réponse d'erreur d'une API, décrit par la RFC 9457. |
 | **Requête paramétrée** | Requête où les valeurs sont transmises à part de l'instruction : elles ne peuvent donc pas en modifier le sens. |
@@ -103,7 +105,23 @@ en faire confiance à davantage permettrait à un client de falsifier son adress
 | Où | En-têtes |
 |---|---|
 | **API** | Posés par Helmet 8 : une dizaine d'en-têtes, dont le refus de la détection automatique du type de contenu et la limitation de l'affichage dans un cadre. |
-| **Interface** | Posés par nginx : `nosniff`, refus de l'affichage dans un cadre, et transmission du référent limitée au site lui-même. |
+| **Interface** | Posés par nginx : `nosniff`, refus de l'affichage dans un cadre, transmission du référent limitée au site lui-même, et politique de contenu (`Content-Security-Policy`). |
+
+**Politique de contenu de l'interface**
+Le navigateur ne charge et n'exécute que ce que cette politique autorise. Un script injecté dans une page, venu d'un
+autre site ou glissé dans un champ de saisie, est donc refusé, même si la page l'affiche.
+
+| Directive | Effet |
+|---|---|
+| `default-src 'self'` | Par défaut, seules les ressources du site lui-même sont acceptées. |
+| `script-src 'self'` | Seuls les scripts du site sont exécutés. Aucun script écrit dans la page, aucune évaluation de texte en code. |
+| `style-src 'self'` | Seule la feuille de style du site est appliquée. Aucun style écrit dans la page. |
+| `img-src 'self' data:` | Les images viennent du site, ou sont intégrées directement dans le fichier. |
+| `connect-src 'self' https://keycloak.localhost` | Les appels réseau du navigateur ne peuvent viser que l'API et Keycloak. |
+| `object-src 'none'` | Aucun module externe (plugin) n'est accepté. |
+| `base-uri 'self'` | L'adresse de base des liens de la page ne peut pas être modifiée. |
+| `form-action 'self'` | Un formulaire ne peut être envoyé qu'au site lui-même. |
+| `frame-ancestors 'none'` | Aucun autre site ne peut afficher l'interface dans un cadre. |
 
 **Surface d'exposition réduite**
 
@@ -120,15 +138,14 @@ adresse électronique, aucun mot de passe, aucune trace de connexion. Une demand
 dans Keycloak, sans toucher aux données métier.
 
 !!! note "À savoir"
-    Le filtre d'erreurs distingue clairement les situations : 400 pour une saisie invalide, 401 pour un jeton absent ou
-    invalide, 403 pour un rôle insuffisant, 429 pour un débit excessif, 503 quand la base ne répond plus. Cette
-    distinction aide l'interface à réagir correctement, sans rien révéler du fonctionnement interne.
+Le filtre d'erreurs distingue clairement les situations : 400 pour une saisie invalide, 401 pour un jeton absent ou
+invalide, 403 pour un rôle insuffisant, 429 pour un débit excessif, 503 quand la base ne répond plus. Cette
+distinction aide l'interface à réagir correctement, sans rien révéler du fonctionnement interne.
 
 ## Ce qui n'est pas couvert
 
-- **Pas de politique de contenu sur l'interface.** L'en-tête `Content-Security-Policy`, qui limite les sources de
-  scripts autorisées, n'est pas posé par nginx. C'est la protection la plus efficace contre l'injection de scripts, et
-  le premier en-tête à ajouter.
+- **Adresse de Keycloak écrite dans la politique de contenu.** Changer l'hôte de Keycloak impose de modifier
+  `frontend/nginx.conf` en même temps que la configuration de l'interface et le realm.
 - **Pas d'en-tête HSTS.** Rien n'impose au navigateur de n'utiliser que HTTPS pour ces noms par la suite.
 - **Le compteur de débit est propre à chaque exemplaire.** Avec quatre exemplaires de l'API, la limite réelle est
   quadruplée, et elle dépend du nombre d'exemplaires du moment. Un compteur partagé, dans Redis par exemple, la rendrait
@@ -149,15 +166,15 @@ dans Keycloak, sans toucher aux données métier.
 | `make smoke` | Déroule un parcours complet, dont un refus en 400 et un refus en 403. |
 | `make test-integration` | Rejoue les cas de validation et d'autorisation avec une vraie base. |
 | `make perf` | Mesure le comportement sous charge, limite de débit relevée pour la durée du test. |
-| `curl -k -I https://pme.localhost/` | Affiche les en-têtes de sécurité posés par nginx. |
+| `curl -k -I https://pme.localhost/` | Affiche les en-têtes de sécurité posés par nginx, dont `content-security-policy`. |
 
 !!! warning "Attention"
-    `make perf-prepare` relève la limite de débit pour permettre le test de charge, et `make perf-reset` la rétablit.
-    Oublier la seconde commande laisse l'API sans protection contre les abus jusqu'au redéploiement suivant.
+`make perf-prepare` relève la limite de débit pour permettre le test de charge, et `make perf-reset` la rétablit.
+Oublier la seconde commande laisse l'API sans protection contre les abus jusqu'au redéploiement suivant.
 
 !!! tip "Astuce"
-    Pour vérifier la validation sans écrire de test, envoyer un dépôt avec un champ inventé. La réponse doit être un
-    400 au format Problem Details, dont le champ `errors` nomme précisément le champ refusé.
+Pour vérifier la validation sans écrire de test, envoyer un dépôt avec un champ inventé. La réponse doit être un
+400 au format Problem Details, dont le champ `errors` nomme précisément le champ refusé.
 
 ## Fichiers principaux
 
@@ -168,11 +185,12 @@ dans Keycloak, sans toucher aux données métier.
 | `api/src/listings/create-listing.dto.ts` | Les règles de validation du dépôt d'annonce. |
 | `api/src/common/problem-details.filter.ts` | Traduit toutes les erreurs au format RFC 9457. |
 | `api/src/listings/listings.controller.ts` | Borne le nombre de résultats et exige le rôle `membre`. |
-| `frontend/nginx.conf` | En-têtes de sécurité et refus des adresses `/api/`. |
+| `frontend/nginx.conf` | En-têtes de sécurité, dont la politique de contenu, et refus des adresses `/api/`. |
 
 ## Pour aller plus loin
 
 - [Les dix risques applicatifs de l'OWASP](https://owasp.org/www-project-top-ten/)
 - [La norme RFC 9457 sur les réponses d'erreur](https://www.rfc-editor.org/rfc/rfc9457.html)
 - [Documentation de Helmet](https://helmetjs.github.io/)
+- [La politique de contenu (CSP) sur MDN](https://developer.mozilla.org/fr/docs/Web/HTTP/Guides/CSP)
 - [Fiche NestJS du projet](../outils/nestjs.md)
