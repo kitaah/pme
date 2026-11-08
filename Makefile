@@ -146,8 +146,12 @@ minikube-down:
 
 # Ingress-nginx (addon Minikube). On attend le controleur : un "make deploy" lance trop tot echoue sur
 # le webhook d'admission, qui n'est pas encore pret.
-# Le patch ajoute la compression gzip des reponses a la ConfigMap du controleur (desactivee par defaut). Un patch
-# et non un `kubectl apply` : la ConfigMap vient de l'addon (elle contient deja hsts: "false"), le patch n'ajoute que ces cles.
+# Le patch ajoute a la ConfigMap du controleur : la compression gzip des reponses (desactivee par defaut) et l'en-tete
+# HSTS (desactive par l'addon, hsts: "false"). Un patch et non un `kubectl apply` : la ConfigMap vient de l'addon.
+# HSTS : le navigateur n'utilisera plus que HTTPS pour ces noms pendant `hsts-max-age` secondes. Duree volontairement courte
+# (7 jours) : un HSTS actif interdit de passer outre l'alerte du certificat, ce qui bloque le site apres un changement
+# d'autorite locale tant que le navigateur le retient. En production : 31536000 (1 an), une fois le HTTPS valide partout.
+# Pas de sous-domaines (les six noms sont distincts) ni de prechargement (liste publique des navigateurs, irreversible).
 # La version minimale de TLS n'est PAS forcee ici, contrairement a PostgreSQL (k8s/01-postgres.yaml) et a NATS
 # (k8s/config/nats.conf) : l'addon accepte "TLSv1.2 TLSv1.3" et les navigateurs choisissent 1.3 d'eux-memes.
 # C'est le seul point d'entree public du SI, donc le seul ou les clients ne sont pas maitrises : les referentiels
@@ -155,7 +159,7 @@ minikube-down:
 ingress:
 	minikube addons enable ingress
 	kubectl -n ingress-nginx wait --for=condition=ready pod -l app.kubernetes.io/component=controller --timeout=180s
-	kubectl -n ingress-nginx patch configmap ingress-nginx-controller --type merge -p '{"data":{"use-gzip":"true","gzip-min-length":"1024","gzip-level":"5"}}'
+	kubectl -n ingress-nginx patch configmap ingress-nginx-controller --type merge -p '{"data":{"use-gzip":"true","gzip-min-length":"1024","gzip-level":"5","hsts":"true","hsts-max-age":"604800","hsts-include-subdomains":"false","hsts-preload":"false"}}'
 
 # metrics-server (addon Minikube) : fournit la charge des pods a l'autoscaler (k8s/11-autoscaling.yaml). Sans lui, la cible
 # de chaque autoscaler reste <unknown> et le nombre de pods ne change jamais. Les premieres mesures arrivent apres ~1 minute.

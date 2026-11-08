@@ -138,15 +138,14 @@ adresse électronique, aucun mot de passe, aucune trace de connexion. Une demand
 dans Keycloak, sans toucher aux données métier.
 
 !!! note "À savoir"
-Le filtre d'erreurs distingue clairement les situations : 400 pour une saisie invalide, 401 pour un jeton absent ou
-invalide, 403 pour un rôle insuffisant, 429 pour un débit excessif, 503 quand la base ne répond plus. Cette
-distinction aide l'interface à réagir correctement, sans rien révéler du fonctionnement interne.
+    Le filtre d'erreurs distingue clairement les situations : 400 pour une saisie invalide, 401 pour un jeton absent ou
+    invalide, 403 pour un rôle insuffisant, 429 pour un débit excessif, 503 quand la base ne répond plus. Cette
+    distinction aide l'interface à réagir correctement, sans rien révéler du fonctionnement interne.
 
 ## Ce qui n'est pas couvert
 
 - **Adresse de Keycloak écrite dans la politique de contenu.** Changer l'hôte de Keycloak impose de modifier
   `frontend/nginx.conf` en même temps que la configuration de l'interface et le realm.
-- **Pas d'en-tête HSTS.** Rien n'impose au navigateur de n'utiliser que HTTPS pour ces noms par la suite.
 - **Le compteur de débit est propre à chaque exemplaire.** Avec quatre exemplaires de l'API, la limite réelle est
   quadruplée, et elle dépend du nombre d'exemplaires du moment. Un compteur partagé, dans Redis par exemple, la rendrait
   exacte.
@@ -169,12 +168,12 @@ distinction aide l'interface à réagir correctement, sans rien révéler du fon
 | `curl -k -I https://pme.localhost/` | Affiche les en-têtes de sécurité posés par nginx, dont `content-security-policy`. |
 
 !!! warning "Attention"
-`make perf-prepare` relève la limite de débit pour permettre le test de charge, et `make perf-reset` la rétablit.
-Oublier la seconde commande laisse l'API sans protection contre les abus jusqu'au redéploiement suivant.
+    `make perf-prepare` relève la limite de débit pour permettre le test de charge, et `make perf-reset` la rétablit.
+    Oublier la seconde commande laisse l'API sans protection contre les abus jusqu'au redéploiement suivant.
 
 !!! tip "Astuce"
-Pour vérifier la validation sans écrire de test, envoyer un dépôt avec un champ inventé. La réponse doit être un
-400 au format Problem Details, dont le champ `errors` nomme précisément le champ refusé.
+    Pour vérifier la validation sans écrire de test, envoyer un dépôt avec un champ inventé. La réponse doit être un
+    400 au format Problem Details, dont le champ `errors` nomme précisément le champ refusé.
 
 ## Fichiers principaux
 

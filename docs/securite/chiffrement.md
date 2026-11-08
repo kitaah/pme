@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Rend illisible et infalsifiable tout ce qui circule, du navigateur jusqu'à la base de données |
 | **Outil** | [cert-manager](../outils/cert-manager.md) 1.18.2, autorité de certification locale |
-| **Portée externe** | HTTPS sur les six noms d'hôte, HTTP redirigé vers HTTPS |
+| **Portée externe** | HTTPS sur les six noms d'hôte, HTTP redirigé vers HTTPS, en-tête HSTS de sept jours |
 | **Portée interne** | TLS jusqu'à PostgreSQL et jusqu'à NATS, avec vérification du nom du serveur |
 | **Certificats** | Clés ECDSA P-256, valables 90 jours, renouvelées 15 jours avant l'échéance |
 
@@ -76,6 +76,7 @@ chaine: "" {
 | **Autorité de certification** | Entité qui signe des certificats. Un client ne fait confiance à un certificat que s'il fait confiance à son autorité. |
 | **Certificat** | Document qui associe un nom de serveur à une clé publique, et que signe une autorité. |
 | **ECDSA** | Famille d'algorithmes de signature à courbes elliptiques : des clés plus courtes que RSA, pour une sécurité équivalente. |
+| **HSTS** | En-tête de réponse qui demande au navigateur de n'utiliser que HTTPS pour un site pendant une durée donnée. |
 | **SCRAM-SHA-256** | Méthode d'authentification de PostgreSQL qui ne fait jamais circuler le mot de passe, même chiffré. |
 | **Terminaison TLS** | Endroit où le chiffrement s'arrête et où la requête redevient lisible. |
 | **TLS** | Protocole qui chiffre une communication et authentifie le serveur. Le « s » de HTTPS. |
@@ -89,6 +90,7 @@ chaine: "" {
 |---|---|
 | **HTTPS sur tous les noms** | Un certificat unique couvre les six noms d'hôte de l'ingress. |
 | **Redirection du HTTP** | Une requête en HTTP est redirigée vers HTTPS, elle n'est jamais servie en clair. |
+| **En-tête HSTS** | Pendant sept jours, le navigateur qui a déjà visité un nom n'utilise plus que HTTPS, même si l'adresse saisie commence par `http://`. |
 | **Renouvellement automatique** | cert-manager renouvelle 15 jours avant l'échéance, sans intervention. |
 | **Rotation de la clé** | Une nouvelle clé privée est générée à chaque renouvellement, et non réutilisée. |
 
@@ -125,8 +127,10 @@ n'est joignable que depuis le pod lui-même.
   échappe à la règle générale.
 - **Aucune authentification mutuelle** : un client qui connaît le mot de passe de PostgreSQL peut s'y connecter, d'où
   qu'il vienne. Faute de politique réseau, cela signifie : depuis n'importe quel pod du namespace.
-- **Pas d'en-tête HSTS** : rien n'indique au navigateur de n'utiliser que HTTPS pour ces noms à l'avenir. La redirection
-  couvre le cas courant, mais pas la toute première requête.
+- **HSTS de courte durée, sans prechargement** : la durée est de sept jours, et non d'un an. Un HSTS actif interdit de
+  passer outre l'alerte du certificat : après un changement d'autorité locale, le navigateur bloque le site tant qu'il
+  retient la règle. La toute première visite d'un navigateur reste servie par la redirection, faute de liste de
+  préchargement. En production, la durée serait portée à un an.
 
 ## Commandes de vérification
 
@@ -158,6 +162,7 @@ depuis un autre pod avec `sslmode=disable` est rejetée par le serveur, avant m�
 | `k8s/08-certificate.yaml` | Certificat unique des six noms d'hôte de l'ingress. |
 | `k8s/00-internal-tls.yaml` | Certificats de PostgreSQL et de NATS. |
 | `k8s/08-ingress.yaml` | Termine le TLS et redirige le HTTP vers le HTTPS. |
+| `Makefile` (cible `ingress`) | Active l'en-tête HSTS dans la configuration du contrôleur d'ingress. |
 | `k8s/config/postgres-hba.conf` | Impose le TLS et SCRAM-SHA-256 à toute connexion venant du cluster. |
 | `k8s/config/nats.conf` | Active le TLS de NATS et fixe la version minimale à 1.3. |
 
