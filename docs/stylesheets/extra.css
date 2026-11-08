@@ -1,3 +1,64 @@
+/* ===== Police : Roboto, hébergée avec le site (aucune requête vers Google Fonts) =====
+   Fichiers dans docs/assets/fonts/ (licence SIL OFL 1.1 : LICENSE-Roboto.txt). Jeu de caractères latin,
+   qui couvre le français (accents, œ, guillemets). ===== */
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("../assets/fonts/roboto-latin-300-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/roboto-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Roboto";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/roboto-latin-400-italic.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/roboto-latin-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/roboto-latin-700-normal.woff2") format("woff2");
+}
+
+:root {
+  --md-text-font: "Roboto";
+}
+
+/* ===== Texte courant : Roboto 11 pt, identique dans les paragraphes, les listes et les tableaux =====
+   Les lignes occupent toute la largeur de la colonne (texte justifié, césure automatique en français). ===== */
+.md-typeset {
+  font-size: 11pt;
+}
+
+.md-typeset p,
+.md-typeset li {
+  text-align: justify;
+  hyphens: auto;
+  /* Pas de césure sur les mots courts : au moins 8 lettres, 4 avant et 4 après le tiret */
+  hyphenate-limit-chars: 8 4 4;
+}
+
 /* ===== Mode clair : gris doux, pas de blanc pur, texte gris très foncé
    (pas noir pur) — contraste toujours conforme WCAG AA ===== */
 [data-md-color-scheme="default"] {
@@ -57,6 +118,34 @@
   border-color: #3a3d44;
 }
 
+/* ===== Encarts (note, astuce, attention…) : bandeau de titre avec icône, puis contenu dans l'encart =====
+   Même texte que le reste de la page, marges intérieures confortables, coins arrondis. ===== */
+.md-typeset .admonition,
+.md-typeset details {
+  font-size: 1em;
+  padding: 0 1.2em;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.md-typeset .admonition-title,
+.md-typeset summary {
+  margin: 0 -1.2em;
+  padding: 0.75em 1.2em 0.75em 3em;
+  font-weight: 600;
+}
+
+.md-typeset .admonition-title::before,
+.md-typeset summary::before {
+  left: 1.2em;
+  top: 0.8em;
+}
+
+.md-typeset .admonition > p:not(.admonition-title),
+.md-typeset details > p {
+  margin: 1em 0;
+}
+
 /* ===== Tableaux : un seul style pour tout le site =====
    En-tête indigo (couleur du thème), lignes alternées, première colonne en relief,
    coins arrondis. Texte blanc sur indigo : contraste conforme WCAG AA. ===== */
@@ -69,7 +158,7 @@
 .md-typeset table:not([class]) {
   display: table;
   width: 100%;
-  font-size: 0.7rem;
+  font-size: 1em;
   border: 1px solid #c5cae9;
   border-radius: 10px;
   border-collapse: separate;
@@ -95,8 +184,10 @@
   background-color: #f1f2f9;
 }
 
-.md-typeset table:not([class]) tbody tr:hover td {
-  background-color: #e8eaf6;
+/* Aucun changement de couleur au survol : on neutralise aussi l'effet natif du thème Material */
+.md-typeset table:not([class]) tbody tr:hover {
+  background-color: transparent;
+  box-shadow: none;
 }
 
 /* Première colonne : le « nom » de la ligne (rubrique, commande, attribut), en relief */
@@ -107,9 +198,18 @@
   white-space: nowrap;
 }
 
+/* Les commandes et chemins de la première colonne : taille et graisse normales du code, sans encadré ni fond */
 .md-typeset table:not([class]) td:first-child code {
-  background-color: #ffffff;
-  border: 1px solid #c5cae9;
-  color: #283593;
-  font-weight: 600;
+  background-color: transparent;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-weight: 400;
+}
+
+/* Schémas Mermaid : centrés dans la page, avec de l'air autour */
+.md-typeset .mermaid {
+  display: flex;
+  justify-content: center;
+  margin: 2em 0;
 }

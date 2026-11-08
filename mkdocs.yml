@@ -25,6 +25,7 @@ theme:
 
 # Un onglet par grand thème. "Outils" regroupe une fiche par outil du projet (voir outils/modele-fiche.md).
 # "Pipeline CI/CD" explique les contrôles automatiques : exigences, fonctionnement et une page par famille de tests.
+# "Securite" recense les mesures de securite du projet, une page par couche (identite, chiffrement, secrets, conteneurs, application).
 nav:
   - Accueil: index.md
   - Outils:
@@ -35,8 +36,9 @@ nav:
       - GitLab CI: outils/gitlab-ci.md
       - Grafana: outils/grafana.md
       - Ingress-nginx: outils/ingress-nginx.md
-      - Keycloak: outils/keycloak.md
+      - Jest: outils/jest.md
       - k6: outils/k6.md
+      - Keycloak: outils/keycloak.md
       - Loki: outils/loki.md
       - metrics-server: outils/metrics-server.md
       - Minikube: outils/minikube.md
@@ -47,10 +49,14 @@ nav:
       - PostgreSQL: outils/postgresql.md
       - Prometheus: outils/prometheus.md
       - React: outils/react.md
-      - shadcn/ui: outils/shadcn-ui.md
       - Sealed Secrets: outils/sealed-secrets.md
+      - shadcn/ui: outils/shadcn-ui.md
       - SonarCloud: outils/sonarcloud.md
+      - Supertest: outils/supertest.md
+      - Testcontainers: outils/testcontainers.md
+      - Testing Library: outils/testing-library.md
       - Trivy: outils/trivy.md
+      - Vitest: outils/vitest.md
   - Pipeline CI/CD:
       - Vue d'ensemble: pipeline/index.md
       - Exigences qualité: pipeline/exigences-qualite.md
@@ -58,13 +64,26 @@ nav:
       - Contrôles:
           - Tests unitaires: pipeline/tests-unitaires.md
           - Tests d'intégration: pipeline/tests-integration.md
+          - Contrôle des Dockerfile: pipeline/controle-dockerfile.md
           - Analyse des dépendances: pipeline/analyse-dependances.md
           - Tests des images Docker: pipeline/tests-images.md
           - Publication des images: pipeline/publication-images.md
           - Tests de performance: pipeline/tests-performance.md
           - Analyse SonarCloud: pipeline/analyse-sonarcloud.md
+  - Sécurité:
+      - Vue d'ensemble: securite/index.md
+      - Authentification: securite/authentification.md
+      - Chiffrement: securite/chiffrement.md
+      - Secrets: securite/secrets.md
+      - Durcissement: securite/durcissement.md
+      - Défenses applicatives: securite/application.md
   - Contribuer:
       - Modèle de fiche outil: outils/modele-fiche.md
+
+# Schemas d'architecture : blocs ```d2 transformes en SVG a la construction (binaire d2, aucun JavaScript au chargement)
+plugins:
+  - search
+  - d2
 
 markdown_extensions:
   - admonition
