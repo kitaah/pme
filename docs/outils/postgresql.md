@@ -84,6 +84,11 @@ Les tables ne sont pas créées à la main. Chaque modification du schéma est �
 versionné avec le code et joué au démarrage de l'application. Deux développeurs obtiennent ainsi exactement la même
 base, et le passage d'une version à l'autre est reproductible.
 
+Dans le projet, ce sont l'API et le service de modération qui jouent leurs propres migrations, au démarrage, avec le
+compte qu'ils utilisent aussi pour lire et écrire les données. Ce choix simplifie le déploiement, mais il donne à
+l'application le droit de modifier le schéma. En entreprise, un compte distinct joue les migrations, dans une étape de
+déploiement séparée : voir la limite correspondante dans [Durcissement](../securite/durcissement.md).
+
 **Définitions**
 
 | Terme | Définition |
@@ -92,6 +97,7 @@ base, et le passage d'une version à l'autre est reproductible.
 | **Connexion** | Canal ouvert entre une application et la base. Leur nombre est limité, car chacune consomme de la mémoire. |
 | **Instance** | Programme PostgreSQL en fonctionnement. Il héberge une ou plusieurs bases. |
 | **Migration** | Fichier qui décrit une modification du schéma, par exemple l'ajout d'une table ou d'une colonne. |
+| **Rôle** | Compte de connexion à PostgreSQL, auquel on attribue des droits sur une ou plusieurs bases. |
 | **`pg_hba.conf`** | Fichier qui décide qui peut se connecter, depuis où et avec quelles exigences. |
 | **Schéma** | Description de la structure d'une base : ses tables, leurs colonnes et leurs contraintes. |
 | **SQL** | Langage qui sert à lire et à modifier les données d'une base. |
@@ -127,9 +133,9 @@ sous cette limite même lorsque l'autoscaler ajoute des exemplaires :
 | **Total** | | | **80** |
 
 !!! note "À savoir"
-    Les 20 connexions restantes servent aux déploiements, pendant lesquels d'anciens et de nouveaux pods coexistent, et
-    aux consultations ponctuelles avec [Adminer](adminer.md). Toute modification d'un plafond ou du nombre maximal
-    d'exemplaires impose de refaire ce calcul, détaillé dans `k8s/01-postgres.yaml`.
+Les 20 connexions restantes servent aux déploiements, pendant lesquels d'anciens et de nouveaux pods coexistent, et
+aux consultations ponctuelles avec [Adminer](adminer.md). Toute modification d'un plafond ou du nombre maximal
+d'exemplaires impose de refaire ce calcul, détaillé dans `k8s/01-postgres.yaml`.
 
 ## Fichiers et dossiers principaux
 
@@ -159,16 +165,16 @@ sous cette limite même lorsque l'autoscaler ajoute des exemplaires :
 | `make ca-configmap` | Copie l'autorité locale dans le namespace, pour que les applications vérifient le certificat. |
 
 !!! note "À savoir"
-    Le script de création des bases ne s'exécute qu'à la toute première initialisation du volume. Sur un cluster déjà
-    installé, une base manquante se crée avec la commande dédiée, par exemple `make create-grafana-db`.
+Le script de création des bases ne s'exécute qu'à la toute première initialisation du volume. Sur un cluster déjà
+installé, une base manquante se crée avec la commande dédiée, par exemple `make create-grafana-db`.
 
 !!! warning "Attention"
-    `make undeploy` supprime le namespace, donc le volume : toutes les données sont perdues, annonces et comptes
-    compris. Cette commande est à réserver au cas où l'on souhaite repartir de zéro.
+`make undeploy` supprime le namespace, donc le volume : toutes les données sont perdues, annonces et comptes
+compris. Cette commande est à réserver au cas où l'on souhaite repartir de zéro.
 
 !!! tip "Astuce"
-    PostgreSQL ne relit son certificat qu'au démarrage. Après un renouvellement, relancer le pod avec
-    `kubectl -n pme rollout restart deploy/postgres`, sans quoi il continue de présenter l'ancien certificat.
+PostgreSQL ne relit son certificat qu'au démarrage. Après un renouvellement, relancer le pod avec
+`kubectl -n pme rollout restart deploy/postgres`, sans quoi il continue de présenter l'ancien certificat.
 
 ## Pour aller plus loin
 
