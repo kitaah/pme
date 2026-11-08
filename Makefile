@@ -12,7 +12,7 @@
         smoke token queues db-listings db-moderation create-grafana-db \
         demo-stop-moderation demo-start-moderation demo-kill-api demo-breaker breaker-test \
         app keycloak nats adminer prometheus grafana alloy \
-        docs-serve docs-check docs-image docs-run docs-stop
+        docs-serve docs-check docs-image docs-run docs-stop scripts-perms
 
 # NS sert aux commandes kubectl. Il n'est PAS propage aux manifestes : le namespace est
 # fixe dans k8s/kustomization.yaml (voir README, "Limites connues").
@@ -68,7 +68,7 @@ help:
 	@echo "Commandes disponibles :"
 	@echo ""
 	@echo "  Cluster"
-	@echo "    make minikube-up              - Demarre Minikube"
+	@echo "    make minikube-up              - Demarre Minikube (rend aussi les scripts executables)"
 	@echo "    make minikube-down            - Arrete Minikube"
 	@echo "    make ingress                  - Active l'ingress (addon Minikube) et attend qu'il soit pret"
 	@echo "    make cert-manager             - Installe cert-manager et l'autorite locale (certificats TLS)"
@@ -96,6 +96,7 @@ help:
 	@echo "    make db-moderation            - File de moderation en base (service de moderation)"
 	@echo ""
 	@echo "  Demonstration"
+	@echo "    make scripts-perms            - Rend les scripts .sh executables (a lancer apres un clonage ou une extraction)"
 	@echo "    make smoke                    - Scenario complet en ligne de commande (connexion, depot, 400, 403, file)"
 	@echo "    make token KC_USER=membre       - Affiche un jeton Keycloak de test"
 	@echo "    make demo-stop-moderation     - Arrete le service de moderation (les messages restent dans NATS)"
@@ -131,7 +132,7 @@ help:
 # alors joignable sans "make tunnel" ni redirection. Option prise en compte a la CREATION du cluster seulement :
 # sur un cluster existant, il faut "minikube delete" puis "make minikube-up" (les deploiements sont perdus).
 # Le port 443 sert le HTTPS (cert-manager).
-minikube-up:
+minikube-up: scripts-perms
 	minikube start --driver=docker --memory=$(MINIKUBE_MEMORY) --cpus=$(MINIKUBE_CPUS) \
 		--ports=127.0.0.1:80:80,127.0.0.1:443:443
 	$(MAKE) ingress
@@ -319,6 +320,13 @@ db-moderation:
 	kubectl -n $(NS) exec deploy/postgres -- sh -c 'psql -U "$$POSTGRES_USER" -d moderation -c "SELECT listing_id, owner_username, title, status, received_at FROM moderation_queue ORDER BY received_at"'
 
 # ---- Demonstration ----
+
+# Un zip ou certains systemes de fichiers perdent le droit d'execution des scripts ("Permission denied").
+# Cette commande le remet sur chaque .sh et, dans un depot Git, le fait enregistrer (a commiter ensuite).
+scripts-perms:
+	chmod +x scripts/*.sh k8s/config/*.sh
+	@if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then git update-index --chmod=+x scripts/*.sh k8s/config/*.sh 2>/dev/null || true; fi
+	@echo "Scripts executables."
 
 smoke:
 	APP_URL=$(APP_URL) KEYCLOAK_URL=$(KEYCLOAK_URL) ./scripts/smoke.sh
