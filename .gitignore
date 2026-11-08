@@ -11,3 +11,5 @@ coverage/
 .sonar/
 # Autorite locale exportee par make ca-cert
 pme-ca.crt
+# Cache du plugin D2 de MkDocs (schemas deja generes)
+.cache/
