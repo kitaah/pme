@@ -153,6 +153,9 @@ défaut une fois le déploiement terminé.
   la base, Prometheus et Alloy répondent sans aucun contrôle. Seule Grafana a un compte administrateur, avec
   l'inscription et l'accès anonyme désactivés. Dans un environnement partagé, ces trois interfaces devraient passer
   derrière Keycloak, ou ne pas être exposées du tout.
+- **Keycloak fonctionne en mode développement.** Ce mode simplifie le démarrage, mais il est déconseillé en production :
+  certains contrôles sont assouplis et le serveur reconstruit une partie de son code à chaque démarrage. Le mode de
+  production exige un certificat, un nom d'hôte fixe et une base dimensionnée.
 - **Pas de révocation immédiate** : désactiver un compte dans Keycloak n'invalide pas le jeton déjà remis. Il reste
   utilisable jusqu'à quinze minutes.
 

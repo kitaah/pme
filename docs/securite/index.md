@@ -99,15 +99,26 @@ porte qualité de SonarCloud signale en plus les secrets oubliés et les failles
 Un POC n'est pas une plateforme de production, et le dire franchement vaut mieux que de le laisser croire. Les écarts
 connus sont les suivants. Chacun est repris, avec son contexte, dans la page concernée.
 
-| Limite | Conséquence | Page |
-|---|---|---|
-| **Aucune politique réseau** | Tout pod du namespace peut joindre n'importe quel autre, y compris la base. | [Durcissement](durcissement.md) |
-| **Un seul compte PostgreSQL** | Les quatre bases partagent le même compte : aucune séparation des droits. | [Durcissement](durcissement.md) |
-| **Outils d'exploitation sans authentification** | Adminer, Prometheus et Alloy sont joignables sans mot de passe propre. | [Authentification](authentification.md) |
-| **Autorité de certification locale** | Les certificats ne sont reconnus qu'après import manuel dans le navigateur. | [Chiffrement](chiffrement.md) |
-| **Pas de second facteur** | La connexion repose sur le seul mot de passe, dont la politique impose 12 caractères mais n'écarte pas les mots de passe courants. | [Authentification](authentification.md) |
-| **Aucune journalisation des accès** | Les journaux applicatifs ne constituent pas une piste d'audit. | [Application](application.md) |
-| **Analyse des failles non planifiée** | Une faille publiée sans changement du code n'est vue qu'au contrôle suivant. | [Analyse des dépendances](../pipeline/analyse-dependances.md) |
+| Priorité | Limite | Conséquence | Page |
+|---|---|---|---|
+| **Haute** | **Aucune politique réseau** | Tout pod du namespace peut joindre n'importe quel autre, y compris la base. | [Durcissement](durcissement.md) |
+| **Haute** | **Un seul compte PostgreSQL** | Les quatre bases partagent le même compte : aucune séparation des droits. | [Durcissement](durcissement.md) |
+| **Haute** | **Outils d'exploitation sans authentification** | Adminer, Prometheus et Alloy sont joignables sans mot de passe propre. | [Authentification](authentification.md) |
+| **Haute** | **Pas de second facteur** | La connexion repose sur le seul mot de passe, dont la politique impose 12 caractères mais n'écarte pas les mots de passe courants. | [Authentification](authentification.md) |
+| **Moyenne** | **Keycloak en mode développement** | Contrôles assouplis, code reconstruit à chaque démarrage : déconseillé en production. | [Authentification](authentification.md) |
+| **Moyenne** | **Aucune journalisation des accès** | Les journaux applicatifs ne constituent pas une piste d'audit. | [Application](application.md) |
+| **Moyenne** | **Analyse des failles non planifiée** | Une faille publiée sans changement du code n'est vue qu'au contrôle suivant. | [Analyse des dépendances](../pipeline/analyse-dependances.md) |
+| **Moyenne** | **Aucun chiffrement au repos** | Les données de la base sont écrites en clair sur le disque du nœud. | [Chiffrement](chiffrement.md) |
+| **Moyenne** | **Valeurs de démonstration faibles** | Mots de passe `pme`, `membre` et `moderateur` connus et versionnés. | [Secrets](secrets.md) |
+| **Moyenne** | **Pas de rotation ni d'audit des secrets** | Rien n'impose de changer un mot de passe ni ne trace qui l'a lu. | [Secrets](secrets.md) |
+| **Moyenne** | **Disque modifiable sur la plupart des composants** | Un code étranger pourrait déposer un programme dans PostgreSQL, Keycloak, Grafana, etc. | [Durcissement](durcissement.md) |
+| **Moyenne** | **Pas de contrôle à l'admission, ni de signature des images** | Rien n'empêche de déployer un pod non conforme ou une image qui ne vient pas de la pipeline. | [Durcissement](durcissement.md) |
+| **Basse** | **Trafic interne du site en HTTP** | Entre l'ingress et les services, les échanges circulent en clair dans le cluster. | [Chiffrement](chiffrement.md) |
+| **Basse** | **Autorité de certification locale** | Les certificats ne sont reconnus qu'après import manuel dans le navigateur. | [Chiffrement](chiffrement.md) |
+| **Basse** | **HSTS court, sans préchargement** | La première visite d'un navigateur n'est protégée que par la redirection. | [Chiffrement](chiffrement.md) |
+| **Basse** | **Port de supervision de NATS en HTTP** | Non joignable par les autres pods, mais sans chiffrement. | [Chiffrement](chiffrement.md) |
+| **Basse** | **Révocation différée et flux par mot de passe** | Un jeton reste valable jusqu'à 15 minutes ; `pme-cli` utilise le flux déconseillé. | [Authentification](authentification.md) |
+| **Basse** | **Débit limité par exemplaire, sans détection d'abus** | La limite réelle dépend du nombre d'exemplaires de l'API. | [Application](application.md) |
 
 !!! warning "Attention"
     Ces limites sont acceptables pour une démonstration sur un ordinateur, qui ne contient aucune donnée réelle et n'est

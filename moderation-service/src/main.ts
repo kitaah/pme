@@ -18,7 +18,7 @@ async function bootstrap() {
   await ensureStreams(config.nats);
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Un seul relais de confiance : ingress-nginx.
+  // Un seul relais de confiance : Traefik.
   app.set('trust proxy', 1);
   app.use(httpMetricsMiddleware);
   app.use(helmet());

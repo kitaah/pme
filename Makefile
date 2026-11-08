@@ -5,7 +5,7 @@
 .PHONY: help install test test-integration image-test \
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
         k6-install perf perf-prepare perf-reset perf-load perf-decoupling \
-        minikube-up minikube-down ingress cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
+        minikube-up minikube-down helm ingress cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
         env sealed-secrets sealed-prereqs seal image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         pods logs logs-api logs-moderation logs-keycloak \
         port-forward stop-forward api moderation frontend \
@@ -20,6 +20,11 @@ NS ?= pme
 MINIKUBE_MEMORY ?= 4096
 MINIKUBE_CPUS ?= 2
 CERT_MANAGER_VERSION ?= v1.18.2
+# Version du chart Helm de Traefik (le controleur d'ingress). Epinglee : une montee de version se decide, elle ne se subit pas.
+TRAEFIK_CHART_VERSION ?= 41.3.0
+# Version de Helm installee par `make helm` (outil en ligne de commande qui installe le chart de Traefik).
+HELM_VERSION ?= v4.3.0
+TRAEFIK_NS ?= traefik
 CA_FILE ?= pme-ca.crt
 
 # Les interfaces web passent par l'ingress en HTTPS (certificat cert-manager signe par une autorite locale), sous des
@@ -70,7 +75,8 @@ help:
 	@echo "  Cluster"
 	@echo "    make minikube-up              - Demarre Minikube (rend aussi les scripts executables)"
 	@echo "    make minikube-down            - Arrete Minikube"
-	@echo "    make ingress                  - Active l'ingress (addon Minikube) et attend qu'il soit pret"
+	@echo "    make helm                     - Installe Helm sur l'ordinateur s'il est absent (requis par make ingress)"
+	@echo "    make ingress                  - Installe l'ingress Traefik (Helm) et attend qu'il soit pret"
 	@echo "    make cert-manager             - Installe cert-manager et l'autorite locale (certificats TLS)"
 	@echo "    make metrics-server           - Active metrics-server (addon Minikube), requis par l'autoscaling"
 	@echo "    make hpa                      - Suit l'autoscaling : charge, cible et nombre de pods"
@@ -144,22 +150,28 @@ minikube-up: scripts-perms
 minikube-down:
 	minikube stop
 
-# Ingress-nginx (addon Minikube). On attend le controleur : un "make deploy" lance trop tot echoue sur
-# le webhook d'admission, qui n'est pas encore pret.
-# Le patch ajoute a la ConfigMap du controleur : la compression gzip des reponses (desactivee par defaut) et l'en-tete
-# HSTS (desactive par l'addon, hsts: "false"). Un patch et non un `kubectl apply` : la ConfigMap vient de l'addon.
-# HSTS : le navigateur n'utilisera plus que HTTPS pour ces noms pendant `hsts-max-age` secondes. Duree volontairement courte
-# (7 jours) : un HSTS actif interdit de passer outre l'alerte du certificat, ce qui bloque le site apres un changement
-# d'autorite locale tant que le navigateur le retient. En production : 31536000 (1 an), une fois le HTTPS valide partout.
-# Pas de sous-domaines (les six noms sont distincts) ni de prechargement (liste publique des navigateurs, irreversible).
-# La version minimale de TLS n'est PAS forcee ici, contrairement a PostgreSQL (k8s/01-postgres.yaml) et a NATS
-# (k8s/config/nats.conf) : l'addon accepte "TLSv1.2 TLSv1.3" et les navigateurs choisissent 1.3 d'eux-memes.
-# C'est le seul point d'entree public du SI, donc le seul ou les clients ne sont pas maitrises : les referentiels
-# (ANSSI, NIST, PCI DSS) y demandent TLS 1.2 au minimum, et non 1.3 exclusivement.
+# Helm (gestionnaire de paquets de Kubernetes) : installe une seule fois par ordinateur, avec le script officiel du projet
+# Helm (somme de controle verifiee, version epinglee). Il ecrit dans /usr/local/bin, d'ou le mot de passe administrateur.
+# Sans effet si Helm est deja installe. Autres methodes : https://helm.sh/docs/intro/install/
+helm:
+	@if command -v helm >/dev/null; then echo "Helm deja installe : $$(helm version --short)"; \
+	else curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4 | DESIRED_VERSION=$(HELM_VERSION) bash; fi
+
+# Ingress Traefik, installe par son chart Helm officiel (version epinglee, reglages dans k8s/traefik/values.yaml).
+# Il remplace ingress-nginx, archive par la communaute Kubernetes en mars 2026 (plus aucun correctif de securite).
+# L'addon Minikube est desactive d'abord : il occupe les ports 80 et 443 du noeud, que Traefik reprend. Sur un
+# cluster neuf la commande ne fait rien. `helm upgrade --install` sert aussi bien a installer qu'a mettre a jour,
+# et --wait attend que le controleur soit pret : un "make deploy" lance trop tot echouerait sur les ressources Traefik.
+# Le chart installe aussi les definitions des ressources Traefik (Middleware...) utilisees par k8s/08-middlewares.yaml.
+# Redirection HTTP vers HTTPS, ports du noeud et journal d'acces : voir k8s/traefik/values.yaml.
+# Traefik exige TLS 1.2 au minimum par defaut, comme PostgreSQL (k8s/01-postgres.yaml) et NATS (k8s/config/nats.conf).
+# HSTS et compression des reponses : k8s/08-middlewares.yaml.
 ingress:
-	minikube addons enable ingress
-	kubectl -n ingress-nginx wait --for=condition=ready pod -l app.kubernetes.io/component=controller --timeout=180s
-	kubectl -n ingress-nginx patch configmap ingress-nginx-controller --type merge -p '{"data":{"use-gzip":"true","gzip-min-length":"1024","gzip-level":"5","hsts":"true","hsts-max-age":"604800","hsts-include-subdomains":"false","hsts-preload":"false"}}'
+	@command -v helm >/dev/null || { echo "helm absent : lancer make helm"; exit 1; }
+	@minikube addons disable ingress >/dev/null 2>&1 || true
+	helm repo add traefik https://traefik.github.io/charts --force-update
+	helm upgrade --install traefik traefik/traefik --version $(TRAEFIK_CHART_VERSION) \
+		--namespace $(TRAEFIK_NS) --create-namespace --values k8s/traefik/values.yaml --wait --timeout 3m
 
 # metrics-server (addon Minikube) : fournit la charge des pods a l'autoscaler (k8s/11-autoscaling.yaml). Sans lui, la cible
 # de chaque autoscaler reste <unknown> et le nombre de pods ne change jamais. Les premieres mesures arrivent apres ~1 minute.
@@ -205,7 +217,7 @@ ca-configmap:
 # Ports 80 et 443 = ports privilegies, d'ou sudo (KUBECONFIG est transmis, sudo ne garde pas l'environnement).
 # Laisser ce terminal ouvert. Fonctionne de la meme facon sous Linux, macOS et Windows.
 # "make port-forward" lance la meme redirection en arriere-plan : ne pas lancer les deux (le port 80 serait pris).
-INGRESS_FORWARD = kubectl -n ingress-nginx port-forward --address 127.0.0.1 svc/ingress-nginx-controller 80:80 443:443
+INGRESS_FORWARD = kubectl -n $(TRAEFIK_NS) port-forward --address 127.0.0.1 svc/traefik 80:80 443:443
 tunnel:
 	sudo env KUBECONFIG="$${KUBECONFIG:-$$HOME/.kube/config}" $(INGRESS_FORWARD)
 
@@ -271,6 +283,7 @@ image-frontend:
 
 deploy: ca-configmap | $(SEALED_FILE)
 	@kubectl get crd certificates.cert-manager.io >/dev/null 2>&1 || { echo "cert-manager est absent : lancer make cert-manager"; exit 1; }
+	@kubectl get crd middlewares.traefik.io >/dev/null 2>&1 || { echo "Traefik est absent : lancer make ingress"; exit 1; }
 	kubectl apply -k k8s/
 	@echo "Deploiement lance. Suivre : make pods (Keycloak met ~1 min a demarrer)"
 
@@ -376,7 +389,7 @@ port-forward:
 		sudo -v; \
 		sudo env KUBECONFIG="$${KUBECONFIG:-$$HOME/.kube/config}" sh -c 'while true; do $(INGRESS_FORWARD); sleep 2; done' >/dev/null 2>&1 & \
 	fi
-	@( while true; do kubectl -n $(NS) port-forward deploy/nats $(NATS_MONITOR_PORT):8222; sleep 2; done ) &
+	@( while true; do kubectl -n $(NS) port-forward svc/nats $(NATS_MONITOR_PORT):8222; sleep 2; done ) &
 	@( while true; do kubectl -n $(NS) port-forward svc/postgres 5432:5432; sleep 2; done ) &
 	@( while true; do kubectl -n $(NS) port-forward svc/nats 4222:4222; sleep 2; done ) &
 	@sleep 2
@@ -387,7 +400,7 @@ port-forward:
 
 stop-forward:
 	@pkill -f "kubectl -n $(NS) port-forward" || true
-	@if pgrep -f "kubectl -n ingress-nginx port-forward" >/dev/null; then sudo pkill -f "kubectl -n ingress-nginx port-forward"; fi
+	@if pgrep -f "kubectl -n $(TRAEFIK_NS) port-forward" >/dev/null; then sudo pkill -f "kubectl -n $(TRAEFIK_NS) port-forward"; fi
 	@echo "Port-forwards arretes."
 
 # En developpement local, les services tournent sur l'ordinateur mais lisent les cles de

@@ -1,0 +1,39 @@
+# Traitements appliques par Traefik aux reponses, avant de les rendre au navigateur (ressources `Middleware`).
+# Ils remplacent les reglages que le controleur ingress-nginx portait dans sa ConfigMap. Ils sont rattaches a
+# l'Ingress `pme` par l'annotation traefik.ingress.kubernetes.io/router.middlewares (k8s/08-ingress.yaml).
+#
+# HSTS : le navigateur n'utilisera plus que HTTPS pour ces noms pendant `stsSeconds` secondes. Duree volontairement
+# courte (7 jours) : un HSTS actif interdit de passer outre l'alerte du certificat, ce qui bloque le site apres un
+# changement d'autorite locale tant que le navigateur le retient. En production : 31536000 (1 an), une fois le HTTPS
+# valide partout. Pas de sous-domaines (les six noms sont distincts) ni de prechargement (liste publique des
+# navigateurs, irreversible).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: hsts
+spec:
+  headers:
+    stsSeconds: 604800
+    stsIncludeSubdomains: false
+    stsPreload: false
+---
+# Compression des reponses superieures a 1 Ko (gzip, ou un format plus recent si le navigateur le demande).
+# Traefik ne recompresse pas les contenus deja compresses (images, archives).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: compress
+spec:
+  compress:
+    minResponseBodyBytes: 1024
+---
+# Les deux traitements ensemble : l'Ingress ne reference que cette chaine.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: web-defaults
+spec:
+  chain:
+    middlewares:
+      - name: hsts
+      - name: compress

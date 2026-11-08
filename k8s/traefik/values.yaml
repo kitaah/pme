@@ -1,0 +1,45 @@
+# Reglages du chart Helm de Traefik (installe par `make ingress`, version epinglee dans le Makefile).
+# Seules les valeurs qui different des valeurs par defaut du chart sont listees.
+
+# Pas de verification de nouvelle version au demarrage : Traefik ne contacte aucun service exterieur.
+# (L'envoi de statistiques d'usage anonymes est deja desactive par defaut.)
+global:
+  checkNewVersion: false
+
+# Ports du noeud Minikube. Traefik ecoute sur les ports 80 et 443 du noeud (hostPort), comme l'addon ingress-nginx
+# qu'il remplace : un cluster cree par `make minikube-up` (--ports 80 et 443) est donc joignable sans `make tunnel`.
+# Le HTTP est redirige vers le HTTPS par Traefik lui-meme, pour tous les noms d'hote, sans annotation par Ingress.
+ports:
+  web:
+    hostPort: 80
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  websecure:
+    hostPort: 443
+
+# Service interne : l'entree se fait par les ports du noeud, pas par un equilibreur de charge externe.
+service:
+  type: ClusterIP
+
+# Journal d'acces au format JSON, lisible avec `kubectl -n traefik logs deploy/traefik`.
+# Les en-tetes ne sont pas journalises (valeur par defaut du chart) : ni jeton, ni cookie dans les journaux.
+# Alloy ne lit que le namespace pme (k8s/13-alloy.yaml) : ce journal n'arrive donc pas dans Loki.
+accessLog:
+  enabled: true
+  format: json
+
+# L'interface web de Traefik (tableau de bord) n'est pas exposee : elle ne sert pas au projet.
+ingressRoute:
+  dashboard:
+    enabled: false
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 256Mi

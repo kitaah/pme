@@ -1,17 +1,24 @@
-# Ingress-nginx
+# Traefik
 
 ## Fiche d'identité
 
 | Information | Détail |
 |---|---|
 | **Rôle** | Point d'entrée unique du cluster : il reçoit les requêtes du navigateur, les déchiffre et les dirige vers le bon service |
-| **Version** | Addon « ingress » de Minikube, qui installe ingress-nginx |
+| **Version** | Chart Helm 41.3.0, qui installe Traefik Proxy 3.7 |
 | **Adresse en local** | <https://pme.localhost> et les cinq autres noms en `.localhost` |
 
 ## Description
 
-Ingress-nginx est le **contrôleur d'ingress** de la communauté Kubernetes. Il s'appuie sur le serveur web nginx, et
-son rôle est d'aiguiller le trafic qui entre dans le cluster.
+Traefik est un **contrôleur d'ingress** : un serveur qui reçoit le trafic entrant dans le cluster et l'aiguille vers
+la bonne application. C'est un projet libre, maintenu activement, que de nombreux fournisseurs de Kubernetes ont adopté
+comme point d'entrée par défaut.
+
+**Pourquoi Traefik et non ingress-nginx ?**
+Le projet ingress-nginx, longtemps le choix par défaut, a été archivé par la communauté Kubernetes en mars 2026. Il ne
+reçoit plus aucun correctif, y compris de sécurité. Or l'ingress est la seule partie du cluster directement exposée aux
+clients : y laisser un composant sans mise à jour n'est pas acceptable. Traefik remplace donc ingress-nginx.
+Il comprend les ressources d'ingress existantes, ce qui limite le changement aux réglages propres au contrôleur.
 
 **Pourquoi un point d'entrée unique ?**
 Le cluster héberge plusieurs interfaces web : le site, l'API, la modération, Keycloak, Adminer, Grafana, Prometheus
@@ -46,7 +53,7 @@ classes: {
 }
 
 navigateur: "Navigateur\nHTTPS, ports 80 et 443" {class: boite}
-ingress: "Ingress\nle chiffrement s'arrête ici" {class: boite}
+ingress: "Traefik\nle chiffrement s'arrête ici" {class: boite}
 
 site: "pme.localhost" {
   class: boite
@@ -63,14 +70,19 @@ ingress -> autres
 ```
 
 **Le chiffrement s'arrête à l'ingress.**
-Les échanges entre le navigateur et l'ingress sont chiffrés en HTTPS, avec un certificat fourni par
-[cert-manager](cert-manager.md). L'ingress déchiffre la requête, puis la transmet en HTTP aux services du cluster :
+Les échanges entre le navigateur et Traefik sont chiffrés en HTTPS, avec un certificat fourni par
+[cert-manager](cert-manager.md). Traefik déchiffre la requête, puis la transmet en HTTP aux services du cluster :
 c'est ce qu'on appelle la **terminaison TLS**. Ce choix évite à chaque application de gérer son propre certificat.
 Deux liaisons internes font exception et restent chiffrées de bout en bout, parce qu'elles transportent des données
 sensibles : celles vers [PostgreSQL](postgresql.md) et vers [NATS](nats.md).
 
+**Il ajoute des protections aux réponses.**
+Les réglages de réponse sont décrits dans des ressources appelées **middlewares**, que l'ingress référence. Deux sont
+utilisés. L'un ajoute l'en-tête HSTS, qui demande au navigateur de n'utiliser que HTTPS pour ces noms. L'autre compresse
+les réponses volumineuses pour accélérer le chargement.
+
 **Il répartit aussi la charge.**
-Une application fonctionne en plusieurs exemplaires, dont le nombre varie avec la charge. L'ingress envoie les
+Une application fonctionne en plusieurs exemplaires, dont le nombre varie avec la charge. Traefik envoie les
 requêtes directement à ces exemplaires, à tour de rôle. Lorsque l'autoscaler en ajoute ou en retire, la répartition
 suit d'elle-même. Le cluster n'a donc pas besoin d'un répartiteur de charge séparé, service que seul un hébergeur
 fournirait.
@@ -78,16 +90,21 @@ fournirait.
 **Toutes les adresses ne sont pas exposées.**
 Seul le préfixe `/api/v1` est accessible depuis l'extérieur. Les adresses techniques de l'API, ses mesures et ses
 sondes de santé, restent internes au cluster : Prometheus et Kubernetes les interrogent directement, sans passer par
-l'ingress. Une adresse non exposée est une surface d'attaque en moins.
+l'ingress. Une adresse non exposée est une surface d'attaque en moins. L'interface web propre à Traefik, son tableau de
+bord, n'est pas exposée non plus.
 
 **Définitions**
 
 | Terme | Définition |
 |---|---|
+| **Chart Helm** | Paquet qui décrit l'installation d'un logiciel dans Kubernetes. Il se règle par un fichier de valeurs. |
 | **Chemin** | Partie de l'adresse qui suit le nom d'hôte, par exemple `/api/v1/listings`. |
 | **Contrôleur d'ingress** | Programme qui applique les règles d'ingress et achemine réellement les requêtes. |
 | **Fichier hosts** | Fichier de l'ordinateur qui associe un nom d'hôte à une adresse réseau. |
+| **Helm** | Outil en ligne de commande qui installe et met à jour les charts dans Kubernetes. |
+| **HSTS** | En-tête de réponse qui demande au navigateur de n'utiliser que HTTPS pour un site pendant une durée donnée. |
 | **Ingress** | Règle Kubernetes qui associe un nom d'hôte et un chemin à un service du cluster. |
+| **Middleware** | Traitement que Traefik applique à une requête ou à une réponse, par exemple l'ajout d'un en-tête. |
 | **Nom d'hôte** | Adresse saisie dans le navigateur, par exemple `keycloak.localhost`. |
 | **Répartition de charge** | Distribution des requêtes entre plusieurs exemplaires d'une même application. |
 | **Terminaison TLS** | Fait de déchiffrer le HTTPS à l'entrée, puis de transmettre la requête en HTTP à l'intérieur. |
@@ -100,8 +117,10 @@ l'ingress. Une adresse non exposée est une surface d'attaque en moins.
 - Il dirige chaque nom d'hôte vers son service, et les trois chemins du site vers leurs destinations respectives.
 - Il chiffre les échanges avec le navigateur et redirige automatiquement le HTTP vers le HTTPS.
 - Il ajoute l'en-tête HSTS à ses réponses : pendant sept jours, le navigateur n'utilise plus que HTTPS pour ces noms.
+- Il compresse les réponses de plus de 1 Ko.
 - Il répartit les requêtes entre les exemplaires de l'API, de la modération et du site.
 - Il n'expose que ce qui doit l'être : les mesures et les sondes de santé restent internes.
+- Il écrit un journal de chaque requête, au format JSON, consultable avec la commande de journal ci-dessous.
 - Sans lui, chaque interface exigerait une redirection de port distincte, à relancer à chaque session de travail.
 
 Les six noms d'hôte sont les suivants :
@@ -123,27 +142,31 @@ Les six noms d'hôte sont les suivants :
 
 | Fichier ou dossier | Description |
 |---|---|
+| `k8s/traefik/values.yaml` | Réglages de Traefik : ports 80 et 443, redirection vers HTTPS, journal d'accès. |
 | `k8s/08-ingress.yaml` | Déclare les noms d'hôte, les chemins, les services visés et le certificat. |
+| `k8s/08-middlewares.yaml` | Décrit l'en-tête HSTS et la compression des réponses. |
 | `k8s/08-certificate.yaml` | Demande à cert-manager le certificat des six noms d'hôte. |
 | `k8s/03-keycloak.yaml` | Fixe l'adresse publique de Keycloak. |
 | `k8s/config/realm-pme.json` | Liste les adresses de retour autorisées après la connexion. |
 | `k8s/config/frontend-config.js` | Indique au site l'adresse de Keycloak. |
-| `Makefile` | Contient les noms d'hôte et les commandes liées à l'ingress. |
+| `Makefile` | Contient les noms d'hôte, la version du chart et les commandes liées à l'ingress. |
 | `/etc/hosts` | Associe les six noms d'hôte à l'adresse de l'ordinateur. |
 
 ## Commandes essentielles
 
-À lancer dans un terminal, depuis le dossier du projet.
+À lancer dans un terminal, depuis le dossier du projet. Helm doit être installé sur l'ordinateur, ce que fait `make helm`.
 
 | Commande | Description |
 |---|---|
-| `make minikube-up` | Crée le cluster en publiant les ports 80 et 443 sur l'ordinateur. |
-| `make ingress` | Active l'ingress dans le cluster et attend qu'il soit prêt. |
+| `make minikube-up` | Crée le cluster en publiant les ports 80 et 443 sur l'ordinateur, puis installe Traefik. |
+| `make helm` | Installe Helm sur l'ordinateur s'il est absent. Le mot de passe administrateur est demandé. |
+| `make ingress` | Installe ou met à jour Traefik dans le cluster et attend qu'il soit prêt. |
 | `make hosts` | Affiche la ligne à ajouter au fichier hosts de l'ordinateur. |
-| `make deploy` | Installe les règles d'ingress et le certificat avec le reste de la plateforme. |
+| `make deploy` | Installe les règles d'ingress, les middlewares et le certificat avec le reste de la plateforme. |
 | `make app` | Ouvre l'application dans le navigateur. |
 | `make ca-cert` | Écrit l'autorité locale dans `pme-ca.crt`, à importer dans le navigateur. |
-| `make tunnel` | Redirige les ports 80 et 443 vers l'ingress, pour un cluster créé sans publication des ports. |
+| `make tunnel` | Redirige les ports 80 et 443 vers Traefik, pour un cluster créé sans publication des ports. |
+| `kubectl -n traefik logs deploy/traefik` | Affiche le journal de Traefik, dont les requêtes reçues. |
 
 La ligne à ajouter une seule fois au fichier hosts est la suivante :
 
@@ -160,8 +183,10 @@ Windows. Sa modification demande les droits d'administrateur.
     ferait échouer la connexion.
 
 !!! warning "Attention"
-    Le projet ingress-nginx a cessé d'être maintenu en mars 2026. Ce choix reste acceptable pour un cluster local, mais
-    une mise en production imposerait de le remplacer, par exemple par Traefik ou par une passerelle d'API.
+    Le contrôleur d'ingress était auparavant ingress-nginx, installé par l'extension « ingress » de Minikube. Sur un
+    cluster déjà créé avec cette extension, `make ingress` la désactive avant d'installer Traefik : les deux se
+    disputeraient les ports 80 et 443. Les anciennes règles d'ingress doivent être supprimées, puis recréées par
+    `make deploy`.
 
 !!! tip "Astuce"
     Le cluster publie les ports 80 et 443 dès sa création : l'ingress est donc joignable sans autre commande, et
@@ -170,6 +195,8 @@ Windows. Sa modification demande les droits d'administrateur.
 
 ## Pour aller plus loin
 
-- [Documentation d'ingress-nginx](https://kubernetes.github.io/ingress-nginx/)
+- [Documentation de Traefik](https://doc.traefik.io/traefik/)
+- [Installation de Helm](https://helm.sh/docs/intro/install/)
 - [Documentation de Kubernetes sur les ingress](https://kubernetes.io/fr/docs/concepts/services-networking/ingress/)
+- [Annonce du retrait d'ingress-nginx](https://kubernetes.io/blog/2025/11/11/ingress-Nginx-retirement/)
 - [Fiche cert-manager du projet](cert-manager.md)
