@@ -124,7 +124,8 @@ n'est joignable que depuis le pod lui-même.
 - **Le trafic interne du site reste en HTTP** : entre l'ingress et les services, la requête circule en clair. Un cluster
   multi-nœuds, ou partagé, justifierait un maillage de services chiffrant tous les échanges.
 - **Le port de supervision de NATS reste en HTTP simple** : il n'expose que des compteurs, pas de données, mais il
-  échappe à la règle générale.
+  échappe à la règle générale. Il n'est cependant plus joignable par les autres pods : le service du cluster ne le
+  publie plus, et seuls le pod lui-même et les sondes de Kubernetes y accèdent.
 - **Aucune authentification mutuelle** : un client qui connaît le mot de passe de PostgreSQL peut s'y connecter, d'où
   qu'il vienne. Faute de politique réseau, cela signifie : depuis n'importe quel pod du namespace.
 - **HSTS de courte durée, sans prechargement** : la durée est de sept jours, et non d'un an. Un HSTS actif interdit de

@@ -3,6 +3,9 @@
 # arrete serait perdu. JetStream apporte le flux durable, l'acquittement manuel et la remise en file.
 #
 # Deux ports : 4222 pour les clients, 8222 pour la supervision HTTP (/healthz, /jsz).
+# Seul 4222 est publie par le Service : le port 8222 n'est joignable que depuis le pod lui-meme (`make queues`, via
+# kubectl exec) et par les sondes de Kubernetes, qui s'adressent au pod. Les autres pods du namespace ne peuvent pas le lire.
+# Pour le consulter depuis l'ordinateur : `make port-forward`, qui vise le Deployment et non le Service.
 # NATS n'a pas d'interface web : l'etat des flux se lit sur /jsz (voir `make queues` et `make nats`).
 #
 # Stockage non persistant (emptyDir) : suffisant pour le POC. Les messages survivent a l'arret du
@@ -115,6 +118,3 @@ spec:
     - name: client
       port: 4222
       targetPort: 4222
-    - name: monitor
-      port: 8222
-      targetPort: 8222

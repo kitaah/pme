@@ -84,8 +84,10 @@ directement. Une fenêtre de déduplication de deux minutes ignore par ailleurs 
 
 **Deux ports, deux usages.**
 Le port 4222 reçoit les applications ; il est chiffré et exige un identifiant. Le port 8222 est un port de supervision
-qui publie l'état du serveur et des flux au format texte. Il reste en HTTP simple : il n'expose aucun message, et c'est
-lui que lisent les sondes de Kubernetes et la commande `make queues`. NATS n'a pas d'interface web.
+qui publie l'état du serveur et des flux au format texte. Il reste en HTTP simple : il n'expose aucun message.
+Il n'est plus publié par le service du cluster : les autres composants ne peuvent donc pas le lire. Seuls y accèdent
+les sondes de Kubernetes, qui s'adressent directement au pod, la commande `make queues`, qui s'exécute dans le pod, et
+`make port-forward`, qui ouvre un accès temporaire depuis l'ordinateur. NATS n'a pas d'interface web.
 
 **Définitions**
 
