@@ -2,8 +2,12 @@
 # (k8s/03-keycloak.yaml, utilisateur `bootstrap`) et affiche un avertissement tant qu'on l'utilise.
 # Ce Job, une fois Keycloak disponible :
 #   1. cree l'administrateur permanent du realm master (identifiants : keycloak-admin-* de pme-secrets) ;
-#   2. supprime le compte d'amorcage.
-# Il peut etre rejoue sans effet : si l'administrateur permanent existe deja, il s'arrete aussitot.
+#   2. supprime le compte d'amorcage ;
+#   3. applique la politique de mots de passe du realm `pme` (longueur 12, majuscule, minuscule, chiffre, different de
+#      l'identifiant). Elle est posee ici et non dans config/realm-pme.json : l'import du realm cree les comptes de
+#      demonstration (membre / membre...), dont le mot de passe ne respecte pas la politique, et Keycloak pourrait refuser
+#      l'import. Posee apres l'import, elle ne s'applique qu'aux mots de passe definis ensuite, et sans `make reset`.
+# Il peut etre rejoue sans effet : si l'administrateur permanent existe deja, il re-applique la politique puis s'arrete.
 # Le mot de passe d'amorcage est celui de pme-secrets (keycloak-admin-password) : le compte ne vit que quelques secondes.
 # Le Job est supprime 5 min apres sa fin (ttlSecondsAfterFinished) : un modele de Job ne peut pas etre modifie apres
 # sa creation, et ainsi chaque `make deploy` le recree avec la version d'image courante.
@@ -46,10 +50,17 @@ spec:
                   --realm master --user "$1" --password "$ADMIN_PASSWORD" >/dev/null 2>&1
               }
 
+              # Politique de mots de passe du realm pme (relancer le Job suffit a la modifier).
+              apply_policy() {
+                "$KCADM" update realms/pme --config "$CFG" \
+                  -s 'passwordPolicy=length(12) and upperCase(1) and lowerCase(1) and digits(1) and notUsername'
+                echo "Politique de mots de passe appliquee au realm pme."
+              }
+
               # Attend que Keycloak reponde, puis regarde quel compte est utilisable.
               ready=""
               for ((i = 0; i < 90; i++)); do
-                if login "$ADMIN_USER"; then echo "Administrateur permanent deja present : rien a faire."; exit 0; fi
+                if login "$ADMIN_USER"; then echo "Administrateur permanent deja present."; apply_policy; exit 0; fi
                 if login bootstrap; then ready=1; break; fi
                 echo "En attente de Keycloak"; sleep 5
               done
@@ -63,6 +74,7 @@ spec:
 
               # Suppression du compte d'amorcage depuis le nouveau compte.
               login "$ADMIN_USER"
+              apply_policy
               id=$("$KCADM" get users --config "$CFG" -r master -q username=bootstrap -q exact=true --fields id --format csv --noquotes)
               test -n "$id" && "$KCADM" delete "users/$id" --config "$CFG" -r master
               echo "Compte d'amorcage supprime."
