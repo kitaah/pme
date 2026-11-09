@@ -190,22 +190,37 @@ dependency-scan:
 
 # ---------- Analyse des images d'Istio : failles connues dans istiod, istio-cni et ztunnel (Trivy) ----------
 # istio-cni et ztunnel s'executent avec des droits eleves sur le noeud : leurs images sont analysees comme celles du projet.
-# Meme installation de Trivy et memes regles que dependency-scan (job dont celui-ci herite). La version d'Istio est lue dans
-# le Makefile (ISTIO_VERSION) : une seule source. Lance automatiquement quand cette version, les reglages Istio ou le
-# fichier d'exceptions changent, sinon a la demande.
+# Ces images sont publiees par Istio et ne sont pas reconstruites ici : le correctif d'une faille vient d'une nouvelle version
+# d'Istio. Le job bloque donc sur les failles CRITICAL corrigeables, et signale les HIGH (nombre dans le journal, detail dans
+# les rapports JSON) pour decider d'une montee de version. Les exceptions restent dans .trivyignore.
+# Meme installation de Trivy que dependency-scan (job dont celui-ci herite). La version d'Istio est lue dans le Makefile
+# (ISTIO_VERSION) : une seule source. Lance automatiquement quand les reglages Istio ou la CI changent, sinon a la demande.
 istio-scan:
   extends: dependency-scan
   script:
     - ISTIO_VERSION=$(sed -n 's/^ISTIO_VERSION ?= *//p' Makefile)
     - test -n "$ISTIO_VERSION"
+    # 1. Analyse des trois images (HIGH et CRITICAL corrigeables), un rapport JSON par image, sans echec a ce stade.
+    - |
+      for img in pilot install-cni ztunnel; do
+        trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --format json --output "trivy-istio-$img.json" --exit-code 0 "docker.io/istio/$img:$ISTIO_VERSION"
+      done
+    # 2. Nombre de failles HIGH par image : information, pas un echec.
+    - |
+      for img in pilot install-cni ztunnel; do
+        echo "$img:$ISTIO_VERSION : $(grep -c '"Severity": "HIGH"' "trivy-istio-$img.json") failles HIGH corrigeables (voir le rapport trivy-istio-$img.json)"
+      done
+    # 3. Echec s'il reste une faille CRITICAL corrigeable non justifiee (.trivyignore).
     - |
       failed=""
       for img in pilot install-cni ztunnel; do
-        echo "== docker.io/istio/$img:$ISTIO_VERSION"
-        trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 "docker.io/istio/$img:$ISTIO_VERSION" || failed=1
+        trivy convert --format table --severity CRITICAL --exit-code 1 "trivy-istio-$img.json" || failed=1
       done
       test -z "$failed"
-  artifacts: {}
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths: [trivy-istio-pilot.json, trivy-istio-install-cni.json, trivy-istio-ztunnel.json]
   rules:
     - changes: [".gitlab-ci.yml", ".trivyignore", "k8s/istio/**/*"]
     - when: manual

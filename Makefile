@@ -4,7 +4,7 @@
 
 .PHONY: help install test test-integration image-test \
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
-        minikube-up minikube-down helm ingress inotify istio mesh-check cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
+        minikube-up minikube-down helm ingress inotify istio istio-scan mesh-check cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
         env kubeseal sealed-secrets sealed-prereqs seal image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         pods logs logs-api logs-moderation logs-keycloak \
         port-forward stop-forward api moderation frontend \
@@ -91,6 +91,7 @@ help:
 	@echo "    make ca-cert                  - Ecrit l'autorite locale dans $(CA_FILE), a importer dans le navigateur"
 	@echo "    make inotify                  - Releve la limite inotify de l'ordinateur (sudo) : requis par Istio, sans effet si deja suffisante"
 	@echo "    make istio                    - Installe Istio (mode ambient) : chiffre en mTLS les echanges entre pods"
+	@echo "    make istio-scan               - Analyse Trivy des trois images d'Istio (echec sur CRITICAL corrigeable, HIGH signalees)"
 	@echo "    make mesh-check               - Verifie le mTLS : un pod hors du mesh est refuse, les echanges portent des identites"
 	@echo "    make ca-configmap             - Copie l'autorite locale dans le namespace $(NS) (verification du TLS de PostgreSQL)"
 	@echo "    make tunnel                   - Redirige les ports 80 et 443 vers l'ingress (cluster cree sans --ports ; laisser ouvert, mot de passe demande)"
@@ -205,9 +206,10 @@ inotify:
 istio: inotify
 	@command -v helm >/dev/null || { echo "helm absent : lancer make helm"; exit 1; }
 	@kubectl get namespace $(TRAEFIK_NS) >/dev/null 2>&1 || { echo "Namespace $(TRAEFIK_NS) absent : lancer make ingress d'abord"; exit 1; }
+	kubectl apply -f k8s/istio/namespace.yaml
 	helm repo add istio https://istio-release.storage.googleapis.com/charts --force-update
 	helm upgrade --install istio-base istio/base --version $(ISTIO_VERSION) \
-		--namespace istio-system --create-namespace --wait --timeout 3m
+		--namespace istio-system --wait --timeout 3m
 	helm upgrade --install istiod istio/istiod --version $(ISTIO_VERSION) \
 		--namespace istio-system --values k8s/istio/istiod-values.yaml --wait --timeout 5m
 	helm upgrade --install istio-cni istio/cni --version $(ISTIO_VERSION) \
@@ -215,6 +217,18 @@ istio: inotify
 	helm upgrade --install ztunnel istio/ztunnel --version $(ISTIO_VERSION) \
 		--namespace istio-system --values k8s/istio/ztunnel-values.yaml --wait --timeout 3m
 	kubectl label namespace $(TRAEFIK_NS) istio.io/dataplane-mode=ambient --overwrite
+
+# Failles connues dans les trois images d'Istio (plan de controle, agent reseau, ztunnel). Ces composants s'executent avec
+# des droits eleves sur le noeud : leurs images sont donc analysees. Elles sont publiees par Istio et non reconstruites ici :
+# la commande echoue sur les failles CRITICAL corrigeables et affiche les HIGH a titre d'information (meme regle que la CI).
+# Prerequis : trivy installe. Aucune image a construire : Trivy lit directement le registre d'Istio.
+istio-scan:
+	@for img in pilot install-cni ztunnel; do \
+		echo "== docker.io/istio/$$img:$(ISTIO_VERSION) : failles HIGH (information)"; \
+		trivy image --scanners vuln --severity HIGH --ignore-unfixed --exit-code 0 docker.io/istio/$$img:$(ISTIO_VERSION); \
+		echo "== docker.io/istio/$$img:$(ISTIO_VERSION) : failles CRITICAL (bloquantes)"; \
+		trivy image --scanners vuln --severity CRITICAL --ignore-unfixed --exit-code 1 docker.io/istio/$$img:$(ISTIO_VERSION) || exit 1; \
+	done
 
 # Verifie le chiffrement entre pods. Un pod hors du mesh (namespace default) essaie de joindre l'interface : il doit
 # etre refuse (pas de code HTTP 200). Puis les derniers echanges vus par ztunnel : chaque ligne montre l'identite
