@@ -188,6 +188,29 @@ dependency-scan:
     - when: manual
       allow_failure: true
 
+# ---------- Analyse des images d'Istio : failles connues dans istiod, istio-cni et ztunnel (Trivy) ----------
+# istio-cni et ztunnel s'executent avec des droits eleves sur le noeud : leurs images sont analysees comme celles du projet.
+# Meme installation de Trivy et memes regles que dependency-scan (job dont celui-ci herite). La version d'Istio est lue dans
+# le Makefile (ISTIO_VERSION) : une seule source. Lance automatiquement quand cette version, les reglages Istio ou le
+# fichier d'exceptions changent, sinon a la demande.
+istio-scan:
+  extends: dependency-scan
+  script:
+    - ISTIO_VERSION=$(sed -n 's/^ISTIO_VERSION ?= *//p' Makefile)
+    - test -n "$ISTIO_VERSION"
+    - |
+      failed=""
+      for img in pilot install-cni ztunnel; do
+        echo "== docker.io/istio/$img:$ISTIO_VERSION"
+        trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 "docker.io/istio/$img:$ISTIO_VERSION" || failed=1
+      done
+      test -z "$failed"
+  artifacts: {}
+  rules:
+    - changes: [".gitlab-ci.yml", ".trivyignore", "k8s/istio/**/*"]
+    - when: manual
+      allow_failure: true
+
 # ---------- Tests d'integration : PostgreSQL et NATS (JetStream) reels, lances par Testcontainers ----------
 # Testcontainers a besoin d'un demon Docker : service Docker-in-Docker, detruit avec le job.
 # Un seul job pour l'API et la moderation : le demarrage de Docker-in-Docker (~40 s facturees) n'est paye qu'une fois.
