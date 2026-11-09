@@ -26,29 +26,29 @@ La pipeline lance **66 tests unitaires** répartis en 3 jobs, un par module. Les
 
 | Fichier | Tests | Ce qui est vérifié |
 |---|---|---|
-| `api/src/auth/roles.guard.spec.ts` | 3 | Le contrôle des rôles laisse passer le bon rôle et refuse les autres (403). |
-| `api/src/listings/listings.service.spec.ts` | 3 | Dépôt d'une annonce, retrait avec erreur 503 si la publication échoue, lecture des annonces du membre. |
-| `api/src/listings/listing-events.publisher.spec.ts` | 3 | Contrat de l'événement publié, deux nouvelles tentatives si le broker est injoignable. |
-| `api/src/metrics/metrics.spec.ts` | 5 | Mesures au format Prometheus, routes de santé et de mesures ignorées. |
+| **`api/src/auth/roles.guard.spec.ts`** | 3 | Le contrôle des rôles laisse passer le bon rôle et refuse les autres (403). |
+| **`api/src/listings/`**<br>**`listings.service.spec.ts`** | 3 | Dépôt d'une annonce, retrait avec erreur 503 si la publication échoue, lecture des annonces du membre. |
+| **`api/src/listings/`**<br>**`listing-events.publisher.spec.ts`** | 3 | Contrat de l'événement publié, deux nouvelles tentatives si le broker est injoignable. |
+| **`api/src/metrics/metrics.spec.ts`** | 5 | Mesures au format Prometheus, routes de santé et de mesures ignorées. |
 
 ### Service de modération (17 tests)
 
 | Fichier | Tests | Ce qui est vérifié |
 |---|---|---|
-| `moderation-service/src/auth/roles.guard.spec.ts` | 3 | Le contrôle des rôles laisse passer le bon rôle et refuse les autres (403). |
-| `moderation-service/src/moderation/listing-submitted.consumer.spec.ts` | 6 | Message acquitté, doublon, message mal formé, panne passagère, échec de la copie ou du rejet. |
-| `moderation-service/src/moderation/moderation.service.spec.ts` | 3 | Ajout à la file, rejeu sans doublon, erreurs de base transmises. |
-| `moderation-service/src/metrics/metrics.spec.ts` | 5 | Mesures au format Prometheus, routes de santé et de mesures ignorées. |
+| **`moderation-service/src/auth/`**<br>**`roles.guard.spec.ts`** | 3 | Le contrôle des rôles laisse passer le bon rôle et refuse les autres (403). |
+| **`moderation-service/src/moderation/`**<br>**`listing-submitted.consumer.spec.ts`** | 6 | Message acquitté, doublon, message mal formé, panne passagère, échec de la copie ou du rejet. |
+| **`moderation-service/src/moderation/`**<br>**`moderation.service.spec.ts`** | 3 | Ajout à la file, rejeu sans doublon, erreurs de base transmises. |
+| **`moderation-service/src/metrics/`**<br>**`metrics.spec.ts`** | 5 | Mesures au format Prometheus, routes de santé et de mesures ignorées. |
 
 ### Interface (35 tests)
 
 | Fichier | Tests | Ce qui est vérifié |
 |---|---|---|
-| `frontend/src/theme.test.ts` | 26 | Contrastes de la palette selon le RGAA : texte à 4,5:1, composants à 3:1, texte courant à 7:1. |
-| `frontend/src/components/Header.test.tsx` | 2 | Nom et rôle affichés, déconnexion au clic. |
-| `frontend/src/components/ListingForm.test.tsx` | 2 | Erreurs de l'API affichées, dépôt confirmé et formulaire vidé. |
-| `frontend/src/components/MyListings.test.tsx` | 2 | Libellé de chaque statut, erreur affichée si l'API ne répond pas. |
-| `frontend/src/components/ui/button.test.tsx` | 3 | Variantes du bouton et rendu en lien. |
+| **`frontend/src/theme.test.ts`** | 26 | Contrastes de la palette selon le RGAA : texte à 4,5:1, composants à 3:1, texte courant à 7:1. |
+| **`frontend/src/components/Header.test.tsx`** | 2 | Nom et rôle affichés, déconnexion au clic. |
+| **`frontend/src/components/`**<br>**`ListingForm.test.tsx`** | 2 | Erreurs de l'API affichées, dépôt confirmé et formulaire vidé. |
+| **`frontend/src/components/`**<br>**`MyListings.test.tsx`** | 2 | Libellé de chaque statut, erreur affichée si l'API ne répond pas. |
+| **`frontend/src/components/ui/`**<br>**`button.test.tsx`** | 3 | Variantes du bouton et rendu en lien. |
 
 ### Seuils de couverture
 
@@ -79,13 +79,13 @@ La pipeline lance **66 tests unitaires** répartis en 3 jobs, un par module. Les
 
 | Fichier ou dossier | Description |
 |---|---|
-| `api/jest.config.js` | Règle les tests de l'API : projet « unit », rapports et seuils. |
-| `moderation-service/jest.config.js` | Règle les tests de la modération, sur le même modèle. |
-| `frontend/vite.config.ts` | Règle Vitest : environnement, rapports et seuils. |
-| `api/src/` | Contient le code de l'API et ses tests `.spec.ts`. |
-| `moderation-service/src/` | Contient le code de la modération et ses tests `.spec.ts`. |
-| `frontend/src/` | Contient l'interface et ses tests `.test.ts` et `.test.tsx`. |
-| `.gitlab-ci.yml` | Définit les trois jobs `unit-tests`. |
+| **`api/jest.config.js`** | Règle les tests de l'API : projet « unit », rapports et seuils. |
+| **`moderation-service/jest.config.js`** | Règle les tests de la modération, sur le même modèle. |
+| **`frontend/vite.config.ts`** | Règle Vitest : environnement, rapports et seuils. |
+| **`api/src/`** | Contient le code de l'API et ses tests `.spec.ts`. |
+| **`moderation-service/src/`** | Contient le code de la modération et ses tests `.spec.ts`. |
+| **`frontend/src/`** | Contient l'interface et ses tests `.test.ts` et `.test.tsx`. |
+| **`.gitlab-ci.yml`** | Définit les trois jobs `unit-tests`. |
 
 ## Commandes essentielles
 
@@ -93,10 +93,10 @@ La pipeline lance **66 tests unitaires** répartis en 3 jobs, un par module. Les
 
 | Commande | Description |
 |---|---|
-| `make test` | Lance les tests unitaires des trois modules. |
-| `make coverage` | Lance les tests avec la couverture et les seuils. |
-| `cd api && npm test` | Lance seulement les tests unitaires de l'API. |
-| `cd frontend && npm run test:watch` | Relance les tests de l'interface à chaque enregistrement. |
+| **`make test`** | Lance les tests unitaires des trois modules. |
+| **`make coverage`** | Lance les tests avec la couverture et les seuils. |
+| **`cd api && npm test`** | Lance seulement les tests unitaires de l'API. |
+| **`cd frontend && npm run test:watch`** | Relance les tests de l'interface à chaque enregistrement. |
 
 !!! tip "Astuce"
     Les tests unitaires n'ont pas besoin de Docker. Ils se lancent donc sur n'importe quel poste, en quelques secondes.

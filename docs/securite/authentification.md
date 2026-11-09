@@ -96,7 +96,7 @@ etapes: "" {
 
 | Application | Flux autorisé | Usage |
 |---|---|---|
-| `pme-web` | Authorization Code avec PKCE (S256) | L'interface du site. Les adresses de retour sont limitées à `pme.localhost` et au serveur de développement. |
+| **`pme-web`** | Authorization Code avec PKCE (S256) | L'interface du site. Les adresses de retour sont limitées à `pme.localhost` et au serveur de développement. |
 
 **Côté API et service de modération**
 
@@ -161,7 +161,7 @@ défaut une fois le déploiement terminé.
 
 | Commande | Description |
 |---|---|
-| `make keycloak` | Ouvre la console d'administration de Keycloak. |
+| **`make keycloak`** | Ouvre la console d'administration de Keycloak. |
 
 Pour vérifier le refus par défaut, trois appels suffisent :
 
@@ -181,13 +181,13 @@ Pour vérifier le refus par défaut, trois appels suffisent :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/config/realm-pme.json` | Déclare le realm, les rôles et l'application. |
-| `k8s/03-keycloak-admin-job.yaml` | Crée l'administrateur permanent, supprime le compte d'amorçage et pose la politique de mots de passe. |
-| `api/src/auth/jwt.strategy.ts` | Vérifie la signature, l'émetteur, la date et l'application émettrice. |
-| `api/src/auth/jwt-auth.guard.ts` | Garde globale : exige un jeton sauf sur les routes marquées publiques. |
-| `api/src/auth/roles.guard.ts` | Contrôle des rôles, erreur 403 en cas de refus. |
-| `moderation-service/src/moderation/moderation.controller.ts` | Pose les gardes sur le contrôleur, pas sur le service entier. |
-| `frontend/src/auth.ts` | Connexion par PKCE et renouvellement du jeton côté navigateur. |
+| **`k8s/config/realm-pme.json`** | Déclare le realm, les rôles et l'application. |
+| **`k8s/03-keycloak-admin-job.yaml`** | Crée l'administrateur permanent, supprime le compte d'amorçage et pose la politique de mots de passe. |
+| **`api/src/auth/jwt.strategy.ts`** | Vérifie la signature, l'émetteur, la date et l'application émettrice. |
+| **`api/src/auth/jwt-auth.guard.ts`** | Garde globale : exige un jeton sauf sur les routes marquées publiques. |
+| **`api/src/auth/roles.guard.ts`** | Contrôle des rôles, erreur 403 en cas de refus. |
+| **`moderation-service/src/moderation/`**<br>**`moderation.controller.ts`** | Pose les gardes sur le contrôleur, pas sur le service entier. |
+| **`frontend/src/auth.ts`** | Connexion par PKCE et renouvellement du jeton côté navigateur. |
 
 ## Pour aller plus loin
 

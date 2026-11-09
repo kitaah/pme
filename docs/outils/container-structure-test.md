@@ -59,9 +59,9 @@ Les contrôles sont répartis par image :
 
 | Fichier | Image contrôlée | Points vérifiés |
 |---|---|---|
-| `tests/image/api.yaml` | API | Compte non root, version de Node, application compilée présente, sources et outils absents, port et commande. |
-| `tests/image/moderation.yaml` | Service de modération | Les mêmes points, adaptés à ce service. |
-| `tests/image/frontend.yaml` | Interface | Fichiers du site présents, configuration nginx valide, sources absentes, port exposé. |
+| **`tests/image/api.yaml`** | API | Compte non root, version de Node, application compilée présente, sources et outils absents, port et commande. |
+| **`tests/image/moderation.yaml`** | Service de modération | Les mêmes points, adaptés à ce service. |
+| **`tests/image/frontend.yaml`** | Interface | Fichiers du site présents, configuration nginx valide, sources absentes, port exposé. |
 
 !!! warning "Attention"
     La version de Node attendue est écrite dans ces fichiers. Après une montée de version, il faut les mettre à jour
@@ -71,11 +71,11 @@ Les contrôles sont répartis par image :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `tests/image/api.yaml` | Décrit les contrôles de l'image de l'API. |
-| `tests/image/moderation.yaml` | Décrit les contrôles de l'image du service de modération. |
-| `tests/image/frontend.yaml` | Décrit les contrôles de l'image de l'interface. |
-| `.gitlab-ci.yml` | Lance ces contrôles avant l'analyse de sécurité et la publication. |
-| `Makefile` | Contient la commande de contrôle des images sur l'ordinateur. |
+| **`tests/image/api.yaml`** | Décrit les contrôles de l'image de l'API. |
+| **`tests/image/moderation.yaml`** | Décrit les contrôles de l'image du service de modération. |
+| **`tests/image/frontend.yaml`** | Décrit les contrôles de l'image de l'interface. |
+| **`.gitlab-ci.yml`** | Lance ces contrôles avant l'analyse de sécurité et la publication. |
+| **`Makefile`** | Contient la commande de contrôle des images sur l'ordinateur. |
 
 ## Commandes essentielles
 
@@ -83,9 +83,9 @@ Les contrôles sont répartis par image :
 
 | Commande | Description |
 |---|---|
-| `make image` | Construit les trois images à contrôler. |
-| `make image-test` | Contrôle la structure des images, puis leurs failles. |
-| `container-structure-test test --image pme-api:dev --config tests/image/api.yaml` | Contrôle l'image de l'API seule. |
+| **`make image`** | Construit les trois images à contrôler. |
+| **`make image-test`** | Contrôle la structure des images, puis leurs failles. |
+| **`container-structure-test test`**<br>**`--image pme-api:dev`**<br>**`--config tests/image/api.yaml`** | Contrôle l'image de l'API seule. |
 
 !!! note "À savoir"
     Dans la pipeline, le programme est téléchargé depuis les publications officielles, dans une version précise, et sa

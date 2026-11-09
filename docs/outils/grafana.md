@@ -29,12 +29,12 @@ Le tableau « Services » répond à la question « est-ce que tout va bien ? »
 
 | Panneau | Ce qu'il montre |
 |---|---|
-| État des cibles | Les services qui répondent, et ceux qui ne répondent plus. |
-| Requêtes HTTP par seconde | Le trafic reçu, par service. |
-| Durée des requêtes (centile 95) | La durée en dessous de laquelle se situent 95 % des réponses. |
-| Réponses en erreur par seconde | Les erreurs 4xx, dues aux demandes, et 5xx, dues aux services. |
-| Processeur et mémoire | Les ressources consommées par chaque service. |
-| Retard de la boucle d'exécution | Un retard qui grimpe signale un service saturé. |
+| **État des cibles** | Les services qui répondent, et ceux qui ne répondent plus. |
+| **Requêtes HTTP par seconde** | Le trafic reçu, par service. |
+| **Durée des requêtes (centile 95)** | La durée en dessous de laquelle se situent 95 % des réponses. |
+| **Réponses en erreur par seconde** | Les erreurs 4xx, dues aux demandes, et 5xx, dues aux services. |
+| **Processeur et mémoire** | Les ressources consommées par chaque service. |
+| **Retard de la boucle d'exécution** | Un retard qui grimpe signale un service saturé. |
 
 Le tableau « Logs » répond à la question suivante, « que s'est-il passé ? » : nombre de lignes écrites, lignes en
 erreur et en alerte, répartition par service, et les cent dernières lignes, filtrables par service et par mot
@@ -68,8 +68,8 @@ Ses sources de données sont les suivantes :
 
 | Source | Contenu | Conservation |
 |---|---|---|
-| Prometheus | Les mesures de fonctionnement des services. | 6 heures |
-| Loki | Les journaux de tous les composants. | 24 heures |
+| **Prometheus** | Les mesures de fonctionnement des services. | 6 heures |
+| **Loki** | Les journaux de tous les composants. | 24 heures |
 
 !!! note "À savoir"
     Les courbes sont tracées par exemplaire : la légende indique le service et l'adresse du pod. Après un
@@ -80,14 +80,14 @@ Ses sources de données sont les suivantes :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/10-grafana.yaml` | Déploie Grafana dans le cluster. |
-| `k8s/config/grafana-datasource.yml` | Déclare Prometheus comme source de données. |
-| `k8s/config/grafana-datasource-loki.yml` | Déclare Loki comme source de données. |
-| `k8s/config/grafana-dashboards.yml` | Indique à Grafana où lire les tableaux de bord. |
-| `k8s/config/grafana-dashboard-pme.json` | Décrit le tableau de bord « Services ». |
-| `k8s/config/grafana-dashboard-logs.json` | Décrit le tableau de bord « Logs ». |
-| `k8s/config/postgres-init.sh` | Crée la base de Grafana à la première initialisation du volume. |
-| `.env` | Contient l'identifiant et le mot de passe de connexion. Ce fichier est exclu de Git. |
+| **`k8s/10-grafana.yaml`** | Déploie Grafana dans le cluster. |
+| **`k8s/config/grafana-datasource.yml`** | Déclare Prometheus comme source de données. |
+| **`k8s/config/grafana-datasource-loki.yml`** | Déclare Loki comme source de données. |
+| **`k8s/config/grafana-dashboards.yml`** | Indique à Grafana où lire les tableaux de bord. |
+| **`k8s/config/grafana-dashboard-pme.json`** | Décrit le tableau de bord « Services ». |
+| **`k8s/config/grafana-dashboard-logs.json`** | Décrit le tableau de bord « Logs ». |
+| **`k8s/config/postgres-init.sh`** | Crée la base de Grafana à la première initialisation du volume. |
+| **`.env`** | Contient l'identifiant et le mot de passe de connexion. Ce fichier est exclu de Git. |
 
 ## Commandes essentielles
 
@@ -95,10 +95,10 @@ Ses sources de données sont les suivantes :
 
 | Commande | Description |
 |---|---|
-| `make deploy` | Installe Grafana avec le reste de la plateforme. |
-| `make grafana` | Ouvre Grafana dans le navigateur. |
-| `make create-grafana-db` | Crée la base de Grafana sur un cluster déjà installé. |
-| `make pods` | Indique si Grafana est prêt. |
+| **`make deploy`** | Installe Grafana avec le reste de la plateforme. |
+| **`make grafana`** | Ouvre Grafana dans le navigateur. |
+| **`make create-grafana-db`** | Crée la base de Grafana sur un cluster déjà installé. |
+| **`make pods`** | Indique si Grafana est prêt. |
 
 !!! warning "Attention"
     Un tableau de bord fourni par le dépôt ne peut pas être enregistré depuis l'interface : la modification serait

@@ -83,11 +83,11 @@ Le job démarre l'API réelle avec les vrais services dont elle dépend, sans Do
 
 | Fichier ou dossier | Description |
 |---|---|
-| `tests/performance/load.js` | Scénario de charge : profils, contrôles et seuils. |
-| `tests/performance/common.js` | Fonctions partagées : connexion, dépôt et lecture des annonces. |
-| `tests/performance/support/ci-environment.cjs` | Faux fournisseur d'identité et création du flux NATS. |
-| `scripts/perf-ci.sh` | Orchestre le test dans la pipeline : API, jeton, k6. |
-| `.gitlab-ci.yml` | Définit le job `performance-tests` et ses services. |
+| **`tests/performance/load.js`** | Scénario de charge : profils, contrôles et seuils. |
+| **`tests/performance/common.js`** | Fonctions partagées : connexion, dépôt et lecture des annonces. |
+| **`tests/performance/support/`**<br>**`ci-environment.cjs`** | Faux fournisseur d'identité et création du flux NATS. |
+| **`scripts/perf-ci.sh`** | Orchestre le test dans la pipeline : API, jeton, k6. |
+| **`.gitlab-ci.yml`** | Définit le job `performance-tests` et ses services. |
 
 ## Pour aller plus loin
 

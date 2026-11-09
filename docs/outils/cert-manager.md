@@ -101,9 +101,9 @@ Les certificats émis sont les suivants :
 
 | Certificat | Pour qui | Durée | Vérifié par |
 |---|---|---|---|
-| Les six noms en `.localhost` | L'ingress | 90 jours | Le navigateur, après import de l'autorité. |
-| `postgres-tls` | PostgreSQL | 90 jours | L'API, la modération, Keycloak et Grafana. |
-| `nats-tls` | NATS | 90 jours | L'API et le service de modération. |
+| **Les six noms en `.localhost`** | L'ingress | 90 jours | Le navigateur, après import de l'autorité. |
+| **`postgres-tls`** | PostgreSQL | 90 jours | L'API, la modération, Keycloak et Grafana. |
+| **`nats-tls`** | NATS | 90 jours | L'API et le service de modération. |
 
 !!! warning "Attention"
     Le fichier `pme-ca.crt` ne doit servir qu'à ce projet local. Importer l'autorité d'un autre cluster ou d'une autre
@@ -113,12 +113,12 @@ Les certificats émis sont les suivants :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/cert-manager/issuers.yaml` | Déclare l'autorité locale et l'émetteur qui signe les certificats. |
-| `k8s/08-certificate.yaml` | Demande le certificat des six noms d'hôte. |
-| `k8s/00-internal-tls.yaml` | Demande les certificats internes de PostgreSQL et de NATS. |
-| `k8s/08-ingress.yaml` | Utilise le certificat public pour chiffrer les échanges avec le navigateur. |
-| `pme-ca.crt` | Certificat de l'autorité locale, à importer dans le navigateur. Ce fichier est exclu de Git. |
-| `Makefile` | Contient les commandes d'installation et d'export de l'autorité. |
+| **`k8s/cert-manager/issuers.yaml`** | Déclare l'autorité locale et l'émetteur qui signe les certificats. |
+| **`k8s/08-certificate.yaml`** | Demande le certificat des six noms d'hôte. |
+| **`k8s/00-internal-tls.yaml`** | Demande les certificats internes de PostgreSQL et de NATS. |
+| **`k8s/08-ingress.yaml`** | Utilise le certificat public pour chiffrer les échanges avec le navigateur. |
+| **`pme-ca.crt`** | Certificat de l'autorité locale, à importer dans le navigateur. Ce fichier est exclu de Git. |
+| **`Makefile`** | Contient les commandes d'installation et d'export de l'autorité. |
 
 ## Commandes essentielles
 
@@ -126,11 +126,11 @@ Les certificats émis sont les suivants :
 
 | Commande | Description |
 |---|---|
-| `make cert-manager` | Installe cert-manager et crée l'autorité locale du cluster. |
-| `make ca-cert` | Écrit l'autorité locale dans le fichier `pme-ca.crt`. |
-| `make ca-configmap` | Copie l'autorité dans le namespace, pour que les applications vérifient les certificats internes. |
-| `make deploy` | Demande les certificats avec le reste de la plateforme. |
-| `make app` | Ouvre l'application pour vérifier que la connexion aboutit. |
+| **`make cert-manager`** | Installe cert-manager et crée l'autorité locale du cluster. |
+| **`make ca-cert`** | Écrit l'autorité locale dans le fichier `pme-ca.crt`. |
+| **`make ca-configmap`** | Copie l'autorité dans le namespace, pour que les applications vérifient les certificats internes. |
+| **`make deploy`** | Demande les certificats avec le reste de la plateforme. |
+| **`make app`** | Ouvre l'application pour vérifier que la connexion aboutit. |
 
 Pour importer l'autorité dans Firefox :
 

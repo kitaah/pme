@@ -163,11 +163,11 @@ n'est joignable que depuis le pod lui-même.
 
 | Commande | Description |
 |---|---|
-| `make ca-cert` | Écrit le certificat de l'autorité locale, à importer dans le navigateur. |
-| `kubectl -n pme get certificate` | Affiche les certificats du cluster, leur état et leur validité. |
-| `make ca-configmap` | Copie l'autorité dans le namespace, pour que les applications vérifient les certificats. |
-| `make mesh-check` | Vérifie le maillage : un pod hors du maillage est refusé, et les échanges portent des identités. |
-| `kubectl -n istio-system logs ds/ztunnel --tail=500 \| grep src.identity` | Affiche les connexions chiffrées vues par ztunnel, avec l'identité de la source et de la destination. |
+| **`make ca-cert`** | Écrit le certificat de l'autorité locale, à importer dans le navigateur. |
+| **`kubectl -n pme get certificate`** | Affiche les certificats du cluster, leur état et leur validité. |
+| **`make ca-configmap`** | Copie l'autorité dans le namespace, pour que les applications vérifient les certificats. |
+| **`make mesh-check`** | Vérifie le maillage : un pod hors du maillage est refusé, et les échanges portent des identités. |
+| **`kubectl -n istio-system logs ds/ztunnel`**<br>**`--tail=500 \| grep src.identity`** | Affiche les connexions chiffrées vues par ztunnel, avec l'identité de la source et de la destination. |
 
 Dans les journaux de ztunnel, une connexion chiffrée par le maillage se reconnaît à deux indices : l'adresse de
 destination utilise le port **15008**, celui du tunnel entre nœuds, et les champs `src.identity` et `dst.identity`
@@ -190,17 +190,17 @@ depuis un autre pod avec `sslmode=disable` est rejetée par le serveur, avant m�
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/cert-manager/issuers.yaml` | Déclare l'autorité locale et son émetteur. |
-| `k8s/08-certificate.yaml` | Certificat unique des six noms d'hôte de l'ingress. |
-| `k8s/00-internal-tls.yaml` | Certificats de PostgreSQL et de NATS. |
-| `k8s/istio/` | Réglages des quatre charts Helm d'Istio, avec des ressources réduites pour Minikube. |
-| `k8s/namespace.yaml` | Porte le label qui enrôle le namespace `pme` dans le maillage. |
-| `k8s/16-mesh-mtls.yaml` | Impose le mode strict : toute connexion hors mTLS est refusée. |
-| `k8s/08-ingress.yaml` | Termine le TLS avec le certificat de cert-manager. |
-| `k8s/08-middlewares.yaml` | Ajoute l'en-tête HSTS aux réponses de l'ingress. |
-| `k8s/traefik/values.yaml` | Redirige le HTTP vers le HTTPS pour tous les noms d'hôte. |
-| `k8s/config/postgres-hba.conf` | Impose le TLS et SCRAM-SHA-256 à toute connexion venant du cluster. |
-| `k8s/config/nats.conf` | Active le TLS de NATS et fixe la version minimale à 1.3. |
+| **`k8s/cert-manager/issuers.yaml`** | Déclare l'autorité locale et son émetteur. |
+| **`k8s/08-certificate.yaml`** | Certificat unique des six noms d'hôte de l'ingress. |
+| **`k8s/00-internal-tls.yaml`** | Certificats de PostgreSQL et de NATS. |
+| **`k8s/istio/`** | Réglages des quatre charts Helm d'Istio, avec des ressources réduites pour Minikube. |
+| **`k8s/namespace.yaml`** | Porte le label qui enrôle le namespace `pme` dans le maillage. |
+| **`k8s/16-mesh-mtls.yaml`** | Impose le mode strict : toute connexion hors mTLS est refusée. |
+| **`k8s/08-ingress.yaml`** | Termine le TLS avec le certificat de cert-manager. |
+| **`k8s/08-middlewares.yaml`** | Ajoute l'en-tête HSTS aux réponses de l'ingress. |
+| **`k8s/traefik/values.yaml`** | Redirige le HTTP vers le HTTPS pour tous les noms d'hôte. |
+| **`k8s/config/postgres-hba.conf`** | Impose le TLS et SCRAM-SHA-256 à toute connexion venant du cluster. |
+| **`k8s/config/nats.conf`** | Active le TLS de NATS et fixe la version minimale à 1.3. |
 
 ## Pour aller plus loin
 

@@ -44,6 +44,25 @@ Quelques règles de vocabulaire valables partout :
     Le test de relecture : une personne qui ne connaît pas l'outil doit pouvoir expliquer, après lecture, à quoi il
     sert et pourquoi le projet l'utilise. Si ce n'est pas le cas, c'est le paragraphe « problème résolu » qui manque.
 
+## Les tableaux
+
+Tous les tableaux suivent les mêmes règles de forme, pour que la colonne de gauche se lise de la même façon partout.
+
+- **La colonne de gauche est toujours en gras.** Pour une commande ou un chemin de fichier, le gras s'ajoute au code :
+  `` **`make deploy`** ``.
+- **Une cellule trop longue passe à la ligne.** Au-delà d'environ quarante caractères, la commande ou le chemin se coupe
+  avec `<br>`, en deux ou trois lignes, chacune en gras et en code. Un chemin se coupe après une barre oblique, une
+  commande avant une option ou avant un tube (`|`).
+- **Un élément par ligne.** Quand une cellule cite plusieurs fichiers ou commandes, chacun a sa propre ligne, au lieu
+  d'être séparé par « et » ou par une virgule.
+
+```markdown
+| Fichier ou dossier | Description |
+|---|---|
+| **`moderation-service/src/moderation/`**<br>**`moderation.service.spec.ts`** | Une phrase. |
+| **`k8s/04-api.yaml`**<br>**`k8s/05-moderation.yaml`** | Une phrase. |
+```
+
 ## Les schémas
 
 Les schémas sont écrits en [D2](https://d2lang.com/), directement dans la page : l'extension de MkDocs les transforme
@@ -180,13 +199,13 @@ n'est pas rassurante, elle est incomplète.
 
 | Fichier ou dossier | Description |
 |---|---|
-| `chemin/du/fichier` | *Une phrase.* |
+| **`chemin/du/fichier`** | *Une phrase.* |
 
 ## Commandes essentielles
 
 | Commande | Description |
 |---|---|
-| `make …` | *Une phrase.* |
+| **`make …`** | *Une phrase.* |
 
 ## Pour aller plus loin
 

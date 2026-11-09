@@ -123,14 +123,14 @@ Cela n'est pas seulement déclaré, c'est vérifié à chaque passage de la pipe
 
 | Contrôle | Ce qu'il vérifie |
 |---|---|
-| [Hadolint](../pipeline/controle-dockerfile.md) | Les recettes de construction, avant même de bâtir l'image. |
-| [container-structure-test](../pipeline/tests-images.md) | 22 contrôles sur les images : compte non administrateur, absence de sources, absence de fichier `.env`, port et commande de démarrage attendus. |
-| [Trivy](../pipeline/analyse-dependances.md) | Les failles connues des paquets livrés et des dépendances de développement. |
+| **[Hadolint](../pipeline/controle-dockerfile.md)** | Les recettes de construction, avant même de bâtir l'image. |
+| **[container-structure-test](../pipeline/tests-images.md)** | 22 contrôles sur les images : compte non administrateur, absence de sources, absence de fichier `.env`, port et commande de démarrage attendus. |
+| **[Trivy](../pipeline/analyse-dependances.md)** | Les failles connues des paquets livrés et des dépendances de développement. |
 
 !!! note "À savoir"
-PostgreSQL, NATS et Adminer ne fixent pas d'identifiant d'exécution : leurs images démarrent en administrateur puis
-abandonnent elles-mêmes ces droits pour leur propre compte. C'est le fonctionnement prévu par leurs éditeurs ; les
-autres réglages, eux, leur sont bien appliqués.
+    PostgreSQL, NATS et Adminer ne fixent pas d'identifiant d'exécution : leurs images démarrent en administrateur puis
+    abandonnent elles-mêmes ces droits pour leur propre compte. C'est le fonctionnement prévu par leurs éditeurs ; les
+    autres réglages, eux, leur sont bien appliqués.
 
 ## Ce qui n'est pas couvert
 
@@ -167,36 +167,36 @@ autres réglages, eux, leur sont bien appliqués.
 
 | Commande | Description |
 |---|---|
-| `make image-test` | Rejoue les 22 contrôles de structure et l'analyse Trivy sur les trois images. |
-| `make lint-docker` | Contrôle les quatre Dockerfile avec Hadolint. |
-| `make lint-k8s` | Valide les manifestes Kubernetes. |
-| `make istio-scan` | Analyse Trivy des trois images d'Istio : affiche les failles HIGH, et échoue s'il reste une faille CRITICAL corrigeable. |
-| `kubectl -n istio-system get pod -l k8s-app=istio-cni-node -o yaml \| grep -A1 seccompProfile` | Montre que le profil `RuntimeDefault` est bien appliqué à l'agent istio-cni. |
-| `kubectl -n pme exec deploy/pme-api -- id` | Montre l'identifiant du compte qui exécute l'API : il ne doit pas valoir 0. |
+| **`make image-test`** | Rejoue les 22 contrôles de structure et l'analyse Trivy sur les trois images. |
+| **`make lint-docker`** | Contrôle les quatre Dockerfile avec Hadolint. |
+| **`make lint-k8s`** | Valide les manifestes Kubernetes. |
+| **`make istio-scan`** | Analyse Trivy des trois images d'Istio : affiche les failles HIGH, et échoue s'il reste une faille CRITICAL corrigeable. |
+| **`kubectl -n istio-system get pod`**<br>**`-l k8s-app=istio-cni-node -o yaml`**<br>**`\| grep -A1 seccompProfile`** | Montre que le profil `RuntimeDefault` est bien appliqué à l'agent istio-cni. |
+| **`kubectl -n pme exec deploy/pme-api -- id`** | Montre l'identifiant du compte qui exécute l'API : il ne doit pas valoir 0. |
 
 Pour vérifier le disque en lecture seule, essayer d'écrire un fichier dans le conteneur de l'API : la commande échoue,
 sauf dans l'espace temporaire monté à cet effet.
 
 !!! warning "Attention"
-Le disque en lecture seule casse tout composant qui écrit ailleurs que dans son espace temporaire : un cache, un
-fichier de session, un journal sur disque. C'est à vérifier avant d'activer le réglage sur un nouveau service, pas
-après.
+    Le disque en lecture seule casse tout composant qui écrit ailleurs que dans son espace temporaire : un cache, un
+    fichier de session, un journal sur disque. C'est à vérifier avant d'activer le réglage sur un nouveau service, pas
+    après.
 
 !!! tip "Astuce"
-`kubectl -n pme get pod <nom> -o yaml` affiche les réglages réellement appliqués à un pod, y compris ceux qu'il
-hérite du niveau du pod. C'est la source de vérité, plus fiable que la relecture du manifeste.
+    `kubectl -n pme get pod <nom> -o yaml` affiche les réglages réellement appliqués à un pod, y compris ceux qu'il
+    hérite du niveau du pod. C'est la source de vérité, plus fiable que la relecture du manifeste.
 
 ## Fichiers principaux
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/04-api.yaml` et `k8s/05-moderation.yaml` | Réglages les plus complets : compte sans privilège, disque en lecture seule, capacités retirées. |
-| `k8s/06-frontend.yaml` | Mêmes réglages pour l'interface, avec le compte de nginx non privilégié. |
-| `k8s/13-alloy.yaml` | La seule exception : jeton de cluster et droits de lecture sur les pods. |
-| `api/Dockerfile`, `moderation-service/Dockerfile`, `frontend/Dockerfile` | Construction en deux étapes, image finale sans outils. |
-| `tests/image/` | Les 22 contrôles de structure appliqués aux images. |
-| `k8s/istio/namespace.yaml` et `k8s/istio/cni-values.yaml` | Namespace dédié aux composants privilégiés du maillage, et profil seccomp de l'agent istio-cni. |
-| `.hadolint.yaml` | Niveau à partir duquel un écart de Dockerfile fait échouer la pipeline. |
+| **`k8s/04-api.yaml`**<br>**`k8s/05-moderation.yaml`** | Réglages les plus complets : compte sans privilège, disque en lecture seule, capacités retirées. |
+| **`k8s/06-frontend.yaml`** | Mêmes réglages pour l'interface, avec le compte de nginx non privilégié. |
+| **`k8s/13-alloy.yaml`** | La seule exception : jeton de cluster et droits de lecture sur les pods. |
+| **`api/Dockerfile`**<br>**`moderation-service/Dockerfile`**<br>**`frontend/Dockerfile`** | Construction en deux étapes, image finale sans outils. |
+| **`tests/image/`** | Les 22 contrôles de structure appliqués aux images. |
+| **`k8s/istio/namespace.yaml`**<br>**`k8s/istio/cni-values.yaml`** | Namespace dédié aux composants privilégiés du maillage, et profil seccomp de l'agent istio-cni. |
+| **`.hadolint.yaml`** | Niveau à partir duquel un écart de Dockerfile fait échouer la pipeline. |
 
 ## Pour aller plus loin
 

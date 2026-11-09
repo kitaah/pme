@@ -102,10 +102,10 @@ interne du site en HTTP » du [chiffrement](../securite/chiffrement.md) réappar
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/istio/` | Réglages des charts Helm : plan de contrôle, agent réseau et ztunnel, avec des ressources réduites pour Minikube. Contient aussi le namespace `istio-system` et le profil seccomp de l'agent réseau. |
-| `k8s/namespace.yaml` | Porte le label qui enrôle le namespace `pme` dans le maillage. |
-| `k8s/16-mesh-mtls.yaml` | Impose le mode strict : toute connexion hors mTLS est refusée. |
-| `Makefile` (cibles `inotify`, `istio`, `istio-scan` et `mesh-check`) | Relève la limite `inotify`, installe le maillage et enrôle Traefik, analyse ses images, puis vérifie le chiffrement. |
+| **`k8s/istio/`** | Réglages des charts Helm : plan de contrôle, agent réseau et ztunnel, avec des ressources réduites pour Minikube. Contient aussi le namespace `istio-system` et le profil seccomp de l'agent réseau. |
+| **`k8s/namespace.yaml`** | Porte le label qui enrôle le namespace `pme` dans le maillage. |
+| **`k8s/16-mesh-mtls.yaml`** | Impose le mode strict : toute connexion hors mTLS est refusée. |
+| **`Makefile`**<br>(cibles **`inotify`**, **`istio`**,<br>**`istio-scan`** et **`mesh-check`**) | Relève la limite `inotify`, installe le maillage et enrôle Traefik, analyse ses images, puis vérifie le chiffrement. |
 
 ## Commandes essentielles
 
@@ -113,12 +113,12 @@ interne du site en HTTP » du [chiffrement](../securite/chiffrement.md) réappar
 
 | Commande | Description |
 |---|---|
-| `make inotify` | Relève la limite `inotify` de l'ordinateur si elle est trop basse (mot de passe `sudo` demandé). Lancée automatiquement par `make istio`. |
-| `make istio` | Installe Istio en mode ambient et enrôle le namespace de Traefik. |
-| `make istio-scan` | Analyse les trois images d'Istio avec Trivy : affiche les failles HIGH, échoue sur une faille CRITICAL corrigeable. |
-| `make mesh-check` | Vérifie qu'un pod hors du maillage est refusé et montre des échanges portant des identités. |
-| `kubectl -n istio-system get pods` | Affiche le plan de contrôle, l'agent réseau et ztunnel. |
-| `kubectl -n istio-system logs ds/ztunnel --tail=500 \| grep src.identity` | Affiche les connexions vues par ztunnel, avec l'identité de la source et de la destination. |
+| **`make inotify`** | Relève la limite `inotify` de l'ordinateur si elle est trop basse (mot de passe `sudo` demandé). Lancée automatiquement par `make istio`. |
+| **`make istio`** | Installe Istio en mode ambient et enrôle le namespace de Traefik. |
+| **`make istio-scan`** | Analyse les trois images d'Istio avec Trivy : affiche les failles HIGH, échoue sur une faille CRITICAL corrigeable. |
+| **`make mesh-check`** | Vérifie qu'un pod hors du maillage est refusé et montre des échanges portant des identités. |
+| **`kubectl -n istio-system get pods`** | Affiche le plan de contrôle, l'agent réseau et ztunnel. |
+| **`kubectl -n istio-system logs ds/ztunnel`**<br>**`--tail=500 \| grep src.identity`** | Affiche les connexions vues par ztunnel, avec l'identité de la source et de la destination. |
 
 1. `make minikube-up` crée le cluster et installe Istio après Traefik.
 2. `kubectl -n istio-system get pods` : attendre que `ztunnel` soit en `1/1 Running`.
@@ -131,27 +131,27 @@ Une connexion chiffrée par le maillage se reconnaît dans ces journaux à l'adr
 ligne affichée par `make mesh-check` ne suffit pas : elle peut ne montrer que l'identité de ztunnel lui-même.
 
 !!! note "À savoir"
-Sur un cluster existant, `make istio` suffit, sans le recréer. La commande doit passer avant `make deploy`,
-car la règle du mode strict utilise une ressource que seule l'installation d'Istio déclare.
+    Sur un cluster existant, `make istio` suffit, sans le recréer. La commande doit passer avant `make deploy`,
+    car la règle du mode strict utilise une ressource que seule l'installation d'Istio déclare.
 
-!!! note "Limite `inotify` de l'ordinateur"
-Ztunnel surveille ses certificats avec le mécanisme `inotify` de Linux. Minikube partage le noyau de l'ordinateur,
-dont la limite par défaut (128 instances) est vite atteinte : ztunnel plante alors avec l'erreur
-`Too many open files`. `make inotify` porte la limite à 1024 et la rend permanente dans
-`/etc/sysctl.d/99-inotify.conf`. Le réglage concerne Linux ; sous un autre système, il faut ajuster la limite
-équivalente à la main.
-
-!!! warning "Ne déployer qu'une fois ztunnel prêt"
-`make deploy` enrôle `pme` et applique le mode strict. Si ztunnel n'est pas prêt, les pods de `pme` perdent leur
-réseau (le journal d'istio-cni indique `no ztunnel connection`) et l'application cesse de répondre. Pour revenir en
-arrière : `kubectl -n pme delete peerauthentication default`, puis
-`kubectl label namespace pme istio.io/dataplane-mode-`. Corriger ensuite la cause (voir la limite `inotify`
-ci-dessus), et relancer `make deploy`.
+!!! note "À savoir"
+    **Limite `inotify` de l'ordinateur.** Ztunnel surveille ses certificats avec le mécanisme `inotify` de Linux. Minikube partage le noyau de l'ordinateur,
+    dont la limite par défaut (128 instances) est vite atteinte : ztunnel plante alors avec l'erreur
+    `Too many open files`. `make inotify` porte la limite à 1024 et la rend permanente dans
+    `/etc/sysctl.d/99-inotify.conf`. Le réglage concerne Linux ; sous un autre système, il faut ajuster la limite
+    équivalente à la main.
 
 !!! warning "Attention"
-Istio ajoute trois composants, d'un poids modeste (istiod occupe environ 45 Mo). Si le cluster manque de place, augmenter `MINIKUBE_MEMORY`
-dans le `Makefile` avant de recréer le cluster. Un namespace enrôlé en mode strict dont le trafic ne passe pas par
-le maillage devient inaccessible : c'est le cas de Traefik s'il n'est pas enrôlé.
+    **Ne déployer qu'une fois ztunnel prêt.** `make deploy` enrôle `pme` et applique le mode strict. Si ztunnel n'est pas prêt, les pods de `pme` perdent leur
+    réseau (le journal d'istio-cni indique `no ztunnel connection`) et l'application cesse de répondre. Pour revenir en
+    arrière : `kubectl -n pme delete peerauthentication default`, puis
+    `kubectl label namespace pme istio.io/dataplane-mode-`. Corriger ensuite la cause (voir la limite `inotify`
+    ci-dessus), et relancer `make deploy`.
+
+!!! warning "Attention"
+    Istio ajoute trois composants, d'un poids modeste (istiod occupe environ 45 Mo). Si le cluster manque de place, augmenter `MINIKUBE_MEMORY`
+    dans le `Makefile` avant de recréer le cluster. Un namespace enrôlé en mode strict dont le trafic ne passe pas par
+    le maillage devient inaccessible : c'est le cas de Traefik s'il n'est pas enrôlé.
 
 ## Pour aller plus loin
 

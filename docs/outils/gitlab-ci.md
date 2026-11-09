@@ -81,8 +81,9 @@ serveur d'origine serait détectée.
 
 ## Rôle dans le projet
 
-- Il exécute les neuf jobs de la pipeline : tests unitaires, analyse SonarCloud, contrôle des Dockerfile, tests
-  d'intégration, analyse des dépendances, contrôle et publication des images, tests de performance.
+- Il exécute les dix jobs de la pipeline : tests unitaires, analyse SonarCloud, contrôle des Dockerfile, tests
+  d'intégration, analyse des dépendances, analyse des images d'Istio, contrôle et publication des images, tests de
+  performance.
 - Il ne se déclenche que sur la branche principale, et seulement pour les jobs dont les fichiers ont changé.
 - Il publie les images vérifiées dans le registre de conteneurs du projet.
 - Il publie les rapports de tests et de couverture dans l'interface de GitLab.
@@ -99,13 +100,13 @@ Le détail de chaque contrôle est décrit dans la [vue d'ensemble de la pipelin
 
 | Fichier ou dossier | Description |
 |---|---|
-| `.gitlab-ci.yml` | Décrit les étapes, les jobs, leurs conditions et leurs rapports. |
-| `sonar-project.properties` | Configure l'analyse de qualité lancée par un job. |
-| `docker-bake.hcl` | Décrit la construction des trois images. |
-| `.hadolint.yaml` | Règle le niveau d'échec du contrôle des Dockerfile. |
-| `.trivyignore` | Liste les failles acceptées temporairement, avec leur date d'expiration. |
-| `scripts/perf-ci.sh` | Enchaîne le démarrage de l'API et le test de performance. |
-| `tests/` | Contient les contrôles d'images et les scénarios de performance. |
+| **`.gitlab-ci.yml`** | Décrit les étapes, les jobs, leurs conditions et leurs rapports. |
+| **`sonar-project.properties`** | Configure l'analyse de qualité lancée par un job. |
+| **`docker-bake.hcl`** | Décrit la construction des trois images. |
+| **`.hadolint.yaml`** | Règle le niveau d'échec du contrôle des Dockerfile. |
+| **`.trivyignore`** | Liste les failles acceptées temporairement, avec leur date d'expiration. |
+| **`scripts/perf-ci.sh`** | Enchaîne le démarrage de l'API et le test de performance. |
+| **`tests/`** | Contient les contrôles d'images et les scénarios de performance. |
 
 ## Commandes essentielles
 
@@ -113,12 +114,13 @@ Chaque contrôle de la pipeline a son équivalent sur l'ordinateur, à lancer de
 
 | Commande | Description |
 |---|---|
-| `make test` | Lance les tests unitaires, comme les jobs `unit-tests`. |
-| `make coverage` | Lance les tests avec la couverture et ses seuils. |
-| `make test-integration` | Lance les tests d'intégration, Docker démarré. |
-| `make lint-docker` | Contrôle les Dockerfile, comme le job `hadolint`. |
-| `make image-test` | Contrôle les images, comme le job `image-tests`. |
-| `make quality` | Enchaîne les contrôles statiques. |
+| **`make test`** | Lance les tests unitaires, comme les jobs `unit-tests`. |
+| **`make coverage`** | Lance les tests avec la couverture et ses seuils. |
+| **`make test-integration`** | Lance les tests d'intégration, Docker démarré. |
+| **`make lint-docker`** | Contrôle les Dockerfile, comme le job `hadolint`. |
+| **`make image-test`** | Contrôle les images, comme le job `image-tests`. |
+| **`make istio-scan`** | Analyse les images d'Istio, comme le job `istio-scan`. |
+| **`make quality`** | Enchaîne les contrôles statiques. |
 
 !!! note "À savoir"
     Dans GitLab, le menu **Build**, puis **Pipelines**, liste les pipelines et leur résultat. Le menu **Build**, puis

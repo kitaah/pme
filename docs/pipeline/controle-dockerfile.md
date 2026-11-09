@@ -19,7 +19,7 @@ image de base sans version, exécution avec les droits `root`, commande mal form
 | Contrôle | Ce qu'il voit | Ce qu'il ne voit pas |
 |---|---|---|
 | **Dockerfile (Hadolint)** | Le texte du Dockerfile, avant toute construction. | L'image réellement obtenue. |
-| [Images Docker](tests-images.md) | L'image construite : utilisateur, fichiers présents, paquets vulnérables. | Les pratiques d'écriture qui n'ont pas d'effet visible dans l'image. |
+| **[Images Docker](tests-images.md)** | L'image construite : utilisateur, fichiers présents, paquets vulnérables. | Les pratiques d'écriture qui n'ont pas d'effet visible dans l'image. |
 
 Hadolint est rapide : il ne démarre pas Docker et ne construit rien. Il signale un défaut en quelques secondes, là où
 les tests des images n'interviennent qu'après une construction complète.

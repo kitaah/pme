@@ -100,8 +100,8 @@ donne dans l'onglet Role mapping :
 
 | Rôle à attribuer | Ce que l'utilisateur peut faire |
 |---|---|
-| `membre` | Déposer une annonce et consulter les siennes. |
-| `membre` et `moderateur` | En plus : consulter la file de modération. |
+| **`membre`** | Déposer une annonce et consulter les siennes. |
+| **`membre`** et **`moderateur`** | En plus : consulter la file de modération. |
 
 Ces comptes sont conservés tant que la base de Keycloak n'est pas réinitialisée.
 
@@ -113,12 +113,12 @@ Ces comptes sont conservés tant que la base de Keycloak n'est pas réinitialis�
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/03-keycloak.yaml` | Déploie Keycloak dans le cluster et fixe son adresse publique. |
-| `k8s/03-keycloak-admin-job.yaml` | Crée le compte administrateur permanent, puis supprime le compte temporaire. |
-| `k8s/config/realm-pme.json` | Décrit le realm : rôles et applications autorisées. |
-| `api/src/auth/jwt.strategy.ts` | Vérifie la signature, l'émetteur et l'application du jeton. |
-| `frontend/src/auth.ts` | Redirige vers la page de connexion et renouvelle le jeton. |
-| `.env` | Contient l'identifiant et le mot de passe de l'administrateur. Ce fichier est exclu de Git. |
+| **`k8s/03-keycloak.yaml`** | Déploie Keycloak dans le cluster et fixe son adresse publique. |
+| **`k8s/03-keycloak-admin-job.yaml`** | Crée le compte administrateur permanent, puis supprime le compte temporaire. |
+| **`k8s/config/realm-pme.json`** | Décrit le realm : rôles et applications autorisées. |
+| **`api/src/auth/jwt.strategy.ts`** | Vérifie la signature, l'émetteur et l'application du jeton. |
+| **`frontend/src/auth.ts`** | Redirige vers la page de connexion et renouvelle le jeton. |
+| **`.env`** | Contient l'identifiant et le mot de passe de l'administrateur. Ce fichier est exclu de Git. |
 
 ## Commandes essentielles
 
@@ -126,10 +126,10 @@ Ces comptes sont conservés tant que la base de Keycloak n'est pas réinitialis�
 
 | Commande | Description |
 |---|---|
-| `make deploy` | Installe Keycloak avec le reste de la plateforme. |
-| `make keycloak` | Ouvre Keycloak dans le navigateur. |
-| `make logs-keycloak` | Affiche le journal de Keycloak, mis à jour en direct. |
-| `make pods` | Indique si Keycloak est prêt. |
+| **`make deploy`** | Installe Keycloak avec le reste de la plateforme. |
+| **`make keycloak`** | Ouvre Keycloak dans le navigateur. |
+| **`make logs-keycloak`** | Affiche le journal de Keycloak, mis à jour en direct. |
+| **`make pods`** | Indique si Keycloak est prêt. |
 
 !!! note "À savoir"
     Keycloak met environ quarante secondes à démarrer, car il prépare sa configuration à chaque lancement. Attendre

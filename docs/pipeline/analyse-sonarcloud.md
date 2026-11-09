@@ -78,11 +78,11 @@ Mesures relevées le 7 novembre 2026, sur la branche principale (1,8 millier de 
 
 | Fichier ou dossier | Description |
 |---|---|
-| `sonar-project.properties` | Configure l'analyse : sources, tests, exclusions et rapports de couverture. |
-| `.gitlab-ci.yml` | Définit le job `sonar`. |
-| `api/coverage/lcov.info` | Rapport de couverture de l'API, produit par les tests unitaires. |
-| `moderation-service/coverage/lcov.info` | Rapport de couverture de la modération. |
-| `frontend/coverage/lcov.info` | Rapport de couverture de l'interface. |
+| **`sonar-project.properties`** | Configure l'analyse : sources, tests, exclusions et rapports de couverture. |
+| **`.gitlab-ci.yml`** | Définit le job `sonar`. |
+| **`api/coverage/lcov.info`** | Rapport de couverture de l'API, produit par les tests unitaires. |
+| **`moderation-service/coverage/lcov.info`** | Rapport de couverture de la modération. |
+| **`frontend/coverage/lcov.info`** | Rapport de couverture de l'interface. |
 
 ## Commandes essentielles
 
@@ -90,8 +90,8 @@ Mesures relevées le 7 novembre 2026, sur la branche principale (1,8 millier de 
 
 | Commande | Description |
 |---|---|
-| `make coverage` | Produit les rapports de couverture des trois modules. |
-| `make sonar` | Lance l'analyse depuis le poste, avec `sonar-scanner`. |
+| **`make coverage`** | Produit les rapports de couverture des trois modules. |
+| **`make sonar`** | Lance l'analyse depuis le poste, avec `sonar-scanner`. |
 
 !!! tip "Astuce"
     Les variables `SONAR_TOKEN` et `SONAR_HOST_URL` sont définies dans les réglages CI/CD de GitLab. La première est

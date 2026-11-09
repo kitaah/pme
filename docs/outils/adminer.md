@@ -44,10 +44,10 @@ Les quatre bases accessibles sont les suivantes :
 
 | Base | Contenu |
 |---|---|
-| `pme` | Les annonces déposées par les membres. |
-| `moderation` | La file des annonces à relire. |
-| `keycloak` | Les comptes, les rôles et les sessions. |
-| `grafana` | Les réglages des tableaux de bord. |
+| **`pme`** | Les annonces déposées par les membres. |
+| **`moderation`** | La file des annonces à relire. |
+| **`keycloak`** | Les comptes, les rôles et les sessions. |
+| **`grafana`** | Les réglages des tableaux de bord. |
 
 !!! note "À savoir"
     Adminer permet aussi de modifier et de supprimer des lignes. Une modification faite directement dans la base
@@ -62,9 +62,9 @@ Les quatre bases accessibles sont les suivantes :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/07-adminer.yaml` | Déploie Adminer dans le cluster. |
-| `k8s/08-ingress.yaml` | Rend l'interface accessible sur `adminer.localhost`. |
-| `.env` | Contient l'identifiant et le mot de passe à saisir sur la page de connexion. |
+| **`k8s/07-adminer.yaml`** | Déploie Adminer dans le cluster. |
+| **`k8s/08-ingress.yaml`** | Rend l'interface accessible sur `adminer.localhost`. |
+| **`.env`** | Contient l'identifiant et le mot de passe à saisir sur la page de connexion. |
 
 ## Commandes essentielles
 
@@ -72,10 +72,10 @@ Les quatre bases accessibles sont les suivantes :
 
 | Commande | Description |
 |---|---|
-| `make deploy` | Installe Adminer avec le reste de la plateforme. |
-| `make adminer` | Ouvre Adminer dans le navigateur. |
-| `make db-listings` | Affiche les annonces enregistrées, sans passer par le navigateur. |
-| `make pods` | Indique si Adminer est prêt. |
+| **`make deploy`** | Installe Adminer avec le reste de la plateforme. |
+| **`make adminer`** | Ouvre Adminer dans le navigateur. |
+| **`make db-listings`** | Affiche les annonces enregistrées, sans passer par le navigateur. |
+| **`make pods`** | Indique si Adminer est prêt. |
 
 Pour se connecter :
 

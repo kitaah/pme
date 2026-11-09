@@ -111,12 +111,12 @@ de gravité `info` et `style` s'affichent, mais ne bloquent pas. Voici quelques 
 
 | Règle | Ce qu'elle vérifie | Pourquoi c'est important |
 |---|---|---|
-| `DL3006` | L'image de base porte une version explicite (`node:24-alpine`, et non `node`). | Sans version, la même construction peut donner un résultat différent d'un jour à l'autre. |
-| `DL3002` | Le dernier utilisateur du Dockerfile n'est pas `root`. | Un conteneur qui s'exécute en `root` donne à un attaquant des droits étendus s'il en prend le contrôle. |
-| `DL3020` | Les fichiers sont copiés avec `COPY` plutôt qu'avec `ADD`. | `ADD` a des effets cachés (téléchargement, décompression) qui surprennent. |
-| `DL3025` | `CMD` est écrit sous forme de liste JSON : `["node", "main.js"]`. | Sans cette forme, le programme passe par un shell et ne reçoit pas toujours le signal d'arrêt de Kubernetes. |
-| `DL3008` | Les paquets installés avec `apt-get` ont une version précisée. | Une mise à jour imprévue d'un paquet ne peut plus casser l'image. |
-| `DL4006` | Un `RUN` qui contient un tube (`|`) active l'option `pipefail`. | Sans elle, l'échec de la première commande du tube passe inaperçu et la construction continue. |
+| **`DL3006`** | L'image de base porte une version explicite (`node:24-alpine`, et non `node`). | Sans version, la même construction peut donner un résultat différent d'un jour à l'autre. |
+| **`DL3002`** | Le dernier utilisateur du Dockerfile n'est pas `root`. | Un conteneur qui s'exécute en `root` donne à un attaquant des droits étendus s'il en prend le contrôle. |
+| **`DL3020`** | Les fichiers sont copiés avec `COPY` plutôt qu'avec `ADD`. | `ADD` a des effets cachés (téléchargement, décompression) qui surprennent. |
+| **`DL3025`** | `CMD` est écrit sous forme de liste JSON : `["node", "main.js"]`. | Sans cette forme, le programme passe par un shell et ne reçoit pas toujours le signal d'arrêt de Kubernetes. |
+| **`DL3008`** | Les paquets installés avec `apt-get` ont une version précisée. | Une mise à jour imprévue d'un paquet ne peut plus casser l'image. |
+| **`DL4006`** | Un `RUN` qui contient un tube (`|`) active l'option `pipefail`. | Sans elle, l'échec de la première commande du tube passe inaperçu et la construction continue. |
 
 La commande `make lint-docker` lance Hadolint sur les quatre Dockerfile du projet : l'API, le service de modération,
 l'interface et la documentation. Ils passent le contrôle sans alerte : image de base versionnée, construction en
@@ -174,22 +174,22 @@ Le cluster exécute les composants suivants. Tous sont dans le namespace `pme`, 
 
 | Groupe | Composants | Rôle |
 |---|---|---|
-| Applications | Interface ([React](react.md)), API et service de modération ([NestJS](nestjs.md)) | Affichent le site, appliquent les règles métier et modèrent les contenus. |
-| Données et messagerie | [PostgreSQL](postgresql.md), [NATS](nats.md) | Stockent les données et transmettent les messages entre l'API et la modération. |
-| Authentification | [Keycloak](keycloak.md) | Gère les comptes, la connexion et les rôles. |
-| Observabilité | [Prometheus](prometheus.md), [Loki](loki.md), [Alloy](alloy.md), [Grafana](grafana.md) | Collectent, conservent et affichent les mesures et les journaux. |
-| Administration | [Adminer](adminer.md) | Permet de consulter les bases depuis un navigateur. |
-| Maillage | [Istio](istio.md) | Chiffre en mTLS les échanges entre pods, sans modifier les applications. |
+| **Applications** | Interface ([React](react.md)), API et service de modération ([NestJS](nestjs.md)) | Affichent le site, appliquent les règles métier et modèrent les contenus. |
+| **Données et messagerie** | [PostgreSQL](postgresql.md), [NATS](nats.md) | Stockent les données et transmettent les messages entre l'API et la modération. |
+| **Authentification** | [Keycloak](keycloak.md) | Gère les comptes, la connexion et les rôles. |
+| **Observabilité** | [Prometheus](prometheus.md), [Loki](loki.md), [Alloy](alloy.md), [Grafana](grafana.md) | Collectent, conservent et affichent les mesures et les journaux. |
+| **Administration** | [Adminer](adminer.md) | Permet de consulter les bases depuis un navigateur. |
+| **Maillage** | [Istio](istio.md) | Chiffre en mTLS les échanges entre pods, sans modifier les applications. |
 
 Le cluster est créé avec les paramètres suivants :
 
 | Paramètre | Valeur | Explication |
 |---|---|---|
-| Pilote | `docker` | Le nœud fonctionne dans un conteneur Docker, sans machine virtuelle. |
-| Mémoire | 5 120 Mo | Mémoire vive allouée au cluster. La variable `MINIKUBE_MEMORY` permet de la modifier. Avec Istio, la plateforme occupe environ 3,2 Go au repos : 5 120 Mo laissent de la marge aux pics (démarrage de Keycloak, montée de l'autoscaler). |
-| Processeurs | 2 cœurs | Puissance de calcul allouée au cluster. La variable `MINIKUBE_CPUS` permet de la modifier. |
-| Ports publiés | 80 et 443 sur `127.0.0.1` | L'adresse `127.0.0.1` désigne l'ordinateur lui-même. L'ingress est ainsi joignable depuis le navigateur, sans redirection de port. |
-| Addons activés | `metrics-server` | Mesure la charge des pods, ce qui permet l'ajustement automatique de leur nombre. Le point d'entrée du cluster, Traefik, n'est pas un addon : il est installé avec Helm. |
+| **Pilote** | `docker` | Le nœud fonctionne dans un conteneur Docker, sans machine virtuelle. |
+| **Mémoire** | 5 120 Mo | Mémoire vive allouée au cluster. La variable `MINIKUBE_MEMORY` permet de la modifier. Avec Istio, la plateforme occupe environ 3,2 Go au repos : 5 120 Mo laissent de la marge aux pics (démarrage de Keycloak, montée de l'autoscaler). |
+| **Processeurs** | 2 cœurs | Puissance de calcul allouée au cluster. La variable `MINIKUBE_CPUS` permet de la modifier. |
+| **Ports publiés** | 80 et 443 sur `127.0.0.1` | L'adresse `127.0.0.1` désigne l'ordinateur lui-même. L'ingress est ainsi joignable depuis le navigateur, sans redirection de port. |
+| **Addons activés** | `metrics-server` | Mesure la charge des pods, ce qui permet l'ajustement automatique de leur nombre. Le point d'entrée du cluster, Traefik, n'est pas un addon : il est installé avec Helm. |
 
 !!! note "À savoir"
     Le cluster ne compte qu'un nœud. Les réplicas d'une application s'exécutent donc sur la même machine : ils
@@ -200,21 +200,21 @@ Le cluster est créé avec les paramètres suivants :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `Makefile` | Regroupe les commandes de création du cluster, de construction des images et de déploiement. |
-| `k8s/` | Contient les manifestes, à raison d'un fichier par composant à déployer. |
-| `k8s/kustomization.yaml` | Liste les manifestes déployés ensemble et génère les ConfigMaps à partir de `k8s/config/`. |
-| `k8s/namespace.yaml` | Crée le namespace `pme`, lui applique la règle de sécurité `baseline` et l'enrôle dans le maillage Istio. |
-| `k8s/istio/` | Contient les réglages des charts Helm d'Istio (voir [Istio](istio.md)). |
-| `k8s/16-mesh-mtls.yaml` | Impose le mode strict du maillage : toute connexion hors mTLS est refusée. |
-| `k8s/config/` | Contient les fichiers de configuration fournis aux composants : PostgreSQL, NATS, Grafana, Alloy et interface. |
-| `k8s/14-pme-secrets-sealed.yaml` | Contient les mots de passe chiffrés, sous une forme qui peut être versionnée dans Git sans risque (voir [Sealed Secrets](sealed-secrets.md)). |
-| `k8s/11-autoscaling.yaml` | Définit, pour l'interface, l'API et la modération, l'autoscaling et le nombre minimal de réplicas disponibles. |
-| `api/Dockerfile` | Décrit la fabrication de l'image de l'API. |
-| `moderation-service/Dockerfile` | Décrit la fabrication de l'image du service de modération. |
-| `frontend/Dockerfile` | Décrit la fabrication de l'image de l'interface. |
-| `docker/docs/Dockerfile` | Décrit la fabrication de l'image de la documentation, y compris l'installation de l'outil de schémas D2. |
-| `.hadolint.yaml` | Règle le niveau à partir duquel Hadolint signale un échec : le niveau « warning ». |
-| `.env` | Contient les mots de passe de démonstration, que `make seal` chiffre. Ce fichier est exclu de Git. |
+| **`Makefile`** | Regroupe les commandes de création du cluster, de construction des images et de déploiement. |
+| **`k8s/`** | Contient les manifestes, à raison d'un fichier par composant à déployer. |
+| **`k8s/kustomization.yaml`** | Liste les manifestes déployés ensemble et génère les ConfigMaps à partir de `k8s/config/`. |
+| **`k8s/namespace.yaml`** | Crée le namespace `pme`, lui applique la règle de sécurité `baseline` et l'enrôle dans le maillage Istio. |
+| **`k8s/istio/`** | Contient les réglages des charts Helm d'Istio (voir [Istio](istio.md)). |
+| **`k8s/16-mesh-mtls.yaml`** | Impose le mode strict du maillage : toute connexion hors mTLS est refusée. |
+| **`k8s/config/`** | Contient les fichiers de configuration fournis aux composants : PostgreSQL, NATS, Grafana, Alloy et interface. |
+| **`k8s/14-pme-secrets-sealed.yaml`** | Contient les mots de passe chiffrés, sous une forme qui peut être versionnée dans Git sans risque (voir [Sealed Secrets](sealed-secrets.md)). |
+| **`k8s/11-autoscaling.yaml`** | Définit, pour l'interface, l'API et la modération, l'autoscaling et le nombre minimal de réplicas disponibles. |
+| **`api/Dockerfile`** | Décrit la fabrication de l'image de l'API. |
+| **`moderation-service/Dockerfile`** | Décrit la fabrication de l'image du service de modération. |
+| **`frontend/Dockerfile`** | Décrit la fabrication de l'image de l'interface. |
+| **`docker/docs/Dockerfile`** | Décrit la fabrication de l'image de la documentation, y compris l'installation de l'outil de schémas D2. |
+| **`.hadolint.yaml`** | Règle le niveau à partir duquel Hadolint signale un échec : le niveau « warning ». |
+| **`.env`** | Contient les mots de passe de démonstration, que `make seal` chiffre. Ce fichier est exclu de Git. |
 
 ## Commandes essentielles
 
@@ -222,17 +222,17 @@ Le cluster est créé avec les paramètres suivants :
 
 | Commande | Description |
 |---|---|
-| `make minikube-up` | Crée et démarre le cluster, publie les ports 80 et 443, installe l'ingress Traefik avec Helm, relève si besoin la limite `inotify` de l'ordinateur, installe le maillage Istio, active metrics-server, installe cert-manager et extrait le certificat de l'autorité de certification locale. |
-| `make inotify` | Relève la limite `inotify` de l'ordinateur si elle est trop basse (mot de passe `sudo` demandé). Elle est nécessaire à Istio. |
-| `make istio` | Installe ou met à jour le maillage Istio sur un cluster existant, sans le recréer. |
-| `make mesh-check` | Vérifie le chiffrement entre pods (voir [Istio](istio.md)). |
-| `make image` | Construit les trois images (API, modération, interface) directement dans le cluster. |
-| `make lint-docker` | Lance Hadolint sur les quatre Dockerfile du projet. La commande échoue dès qu'une règle de gravité `warning` ou `error` est enfreinte. |
-| `make deploy` | Applique les manifestes et déploie toute la plateforme. |
-| `make pods` | Affiche l'état de chaque pod. |
-| `make redeploy` | Reconstruit les images, puis redémarre progressivement l'API, la modération et l'interface pour appliquer une modification du code. |
-| `make undeploy` | Supprime le namespace `pme`, donc la plateforme et ses données. |
-| `make minikube-down` | Arrête le cluster sans le supprimer. |
+| **`make minikube-up`** | Crée et démarre le cluster, publie les ports 80 et 443, installe l'ingress Traefik avec Helm, relève si besoin la limite `inotify` de l'ordinateur, installe le maillage Istio, active metrics-server, installe cert-manager et extrait le certificat de l'autorité de certification locale. |
+| **`make inotify`** | Relève la limite `inotify` de l'ordinateur si elle est trop basse (mot de passe `sudo` demandé). Elle est nécessaire à Istio. |
+| **`make istio`** | Installe ou met à jour le maillage Istio sur un cluster existant, sans le recréer. |
+| **`make mesh-check`** | Vérifie le chiffrement entre pods (voir [Istio](istio.md)). |
+| **`make image`** | Construit les trois images (API, modération, interface) directement dans le cluster. |
+| **`make lint-docker`** | Lance Hadolint sur les quatre Dockerfile du projet. La commande échoue dès qu'une règle de gravité `warning` ou `error` est enfreinte. |
+| **`make deploy`** | Applique les manifestes et déploie toute la plateforme. |
+| **`make pods`** | Affiche l'état de chaque pod. |
+| **`make redeploy`** | Reconstruit les images, puis redémarre progressivement l'API, la modération et l'interface pour appliquer une modification du code. |
+| **`make undeploy`** | Supprime le namespace `pme`, donc la plateforme et ses données. |
+| **`make minikube-down`** | Arrête le cluster sans le supprimer. |
 
 Lors du premier démarrage, l'enchaînement est le suivant :
 
@@ -242,8 +242,8 @@ Lors du premier démarrage, l'enchaînement est le suivant :
 4. `make deploy` déploie la plateforme.
 5. `make pods` permet de suivre le démarrage. Keycloak met environ une minute à devenir disponible.
 
-!!! note "Limite `inotify`"
-    Minikube partage le noyau de l'ordinateur. Avec Istio, la limite d'instances `inotify` par défaut (128) est
+!!! note "À savoir"
+    **Limite `inotify`.** Minikube partage le noyau de l'ordinateur. Avec Istio, la limite d'instances `inotify` par défaut (128) est
     dépassée et ztunnel plante avec l'erreur `Too many open files`. `make istio` lance donc d'abord `make inotify`, qui
     porte la limite à 1024 de façon permanente. Ce réglage concerne Linux ; sous un autre système, il faut ajuster la
     limite équivalente à la main.

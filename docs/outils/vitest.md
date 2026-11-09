@@ -97,11 +97,11 @@ Sa configuration se trouve dans le bloc `test` de `vite.config.ts` :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `frontend/vite.config.ts` | Contient la configuration des tests et de la couverture. |
-| `frontend/src/test/setup.ts` | Prépare chaque test : vérifications dédiées à l'interface, nettoyage de la page. |
-| `frontend/src/**/*.test.ts(x)` | Les tests, placés à côté des composants qu'ils vérifient. |
-| `frontend/coverage/lcov.info` | Rapport de couverture, lu par SonarCloud. |
-| `frontend/reports/junit.xml` | Rapport JUnit, affiché par GitLab. |
+| **`frontend/vite.config.ts`** | Contient la configuration des tests et de la couverture. |
+| **`frontend/src/test/setup.ts`** | Prépare chaque test : vérifications dédiées à l'interface, nettoyage de la page. |
+| **`frontend/src/**/*.test.ts(x)`** | Les tests, placés à côté des composants qu'ils vérifient. |
+| **`frontend/coverage/lcov.info`** | Rapport de couverture, lu par SonarCloud. |
+| **`frontend/reports/junit.xml`** | Rapport JUnit, affiché par GitLab. |
 
 ## Commandes essentielles
 
@@ -109,10 +109,10 @@ Sa configuration se trouve dans le bloc `test` de `vite.config.ts` :
 
 | Commande | Description |
 |---|---|
-| `npm test` | Lance tous les tests une fois, puis s'arrête. |
-| `npm run test:watch` | Relance les tests concernés à chaque modification d'un fichier. |
-| `npm run test:cov` | Lance les tests avec la couverture et ses seuils. |
-| `npx vitest run src/components/Header.test.tsx` | Ne lance qu'un seul fichier de test. |
+| **`npm test`** | Lance tous les tests une fois, puis s'arrête. |
+| **`npm run test:watch`** | Relance les tests concernés à chaque modification d'un fichier. |
+| **`npm run test:cov`** | Lance les tests avec la couverture et ses seuils. |
+| **`npx vitest run`**<br>**`src/components/Header.test.tsx`** | Ne lance qu'un seul fichier de test. |
 
 Depuis la racine du projet, `make test` lance les tests des trois modules et `make coverage` leur couverture.
 

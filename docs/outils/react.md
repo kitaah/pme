@@ -128,28 +128,28 @@ La page se compose des éléments suivants :
 
 | Composant | Rôle |
 |---|---|
-| `App` | Attend la fin de la connexion, récupère l'utilisateur, puis assemble la page. |
-| `Header` | Affiche le nom de l'utilisateur, ses rôles et le bouton de déconnexion. |
-| `ListingForm` | Formulaire de dépôt : titre, description, état de l'objet. Il affiche les erreurs renvoyées par l'API. |
-| `MyListings` | Liste les annonces du membre, avec leur statut de modération. |
-| `components/ui/` | Composants de base issus de shadcn/ui, dont le bouton. |
+| **`App`** | Attend la fin de la connexion, récupère l'utilisateur, puis assemble la page. |
+| **`Header`** | Affiche le nom de l'utilisateur, ses rôles et le bouton de déconnexion. |
+| **`ListingForm`** | Formulaire de dépôt : titre, description, état de l'objet. Il affiche les erreurs renvoyées par l'API. |
+| **`MyListings`** | Liste les annonces du membre, avec leur statut de modération. |
+| **`components/ui/`** | Composants de base issus de shadcn/ui, dont le bouton. |
 
 ## Fichiers et dossiers principaux
 
 | Fichier ou dossier | Description |
 |---|---|
-| `frontend/src/main.tsx` | Point d'entrée : lance l'application dans la page. |
-| `frontend/src/App.tsx` | Page principale, qui assemble les composants. |
-| `frontend/src/components/` | Les composants de la page : bandeau, formulaire, liste des annonces. |
-| `frontend/src/components/ui/` | Les composants de base de shadcn/ui. |
-| `frontend/src/api.ts` | Prépare les appels à l'API et y joint le jeton de l'utilisateur. |
-| `frontend/src/auth.ts` | Gère la connexion à Keycloak et le renouvellement du jeton. |
-| `frontend/src/config.ts` | Lit la configuration fournie au démarrage, dont l'adresse de Keycloak. |
-| `frontend/src/styles.css` | Déclare la palette du projet et les styles communs. |
-| `frontend/src/theme.test.ts` | Vérifie le contraste de chaque association de couleurs utilisée. |
-| `frontend/nginx.conf` | Configure le serveur qui envoie l'interface au navigateur. |
-| `frontend/package.json` | Liste les dépendances et les commandes de l'interface. |
-| `frontend/Dockerfile` | Décrit la fabrication de l'image Docker de l'interface. |
+| **`frontend/src/main.tsx`** | Point d'entrée : lance l'application dans la page. |
+| **`frontend/src/App.tsx`** | Page principale, qui assemble les composants. |
+| **`frontend/src/components/`** | Les composants de la page : bandeau, formulaire, liste des annonces. |
+| **`frontend/src/components/ui/`** | Les composants de base de shadcn/ui. |
+| **`frontend/src/api.ts`** | Prépare les appels à l'API et y joint le jeton de l'utilisateur. |
+| **`frontend/src/auth.ts`** | Gère la connexion à Keycloak et le renouvellement du jeton. |
+| **`frontend/src/config.ts`** | Lit la configuration fournie au démarrage, dont l'adresse de Keycloak. |
+| **`frontend/src/styles.css`** | Déclare la palette du projet et les styles communs. |
+| **`frontend/src/theme.test.ts`** | Vérifie le contraste de chaque association de couleurs utilisée. |
+| **`frontend/nginx.conf`** | Configure le serveur qui envoie l'interface au navigateur. |
+| **`frontend/package.json`** | Liste les dépendances et les commandes de l'interface. |
+| **`frontend/Dockerfile`** | Décrit la fabrication de l'image Docker de l'interface. |
 
 ## Commandes essentielles
 
@@ -157,12 +157,12 @@ La page se compose des éléments suivants :
 
 | Commande | Description |
 |---|---|
-| `make install` | Installe les dépendances. |
-| `make frontend` | Affiche l'interface sur <http://localhost:5173> et la met à jour à chaque modification du code. |
-| `make test` | Lance les tests automatiques, dont le contrôle des contrastes. |
-| `make lint` | Signale les erreurs probables et les écarts aux règles d'écriture de l'équipe. |
-| `make format` | Met le code en forme selon les règles du projet. |
-| `make image-frontend` | Construit l'image Docker de l'interface dans le cluster. |
+| **`make install`** | Installe les dépendances. |
+| **`make frontend`** | Affiche l'interface sur <http://localhost:5173> et la met à jour à chaque modification du code. |
+| **`make test`** | Lance les tests automatiques, dont le contrôle des contrastes. |
+| **`make lint`** | Signale les erreurs probables et les écarts aux règles d'écriture de l'équipe. |
+| **`make format`** | Met le code en forme selon les règles du projet. |
+| **`make image-frontend`** | Construit l'image Docker de l'interface dans le cluster. |
 
 !!! note "À savoir"
     L'interface exige Node 24 ou une version plus récente, celle des images Docker. Avec nvm : `nvm install 24`, puis

@@ -90,8 +90,8 @@ Les deux analyses se répartissent ainsi :
 
 | Analyse | Ce qu'elle examine | Ce qu'elle ne voit pas |
 |---|---|---|
-| Images | Les paquets réellement présents dans l'image livrée. | Les outils de développement, absents de l'image. |
-| Dépendances | Les dépendances déclarées, outils de développement compris. | Le système de l'image, comme Alpine ou nginx. |
+| **Images** | Les paquets réellement présents dans l'image livrée. | Les outils de développement, absents de l'image. |
+| **Dépendances** | Les dépendances déclarées, outils de développement compris. | Le système de l'image, comme Alpine ou nginx. |
 
 !!! note "À savoir"
     Trivy sait aussi chercher des secrets et des erreurs de configuration. Ces fonctions ne sont pas activées ici :
@@ -101,12 +101,12 @@ Les deux analyses se répartissent ainsi :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `.trivyignore` | Liste les exceptions : identifiant de la faille, justification et date d'expiration. |
-| `.gitlab-ci.yml` | Définit les deux analyses, dans les jobs des images et des dépendances. |
-| `docker-bake.hcl` | Décrit la construction des images analysées. |
-| `api/Dockerfile` | Décrit la fabrication de l'image de l'API, dont son image de base. |
-| `moderation-service/Dockerfile` | Même rôle pour le service de modération. |
-| `frontend/Dockerfile` | Même rôle pour l'interface. |
+| **`.trivyignore`** | Liste les exceptions : identifiant de la faille, justification et date d'expiration. |
+| **`.gitlab-ci.yml`** | Définit les deux analyses, dans les jobs des images et des dépendances. |
+| **`docker-bake.hcl`** | Décrit la construction des images analysées. |
+| **`api/Dockerfile`** | Décrit la fabrication de l'image de l'API, dont son image de base. |
+| **`moderation-service/Dockerfile`** | Même rôle pour le service de modération. |
+| **`frontend/Dockerfile`** | Même rôle pour l'interface. |
 
 ## Commandes essentielles
 
@@ -114,10 +114,10 @@ Les deux analyses se répartissent ainsi :
 
 | Commande | Description |
 |---|---|
-| `make image` | Construit les images à analyser. |
-| `make image-test` | Contrôle la structure des images, puis leurs failles. |
-| `make audit` | Recherche les failles des dépendances avec l'outil fourni par `npm`. |
-| `trivy image --severity HIGH,CRITICAL --ignore-unfixed pme-api:dev` | Analyse l'image de l'API seule. |
+| **`make image`** | Construit les images à analyser. |
+| **`make image-test`** | Contrôle la structure des images, puis leurs failles. |
+| **`make audit`** | Recherche les failles des dépendances avec l'outil fourni par `npm`. |
+| **`trivy image --severity HIGH,CRITICAL`**<br>**`--ignore-unfixed pme-api:dev`** | Analyse l'image de l'API seule. |
 
 Pour corriger une faille :
 

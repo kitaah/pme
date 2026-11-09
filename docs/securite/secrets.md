@@ -135,10 +135,10 @@ installer, initialiser, desceller et sauvegarder. Pour huit valeurs fixes de dé
 
 | Commande | Description |
 |---|---|
-| `make env` | Crée `.env` depuis son modèle s'il manque, sans jamais l'écraser. |
-| `make seal` | Rechiffre `.env` dans le fichier scellé, à versionner ensuite. |
-| `make secrets-scan` | Cherche des secrets oubliés dans tout le dépôt. |
-| `git check-ignore -v .env` | Confirme que `.env` est bien ignoré par Git. |
+| **`make env`** | Crée `.env` depuis son modèle s'il manque, sans jamais l'écraser. |
+| **`make seal`** | Rechiffre `.env` dans le fichier scellé, à versionner ensuite. |
+| **`make secrets-scan`** | Cherche des secrets oubliés dans tout le dépôt. |
+| **`git check-ignore -v .env`** | Confirme que `.env` est bien ignoré par Git. |
 
 !!! warning "Attention"
     Un secret qui a été poussé dans le dépôt, même retiré au commit suivant, doit être considéré comme compromis et
@@ -152,12 +152,12 @@ installer, initialiser, desceller et sauvegarder. Pour huit valeurs fixes de dé
 
 | Fichier ou dossier | Description |
 |---|---|
-| `env.example` | Modèle des variables attendues, avec des valeurs de démonstration. |
-| `.env` | Les vraies valeurs, sur l'ordinateur, jamais versionnées. |
-| `k8s/14-pme-secrets-sealed.yaml` | Les huit secrets chiffrés, versionnés dans Git. |
-| `Makefile`, cible `sealed-secrets` | Installe le contrôleur, à une version épinglée. |
-| `.gitleaks.toml` | Règles de recherche de secrets et exceptions assumées. |
-| `Makefile`, cibles `env`, `seal` et `secrets-scan` | Création de `.env`, scellement et recherche de secrets. |
+| **`env.example`** | Modèle des variables attendues, avec des valeurs de démonstration. |
+| **`.env`** | Les vraies valeurs, sur l'ordinateur, jamais versionnées. |
+| **`k8s/14-pme-secrets-sealed.yaml`** | Les huit secrets chiffrés, versionnés dans Git. |
+| **`Makefile`**<br>(cible **`sealed-secrets`**) | Installe le contrôleur, à une version épinglée. |
+| **`.gitleaks.toml`** | Règles de recherche de secrets et exceptions assumées. |
+| **`Makefile`**<br>(cibles **`env`**, **`seal`**<br>et **`secrets-scan`**) | Création de `.env`, scellement et recherche de secrets. |
 
 ## Pour aller plus loin
 

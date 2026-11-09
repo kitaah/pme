@@ -118,15 +118,15 @@ autre site ou glissé dans un champ de saisie, est donc refusé, même si la pag
 
 | Directive | Effet |
 |---|---|
-| `default-src 'self'` | Par défaut, seules les ressources du site lui-même sont acceptées. |
-| `script-src 'self'` | Seuls les scripts du site sont exécutés. Aucun script écrit dans la page, aucune évaluation de texte en code. |
-| `style-src 'self'` | Seule la feuille de style du site est appliquée. Aucun style écrit dans la page. |
-| `img-src 'self' data:` | Les images viennent du site, ou sont intégrées directement dans le fichier. |
-| `connect-src 'self' https://keycloak.localhost` | Les appels réseau du navigateur ne peuvent viser que l'API et Keycloak. |
-| `object-src 'none'` | Aucun module externe (plugin) n'est accepté. |
-| `base-uri 'self'` | L'adresse de base des liens de la page ne peut pas être modifiée. |
-| `form-action 'self'` | Un formulaire ne peut être envoyé qu'au site lui-même. |
-| `frame-ancestors 'none'` | Aucun autre site ne peut afficher l'interface dans un cadre. |
+| **`default-src 'self'`** | Par défaut, seules les ressources du site lui-même sont acceptées. |
+| **`script-src 'self'`** | Seuls les scripts du site sont exécutés. Aucun script écrit dans la page, aucune évaluation de texte en code. |
+| **`style-src 'self'`** | Seule la feuille de style du site est appliquée. Aucun style écrit dans la page. |
+| **`img-src 'self' data:`** | Les images viennent du site, ou sont intégrées directement dans le fichier. |
+| **`connect-src 'self'`**<br>**`https://keycloak.localhost`** | Les appels réseau du navigateur ne peuvent viser que l'API et Keycloak. |
+| **`object-src 'none'`** | Aucun module externe (plugin) n'est accepté. |
+| **`base-uri 'self'`** | L'adresse de base des liens de la page ne peut pas être modifiée. |
+| **`form-action 'self'`** | Un formulaire ne peut être envoyé qu'au site lui-même. |
+| **`frame-ancestors 'none'`** | Aucun autre site ne peut afficher l'interface dans un cadre. |
 
 **Surface d'exposition réduite**
 
@@ -167,8 +167,8 @@ dans Keycloak, sans toucher aux données métier.
 
 | Commande | Description |
 |---|---|
-| `make test-integration` | Rejoue les cas de validation et d'autorisation avec une vraie base. |
-| `curl -k -I https://pme.localhost/` | Affiche les en-têtes de sécurité posés par nginx, dont `content-security-policy`. |
+| **`make test-integration`** | Rejoue les cas de validation et d'autorisation avec une vraie base. |
+| **`curl -k -I https://pme.localhost/`** | Affiche les en-têtes de sécurité posés par nginx, dont `content-security-policy`. |
 
 !!! tip "Astuce"
     Pour vérifier la validation sans écrire de test, envoyer un dépôt avec un champ inventé. La réponse doit être un
@@ -178,12 +178,12 @@ dans Keycloak, sans toucher aux données métier.
 
 | Fichier ou dossier | Description |
 |---|---|
-| `api/src/main.ts` | Active Helmet, la validation stricte et la confiance limitée à un seul relais. |
-| `api/src/app.module.ts` | Déclare la limitation de débit, puis les gardes, dans leur ordre d'exécution. |
-| `api/src/listings/create-listing.dto.ts` | Les règles de validation du dépôt d'annonce. |
-| `api/src/common/problem-details.filter.ts` | Traduit toutes les erreurs au format RFC 9457. |
-| `api/src/listings/listings.controller.ts` | Borne le nombre de résultats et exige le rôle `membre`. |
-| `frontend/nginx.conf` | En-têtes de sécurité, dont la politique de contenu, et refus des adresses `/api/`. |
+| **`api/src/main.ts`** | Active Helmet, la validation stricte et la confiance limitée à un seul relais. |
+| **`api/src/app.module.ts`** | Déclare la limitation de débit, puis les gardes, dans leur ordre d'exécution. |
+| **`api/src/listings/create-listing.dto.ts`** | Les règles de validation du dépôt d'annonce. |
+| **`api/src/common/problem-details.filter.ts`** | Traduit toutes les erreurs au format RFC 9457. |
+| **`api/src/listings/listings.controller.ts`** | Borne le nombre de résultats et exige le rôle `membre`. |
+| **`frontend/nginx.conf`** | En-têtes de sécurité, dont la politique de contenu, et refus des adresses `/api/`. |
 
 ## Pour aller plus loin
 

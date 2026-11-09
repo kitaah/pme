@@ -85,9 +85,9 @@ Les règles d'ajustement sont les suivantes :
 
 | Application | Minimum | Maximum | Seuil de déclenchement | Disponible en maintenance |
 |---|---|---|---|---|
-| Site | 2 | 4 | 70 % du processeur demandé | 1 au minimum |
-| API | 2 | 4 | 70 % du processeur demandé | 1 au minimum |
-| Service de modération | 2 | 4 | 70 % du processeur demandé | 1 au minimum |
+| **Site** | 2 | 4 | 70 % du processeur demandé | 1 au minimum |
+| **API** | 2 | 4 | 70 % du processeur demandé | 1 au minimum |
+| **Service de modération** | 2 | 4 | 70 % du processeur demandé | 1 au minimum |
 
 !!! note "À savoir"
     La limitation de débit de l'API est comptée dans la mémoire de chaque pod. Avec plusieurs exemplaires, la limite
@@ -98,11 +98,11 @@ Les règles d'ajustement sont les suivantes :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/11-autoscaling.yaml` | Déclare l'autoscaler et le nombre minimal d'exemplaires de chaque application. |
-| `k8s/04-api.yaml` | Décrit l'API, ses ressources demandées et son service sans adresse. |
-| `k8s/05-moderation.yaml` | Décrit le service de modération, sur le même principe. |
-| `k8s/config/prometheus.yml` | Interroge chaque exemplaire séparément pour relever ses mesures. |
-| `Makefile` | Contient les commandes d'activation et de suivi. |
+| **`k8s/11-autoscaling.yaml`** | Déclare l'autoscaler et le nombre minimal d'exemplaires de chaque application. |
+| **`k8s/04-api.yaml`** | Décrit l'API, ses ressources demandées et son service sans adresse. |
+| **`k8s/05-moderation.yaml`** | Décrit le service de modération, sur le même principe. |
+| **`k8s/config/prometheus.yml`** | Interroge chaque exemplaire séparément pour relever ses mesures. |
+| **`Makefile`** | Contient les commandes d'activation et de suivi. |
 
 ## Commandes essentielles
 
@@ -110,10 +110,10 @@ Les règles d'ajustement sont les suivantes :
 
 | Commande | Description |
 |---|---|
-| `make metrics-server` | Active l'addon et attend qu'il soit prêt. |
-| `make hpa` | Affiche la charge mesurée, le seuil visé et le nombre d'exemplaires. |
-| `make pods` | Affiche tous les pods et leur état. |
-| `kubectl -n pme top pods` | Affiche la consommation de processeur et de mémoire de chaque pod. |
+| **`make metrics-server`** | Active l'addon et attend qu'il soit prêt. |
+| **`make hpa`** | Affiche la charge mesurée, le seuil visé et le nombre d'exemplaires. |
+| **`make pods`** | Affiche tous les pods et leur état. |
+| **`kubectl -n pme top pods`** | Affiche la consommation de processeur et de mémoire de chaque pod. |
 
 !!! note "À savoir"
     Les premières mesures arrivent environ une minute après l'activation. Pendant ce délai, `make hpa` affiche une

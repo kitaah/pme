@@ -78,10 +78,10 @@ Quatre fichiers l'utilisent :
 
 | Fichier | Ce qui est vérifié |
 |---|---|
-| `Header.test.tsx` | Nom et rôle affichés, déconnexion au clic. |
-| `ListingForm.test.tsx` | Erreurs de l'API affichées, dépôt confirmé et formulaire vidé. |
-| `MyListings.test.tsx` | Libellé de chaque statut, erreur affichée si l'API ne répond pas. |
-| `ui/button.test.tsx` | Variantes du bouton et rendu en lien. |
+| **`Header.test.tsx`** | Nom et rôle affichés, déconnexion au clic. |
+| **`ListingForm.test.tsx`** | Erreurs de l'API affichées, dépôt confirmé et formulaire vidé. |
+| **`MyListings.test.tsx`** | Libellé de chaque statut, erreur affichée si l'API ne répond pas. |
+| **`ui/button.test.tsx`** | Variantes du bouton et rendu en lien. |
 
 !!! note "À savoir"
     Les tests de l'interface sont commentés en « Given / Then » : une phrase décrit la situation de départ, une autre le
@@ -91,10 +91,10 @@ Quatre fichiers l'utilisent :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `frontend/src/test/setup.ts` | Active les vérificateurs de jest-dom et nettoie la page après chaque test. |
-| `frontend/src/components/*.test.tsx` | Les tests des composants de l'application. |
-| `frontend/src/components/ui/button.test.tsx` | Le test du composant de bouton issu de [shadcn/ui](shadcn-ui.md). |
-| `frontend/package.json` | Liste les trois modules dans les dépendances de développement. |
+| **`frontend/src/test/setup.ts`** | Active les vérificateurs de jest-dom et nettoie la page après chaque test. |
+| **`frontend/src/components/*.test.tsx`** | Les tests des composants de l'application. |
+| **`frontend/src/components/ui/`**<br>**`button.test.tsx`** | Le test du composant de bouton issu de [shadcn/ui](shadcn-ui.md). |
+| **`frontend/package.json`** | Liste les trois modules dans les dépendances de développement. |
 
 ## Commandes essentielles
 
@@ -102,9 +102,9 @@ Testing Library n'a pas de commande propre : elle se lance avec [Vitest](vitest.
 
 | Commande | Description |
 |---|---|
-| `npm test` | Lance tous les tests de l'interface. |
-| `npm run test:watch` | Relance les tests à chaque modification. |
-| `npx vitest run src/components/ListingForm.test.tsx` | Ne lance que les tests du formulaire. |
+| **`npm test`** | Lance tous les tests de l'interface. |
+| **`npm run test:watch`** | Relance les tests à chaque modification. |
+| **`npx vitest run`**<br>**`src/components/ListingForm.test.tsx`** | Ne lance que les tests du formulaire. |
 
 !!! warning "Attention"
     Le nettoyage de la page après chaque test est fait par `setup.ts`. Si ce fichier est retiré ou contourné, les
