@@ -90,10 +90,10 @@ sur les Dockerfile, Trivy sur les images et les dépendances, container-structur
 porte qualité de SonarCloud signale en plus les secrets oubliés et les failles du code.
 
 !!! note "À savoir"
-    Aucune mesure de cette section ne dépend d'une action manuelle au moment du déploiement. Tout est déclaré dans le
-    dépôt : les manifestes Kubernetes, la configuration de Keycloak et le fichier de la pipeline. Un déploiement depuis
-    un dépôt neuf reproduit donc exactement le même niveau de sécurité. Seul le maillage suppose un réglage de
-    l'ordinateur (la limite `inotify`), que `make inotify` applique, avec le mot de passe `sudo`.
+Aucune mesure de cette section ne dépend d'une action manuelle au moment du déploiement. Tout est déclaré dans le
+dépôt : les manifestes Kubernetes, la configuration de Keycloak et le fichier de la pipeline. Un déploiement depuis
+un dépôt neuf reproduit donc exactement le même niveau de sécurité. Seul le maillage suppose un réglage de
+l'ordinateur (la limite `inotify`), que `make inotify` applique, avec le mot de passe `sudo`.
 
 ## Ce qui n'est pas couvert
 
@@ -110,7 +110,7 @@ connus sont les suivants. Chacun est repris, avec son contexte, dans la page con
 | **Moyenne** | **Aucune journalisation des accès** | Les journaux applicatifs ne constituent pas une piste d'audit. | [Application](application.md) |
 | **Moyenne** | **Analyse des failles non planifiée** | Une faille publiée sans changement du code n'est vue qu'au contrôle suivant. | [Analyse des dépendances](../pipeline/analyse-dependances.md) |
 | **Moyenne** | **Aucun chiffrement au repos** | Les données de la base sont écrites en clair sur le disque du nœud. | [Chiffrement](chiffrement.md) |
-| **Moyenne** | **Composants du maillage privilégiés** | ztunnel et istio-cni s'exécutent avec des droits élevés sur le nœud, hors du durcissement appliqué aux pods du projet. | [Durcissement](durcissement.md) |
+| **Basse** | **Composants du maillage en root** | ztunnel et istio-cni gardent des droits élevés sur le nœud, inhérents au mode ambient. Ils sont isolés dans leur namespace, sous profil seccomp, et leurs images sont analysées. | [Durcissement](durcissement.md) |
 | **Moyenne** | **Valeurs de démonstration faibles** | Le mot de passe `pme` retenu en local est court. | [Secrets](secrets.md) |
 | **Moyenne** | **Pas de rotation ni d'audit des secrets** | Rien n'impose de changer un mot de passe ni ne trace qui l'a lu. | [Secrets](secrets.md) |
 | **Moyenne** | **Disque modifiable sur la plupart des composants** | Un code étranger pourrait déposer un programme dans PostgreSQL, Keycloak, Grafana, etc. | [Durcissement](durcissement.md) |
@@ -124,13 +124,13 @@ connus sont les suivants. Chacun est repris, avec son contexte, dans la page con
 | **Basse** | **Débit limité par exemplaire, sans détection d'abus** | La limite réelle dépend du nombre d'exemplaires de l'API. | [Application](application.md) |
 
 !!! warning "Attention"
-    Ces limites sont acceptables pour une démonstration sur un ordinateur, qui ne contient aucune donnée réelle et n'est
-    joignable depuis aucun réseau. Elles ne le seraient pas pour une plateforme exposée à des membres : la liste
-    ci-dessus est donc aussi la liste des travaux à mener avant toute mise en service.
+Ces limites sont acceptables pour une démonstration sur un ordinateur, qui ne contient aucune donnée réelle et n'est
+joignable depuis aucun réseau. Elles ne le seraient pas pour une plateforme exposée à des membres : la liste
+ci-dessus est donc aussi la liste des travaux à mener avant toute mise en service.
 
 !!! tip "Astuce"
-    Pour juger du niveau de sécurité d'un composant, lire sa page dans cette section, puis les commentaires de son
-    manifeste dans `k8s/`. Chaque réglage non évident y est justifié à l'endroit où il est écrit.
+Pour juger du niveau de sécurité d'un composant, lire sa page dans cette section, puis les commentaires de son
+manifeste dans `k8s/`. Chaque réglage non évident y est justifié à l'endroit où il est écrit.
 
 ## Pour aller plus loin
 
