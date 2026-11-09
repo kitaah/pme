@@ -61,7 +61,7 @@ Keycloak n'interrompt pas les utilisateurs déjà connectés.
 **Trois contrôles sur le jeton.**
 L'API ne se contente pas de la signature. Elle vérifie aussi l'**émetteur**, c'est-à-dire que le jeton vient bien du
 realm attendu, et l'**application** qui l'a demandé, afin qu'un jeton délivré pour un autre usage ne soit pas accepté.
-Le jeton a enfin une durée de vie courte, quinze minutes : l'interface le renouvelle silencieusement avant qu'il
+Le jeton a enfin une durée de vie courte, cinq minutes : l'interface le renouvelle silencieusement avant qu'il
 expire.
 
 **Les rôles décident de ce qui est permis.**
@@ -101,8 +101,8 @@ Le realm `pme` contient les comptes de démonstration suivants :
 | `moderateur` | `membre`, `moderateur` | En plus : consulter la file de modération. |
 
 !!! warning "Attention"
-    Keycloak fonctionne ici en mode développement, qui simplifie la configuration locale. Une mise en production
-    imposerait le mode `start`, une base dimensionnée et une double authentification sur le compte administrateur.
+Keycloak fonctionne ici en mode développement, qui simplifie la configuration locale. Une mise en production
+imposerait le mode `start`, une base dimensionnée et une double authentification sur le compte administrateur.
 
 ## Fichiers et dossiers principaux
 
@@ -128,16 +128,16 @@ Le realm `pme` contient les comptes de démonstration suivants :
 | `make pods` | Indique si Keycloak est prêt. |
 
 !!! note "À savoir"
-    Keycloak met environ quarante secondes à démarrer, car il prépare sa configuration à chaque lancement. Attendre
-    que `make pods` l'affiche comme prêt avant d'ouvrir la page, sinon le navigateur signale une erreur.
+Keycloak met environ quarante secondes à démarrer, car il prépare sa configuration à chaque lancement. Attendre
+que `make pods` l'affiche comme prêt avant d'ouvrir la page, sinon le navigateur signale une erreur.
 
 !!! warning "Attention"
-    Le realm n'est importé que s'il n'existe pas encore. Pour appliquer une modification de `realm-pme.json`, il faut
-    recréer la base `keycloak`, ce qui supprime les comptes créés depuis.
+Le realm n'est importé que s'il n'existe pas encore. Pour appliquer une modification de `realm-pme.json`, il faut
+recréer la base `keycloak`, ce qui supprime les comptes créés depuis.
 
 !!! tip "Astuce"
-    Pour ouvrir la console d'administration, utiliser les valeurs `KEYCLOAK_ADMIN` et `KEYCLOAK_ADMIN_PASSWORD` du
-    fichier `.env`. Le compte temporaire n'existe plus une fois le déploiement terminé.
+Pour ouvrir la console d'administration, utiliser les valeurs `KEYCLOAK_ADMIN` et `KEYCLOAK_ADMIN_PASSWORD` du
+fichier `.env`. Le compte temporaire n'existe plus une fois le déploiement terminé.
 
 ## Pour aller plus loin
 
