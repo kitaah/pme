@@ -90,10 +90,10 @@ spec:
             - name: KEYCLOAK_JWKS_URI
               value: http://keycloak:8080/realms/pme/protocol/openid-connect/certs
             - name: KEYCLOAK_ALLOWED_CLIENTS
-              value: pme-web,pme-cli
+              value: pme-web
             # Limite de debit : requetes par minute et par IP, comptees en memoire dans chaque pod. Avec plusieurs pods,
             # la limite effective est multipliee par leur nombre (un compteur partage, par exemple Redis, la rendrait exacte).
-            # Relevee temporairement par `make perf-prepare`.
+            # Le job de performance de la pipeline la leve pour la duree du test (scripts/perf-ci.sh).
             - name: THROTTLE_LIMIT
               value: "200"
           securityContext:

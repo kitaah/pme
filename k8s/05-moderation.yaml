@@ -88,7 +88,7 @@ spec:
             - name: KEYCLOAK_JWKS_URI
               value: http://keycloak:8080/realms/pme/protocol/openid-connect/certs
             - name: KEYCLOAK_ALLOWED_CLIENTS
-              value: pme-web,pme-cli
+              value: pme-web
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

@@ -39,15 +39,9 @@ seconde. Le scénario recommence tant que le test dure.
 | Profil | Utilisateurs | Durée | Où |
 |---|---|---|---|
 | **ci** | 10 | 1 minute | Dans la pipeline, sur l'API démarrée dans le job. |
-| **complet** | 20 | 1 minute 45 | Sur le cluster Minikube déployé. |
+| **complet** | 20 | 1 minute 45 | Profil par défaut de k6, non utilisé par la pipeline. |
 
 Les deux profils utilisent le même scénario et les mêmes seuils.
-
-**Preuve du découplage**
-
-Un second scénario prouve que le dépôt d'une annonce ne dépend pas du service de modération. Il est lancé deux fois,
-avec 5 utilisateurs pendant 30 secondes : une fois avec la modération en marche, une fois avec la modération arrêtée.
-Les seuils sont les mêmes. Ce scénario tourne sur le cluster, pas dans la pipeline.
 
 ## Comment la pipeline s'y prend
 
@@ -90,28 +84,10 @@ Le job démarre l'API réelle avec les vrais services dont elle dépend, sans Do
 | Fichier ou dossier | Description |
 |---|---|
 | `tests/performance/load.js` | Scénario de charge : profils, contrôles et seuils. |
-| `tests/performance/decoupling.js` | Scénario qui prouve l'indépendance entre le dépôt et la modération. |
 | `tests/performance/common.js` | Fonctions partagées : connexion, dépôt et lecture des annonces. |
 | `tests/performance/support/ci-environment.cjs` | Faux fournisseur d'identité et création du flux NATS. |
 | `scripts/perf-ci.sh` | Orchestre le test dans la pipeline : API, jeton, k6. |
-| `scripts/perf-decoupling.sh` | Lance le scénario de découplage avec puis sans la modération. |
 | `.gitlab-ci.yml` | Définit le job `performance-tests` et ses services. |
-
-## Commandes essentielles
-
-À lancer dans un terminal, depuis le dossier du projet.
-
-| Commande | Description |
-|---|---|
-| `make k6-install` | Installe k6 sur Debian, Ubuntu ou Linux Mint. |
-| `make perf-prepare` | Relève la limite de débit de l'API avant le test sur le cluster. |
-| `make perf-load` | Lance le test de charge complet sur le cluster. |
-| `make perf-decoupling` | Lance la preuve du découplage. |
-| `make perf` | Lance les deux tests à la suite. |
-| `make perf-reset` | Remet la limite de débit normale. |
-
-!!! warning "Attention"
-    Toujours lancer `make perf-reset` après un test sur le cluster. Sans cela, l'API n'est plus protégée contre les abus.
 
 ## Pour aller plus loin
 
