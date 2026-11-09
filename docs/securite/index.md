@@ -7,7 +7,7 @@
 | **Rôle** | Rassemble toutes les mesures de sécurité de la plateforme, de la connexion d'un membre jusqu'aux droits des conteneurs |
 | **Principe directeur** | Défense en profondeur : plusieurs barrières indépendantes, aucune n'étant supposée infaillible |
 | **Couches traitées** | Identité, échanges, secrets, conteneurs, application |
-| **Contrôles automatiques** | Hadolint, Trivy sur les images et les dépendances, SonarCloud, gitleaks |
+| **Contrôles automatiques** | Dans la pipeline : Hadolint, container-structure-test, Trivy (images, dépendances, images d'Istio) et SonarCloud. À la demande : gitleaks |
 | **Périmètre** | Le cluster local du POC. Les écarts avec un environnement de production sont signalés page par page |
 
 ## Description
@@ -79,15 +79,17 @@ Chaque mesure est détaillée dans la page de sa couche.
 
 | Couche | Mesures principales | Page |
 |---|---|---|
-| **Identité et accès** | Connexion par Keycloak, jeton signé vérifié par l'API, deux rôles, refus par défaut, protection contre les essais répétés. | [Authentification](authentification.md) |
-| **Échanges** | HTTPS sur tous les noms d'hôte, mTLS entre les pods par Istio, TLS jusqu'à PostgreSQL et NATS, certificats renouvelés seuls. | [Chiffrement](chiffrement.md) |
-| **Secrets** | Mots de passe chiffrés avant d'entrer dans Git, déchiffrables par le seul cluster, recherche de secrets oubliés. | [Secrets](secrets.md) |
-| **Conteneurs et cluster** | Aucun droit d'administrateur, disque en lecture seule, capacités retirées, images sans outils de développement. | [Durcissement](durcissement.md) |
-| **Application** | Validation stricte des entrées, limitation de débit, en-têtes de sécurité, erreurs qui ne révèlent rien. | [Défenses applicatives](application.md) |
+| **Identité et accès** | Connexion par Keycloak (flux avec PKCE, jeton gardé en mémoire par le navigateur), jeton signé vérifié par l'API, deux rôles, refus par défaut, données cloisonnées par membre, protection contre les essais répétés, aucun compte d'amorçage conservé. | [Authentification](authentification.md) |
+| **Échanges** | HTTPS sur tous les noms d'hôte, mTLS strict entre les pods par Istio, TLS jusqu'à PostgreSQL et NATS, mots de passe jamais transmis en clair, certificats renouvelés seuls. | [Chiffrement](chiffrement.md) |
+| **Secrets** | Mots de passe chiffrés avant d'entrer dans Git, déchiffrables par le seul cluster, recherche de secrets oubliés, aucun secret en clair dans la pipeline. | [Secrets](secrets.md) |
+| **Conteneurs et cluster** | Aucun droit d'administrateur, disque en lecture seule, capacités retirées, jeton du cluster non monté, ressources plafonnées, standards de sécurité des pods imposés, composants du maillage isolés, images sans outils de développement. | [Durcissement](durcissement.md) |
+| **Application** | Validation stricte des entrées et des messages NATS, requêtes SQL paramétrées, limitation de débit, en-têtes de sécurité et politique de contenu, seule l'API exposée, erreurs qui ne révèlent rien, données personnelles réduites au minimum. | [Défenses applicatives](application.md) |
 
-Trois contrôles de la [pipeline](../pipeline/index.md) vérifient automatiquement une partie de ces mesures : Hadolint
-sur les Dockerfile, Trivy sur les images et les dépendances, container-structure-test sur le contenu des images. La
-porte qualité de SonarCloud signale en plus les secrets oubliés et les failles du code.
+Quatre contrôles de la [pipeline](../pipeline/index.md) vérifient automatiquement une partie de ces mesures : Hadolint
+sur les Dockerfile, Trivy sur les images, les dépendances et les trois images d'Istio, container-structure-test sur le
+contenu des images. La Quality Gate de SonarCloud signale en plus les secrets oubliés et les failles du code. La
+recherche de secrets par gitleaks (`make secrets-scan`) ne tourne pas dans la pipeline : elle se lance à la demande,
+ou avec `make quality`.
 
 !!! note "À savoir"
     Aucune mesure de cette section ne dépend d'une action manuelle au moment du déploiement. Tout est déclaré dans le
@@ -106,8 +108,10 @@ connus sont les suivants. Chacun est repris, avec son contexte, dans la page con
 | **Haute** | **Un seul compte PostgreSQL** | Les quatre bases partagent le même compte : aucune séparation des droits. | [Durcissement](durcissement.md) |
 | **Haute** | **Outils d'exploitation sans authentification** | Adminer, Prometheus et Alloy sont joignables sans mot de passe propre. | [Authentification](authentification.md) |
 | **Haute** | **Pas de second facteur** | La connexion repose sur le seul mot de passe, dont la politique impose 12 caractères mais n'écarte pas les mots de passe courants. | [Authentification](authentification.md) |
+| **Haute** | **Console d'administration de Keycloak exposée** | Elle est joignable par l'ingress comme la page de connexion, et le realm `master` n'a pas de protection contre les essais répétés dans le dépôt. | [Authentification](authentification.md) |
 | **Moyenne** | **Keycloak en mode développement** | Contrôles assouplis, code reconstruit à chaque démarrage : déconseillé en production. | [Authentification](authentification.md) |
-| **Moyenne** | **Aucune journalisation des accès** | Les journaux applicatifs ne constituent pas une piste d'audit. | [Application](application.md) |
+| **Moyenne** | **Un seul compte NATS** | L'API et le service de modération partagent le même compte : aucune permission distincte par sujet. | [Durcissement](durcissement.md) |
+| **Moyenne** | **Aucun log des accès** | Les logs applicatifs ne constituent pas une piste d'audit. | [Application](application.md) |
 | **Moyenne** | **Analyse des failles non planifiée** | Une faille publiée sans changement du code n'est vue qu'au contrôle suivant. | [Analyse des dépendances](../pipeline/analyse-dependances.md) |
 | **Moyenne** | **Aucun chiffrement au repos** | Les données de la base sont écrites en clair sur le disque du nœud. | [Chiffrement](chiffrement.md) |
 | **Moyenne** | **Valeurs de démonstration faibles** | Le mot de passe `pme` retenu en local est court. | [Secrets](secrets.md) |

@@ -29,7 +29,7 @@ suivent la norme ISO/IEC 25010.
 | **Accessibilité (RGAA)** | Les textes et les composants restent lisibles. | 26 contrôles de contraste. | `unit-tests:frontend` |
 | **Observabilité** | Les services publient leurs mesures et la supervision trouve le consommateur. | 11 tests. | `unit-tests:*`, `integration-tests` |
 | **Déployabilité** | Chaque image démarre comme le déploiement l'attend. | Port, dossier, commande, Node 24, nginx valide. | `image-tests` |
-| **Maintenabilité** | Le code est testé, peu dupliqué et sans défaut majeur. | Seuils de couverture et porte qualité Sonar. | `unit-tests:*`, `sonar` |
+| **Maintenabilité** | Le code est testé, peu dupliqué et sans défaut majeur. | Seuils de couverture et Quality Gate Sonar. | `unit-tests:*`, `sonar` |
 
 !!! note "À savoir"
     Les nombres de tests sont ceux du dépôt à la date de rédaction. La liste complète de chaque famille se trouve dans

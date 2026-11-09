@@ -3,13 +3,13 @@
 ## Objectif
 
 Mesurer la qualité générale du code : bugs, failles de sécurité, secrets oubliés, code dupliqué et couverture des tests.
-SonarCloud compare ces mesures à une porte qualité et rend un verdict. C'est le tableau de bord de la maintenabilité du
+SonarCloud compare ces mesures à une Quality Gate et rend un verdict. C'est le tableau de bord de la maintenabilité du
 projet.
 
 **Définitions**
 
 - **SonarCloud** : service en ligne d'analyse de code, édité par SonarSource.
-- **Porte qualité (Quality Gate)** : ensemble de conditions que le code doit respecter. Le verdict est « réussi » ou « échoué ».
+- **Quality Gate** : ensemble de conditions que le code doit respecter. Le verdict est « réussi » ou « échoué ».
 - **Nouveau code** : code ajouté ou modifié depuis une date de référence. Les conditions s'appliquent surtout à lui.
 - **Anomalie (issue)** : défaut repéré dans le code : bug, faille ou mauvaise pratique.
 - **Duplication** : portion de code copiée à plusieurs endroits.
@@ -32,9 +32,9 @@ L'analyse lit le code des trois modules et les rapports de couverture des tests 
 - Les fichiers de démarrage, de configuration, les modules NestJS et les objets de transfert sont exclus de la couverture.
 - Les migrations et la configuration sont exclues des doublons : les deux services sont symétriques.
 
-**Porte qualité**
+**Quality Gate**
 
-Le projet utilise la porte par défaut de SonarCloud, « Sonar way ». Elle impose notamment, sur le nouveau code :
+Le projet utilise la Quality Gate par défaut de SonarCloud, « Sonar way ». Elle impose notamment, sur le nouveau code :
 
 | Condition | Seuil |
 |---|---|
@@ -47,7 +47,7 @@ Mesures relevées le 7 novembre 2026, sur la branche principale (1,8 millier de 
 
 | Mesure | Résultat | Seuil |
 |---|---|---|
-| **Porte qualité** | Échouée, 2 conditions sur le nouveau code. | Réussie |
+| **Quality Gate** | Échouée, 2 conditions sur le nouveau code. | Réussie |
 | **Couverture du nouveau code** | 58,97 % sur 167 lignes. | 80 % au moins |
 | **Duplications du nouveau code** | 11,32 % sur 1,1 millier de lignes. | 3 % au plus |
 | **Couverture de l'ensemble du code** | 49,3 % | Aucun seuil |
@@ -55,7 +55,7 @@ Mesures relevées le 7 novembre 2026, sur la branche principale (1,8 millier de 
 | **Points sensibles de sécurité** | 0 sur le nouveau code. | Aucun seuil |
 
 !!! note "À savoir"
-    L'échec de la porte qualité est connu et assumé. Il montre ce qui reste à améliorer : plus de tests, moins de
+    L'échec de la Quality Gate est connu et assumé. Il montre ce qui reste à améliorer : plus de tests, moins de
     code dupliqué. Le job est toléré en échec le temps de relever ces mesures. Ensuite, il deviendra bloquant.
 
 ## Quand il se lance
@@ -70,9 +70,9 @@ Mesures relevées le 7 novembre 2026, sur la branche principale (1,8 millier de 
 
 ## Où voir le résultat
 
-- **Journal du job** : le verdict de la porte qualité et le lien vers le détail.
+- **Logs du job** : le verdict de la Quality Gate et le lien vers le détail.
 - **Tableau de bord SonarCloud** : l'onglet « Summary » donne les conditions, l'onglet « Issues » les anomalies, et la mention « Last analysis » l'heure de la dernière analyse.
-- **Statut de la pipeline** : le job `sonar` passe en échec si la porte est échouée. La pipeline reste en avertissement, car ce job est toléré.
+- **Statut de la pipeline** : le job `sonar` passe en échec si la Quality Gate est échouée. La pipeline reste en avertissement, car ce job est toléré.
 
 ## Fichiers et dossiers principaux
 
@@ -105,4 +105,4 @@ Mesures relevées le 7 novembre 2026, sur la branche principale (1,8 millier de 
 
 - [Fiche SonarCloud du projet](../outils/sonarcloud.md)
 - [Documentation de SonarQube Cloud](https://docs.sonarsource.com/sonarqube-cloud/)
-- [Porte qualité de SonarQube Cloud](https://docs.sonarsource.com/sonarqube-cloud/improving/quality-gates/)
+- [Quality Gate de SonarQube Cloud](https://docs.sonarsource.com/sonarqube-cloud/improving/quality-gates/)

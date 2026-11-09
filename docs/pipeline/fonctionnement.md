@@ -68,15 +68,15 @@ quota : un job qui ne tourne pas ne coûte rien.
 
 1. Dans GitLab, ouvrir **Build**, puis **Pipelines**.
 2. Cliquer sur la pipeline du commit. Chaque job y apparaît avec son statut.
-3. Cliquer sur un job pour lire son journal.
+3. Cliquer sur un job pour lire ses logs.
 4. Ouvrir l'onglet **Tests** de la pipeline pour voir chaque test unitaire et d'intégration.
 5. Télécharger les artefacts d'un job depuis le panneau de droite : rapports k6, rapports Trivy, couverture.
-6. Ouvrir le lien SonarCloud du journal du job `sonar` pour le détail de la qualité.
+6. Ouvrir le lien SonarCloud des logs du job `sonar` pour le détail de la qualité.
 
 | Statut | Signification |
 |---|---|
 | **Réussi (vert)** | Tous les contrôles sont passés. |
-| **Avertissement (orange)** | Un job toléré a échoué. Aujourd'hui, c'est la porte qualité de Sonar. |
+| **Avertissement (orange)** | Un job toléré a échoué. Aujourd'hui, c'est la Quality Gate de Sonar. |
 | **Échoué (rouge)** | Un contrôle obligatoire a échoué. |
 | **Manuel (gris)** | Le job attend un clic pour se lancer. |
 
@@ -95,7 +95,7 @@ quota : un job qui ne tourne pas ne coûte rien.
 
 | Variable | Rôle |
 |---|---|
-| **`SONAR_TOKEN`** | Jeton d'accès à SonarCloud. Elle est masquée dans les journaux. |
+| **`SONAR_TOKEN`** | Jeton d'accès à SonarCloud. Elle est masquée dans les logs. |
 | **`SONAR_HOST_URL`** | Adresse de SonarCloud : `https://sonarcloud.io`. |
 
 ## Pour aller plus loin

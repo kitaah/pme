@@ -14,6 +14,17 @@ SonarCloud est un service en ligne d'**analyse statique** de code, édité par S
 source du dépôt, lui applique plusieurs centaines de règles, puis envoie le résultat au service, qui l'affiche et le
 conserve.
 
+**Ce qu'il analyse, en général.**
+SonarCloud prend en charge plus de trente langages et classe ses constats en grandes familles :
+
+- Les **bugs** risquent de provoquer un comportement erroné.
+- Les **vulnérabilités** ouvrent une faille exploitable.
+- Les **points sensibles de sécurité** sont à relire à la main.
+- Les **écarts de maintenabilité** rendent le code difficile à faire évoluer.
+- Les **duplications** sont des portions de code recopiées à plusieurs endroits.
+- La **couverture** mesure la part du code exécutée par les tests.
+- Les **secrets oubliés** dans les fichiers (mots de passe, clés) sont aussi détectés.
+
 **Analyser sans exécuter.**
 Contrairement aux tests, l'analyse statique n'exécute pas le programme : elle lit le code comme un relecteur très
 méthodique. Elle repère ainsi des défauts qu'aucun test ne révélerait, parce qu'ils ne se manifestent que dans des cas
@@ -51,17 +62,17 @@ classes: {
 tests: "Tests unitaires\nrapports de couverture" {class: boite}
 analyseur: "Analyseur\nlit le code et les rapports" {class: boite}
 service: "SonarCloud\nmesures et historique" {class: boite}
-verdict: "Porte qualité\nréussi ou échoué" {class: boite}
+verdict: "Quality Gate\nréussi ou échoué" {class: boite}
 
 tests -> analyseur
 analyseur -> service
 service -> verdict
 ```
 
-**La porte qualité donne un verdict, pas une note à commenter.**
-Plutôt que de laisser interpréter des dizaines de chiffres, SonarCloud applique un ensemble de conditions, la **porte
-qualité**, et rend un verdict unique : réussi ou échoué. Le projet utilise la porte par défaut, qui exige notamment
-80 % de couverture et au plus 3 % de doublons.
+**La Quality Gate donne un verdict, pas une note à commenter.**
+Plutôt que de laisser interpréter des dizaines de chiffres, SonarCloud applique un ensemble de conditions, la
+**Quality Gate**, et rend un verdict unique : réussi ou échoué. Le projet utilise la Quality Gate par défaut, qui
+exige notamment 80 % de couverture et au plus 3 % de doublons.
 
 **Ces conditions portent sur le nouveau code.**
 C'est le point qui rend l'outil utilisable sur un projet existant. Les exigences s'appliquent à ce qui a été ajouté ou
@@ -79,7 +90,7 @@ modifications.
 | **Duplication** | Portion de code recopiée à plusieurs endroits, qu'il faudra corriger partout. |
 | **Nouveau code** | Code ajouté ou modifié depuis une date de référence. |
 | **Point sensible de sécurité** | Portion de code à relire à la main pour juger si elle présente un risque. |
-| **Porte qualité** | Ensemble de conditions qui donne un verdict unique : réussi ou échoué. |
+| **Quality Gate** | Ensemble de conditions qui donne un verdict unique : réussi ou échoué. |
 
 ## Rôle dans le projet
 
@@ -124,7 +135,7 @@ Certains fichiers sont volontairement exclus de l'analyse ou du calcul de couver
 | **`make lint`** | Signale localement une partie des mêmes défauts, avant d'envoyer quoi que ce soit. |
 
 !!! note "À savoir"
-    La porte qualité par défaut exige 80 % de couverture sur le nouveau code, seuil supérieur à celui que le projet
+    La Quality Gate par défaut exige 80 % de couverture sur le nouveau code, seuil supérieur à celui que le projet
     applique localement. Le détail figure sur la page
     [Analyse SonarCloud](../pipeline/analyse-sonarcloud.md).
 
@@ -134,7 +145,7 @@ Certains fichiers sont volontairement exclus de l'analyse ou du calcul de couver
 
 !!! tip "Astuce"
     Le jeton d'accès se définit dans les réglages CI/CD de GitLab, avec les variables `SONAR_TOKEN` et
-    `SONAR_HOST_URL`. Il est masqué dans les journaux et ne doit jamais être écrit dans un fichier du dépôt.
+    `SONAR_HOST_URL`. Il est masqué dans les logs et ne doit jamais être écrit dans un fichier du dépôt.
 
 ## Pour aller plus loin
 
