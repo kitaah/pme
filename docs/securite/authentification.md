@@ -8,7 +8,7 @@
 | **Serveur d'identité** | [Keycloak](../outils/keycloak.md) 26.8.1, realm `pme` |
 | **Protocole** | OpenID Connect, flux Authorization Code avec PKCE |
 | **Rôles** | `membre` (dépose et consulte ses annonces) et `moderateur` (lit la file de modération) |
-| **Durée d'un jeton** | 15 minutes |
+| **Durée d'un jeton** | 5 minutes |
 
 ## Description
 
@@ -60,7 +60,7 @@ etapes: "" {
   style.opacity: 0
 
   un: "1. Le membre saisit son mot de passe sur la page de Keycloak" {class: boite}
-  deux: "2. Keycloak lui remet un jeton signé, valable 15 minutes" {class: boite}
+  deux: "2. Keycloak lui remet un jeton signé, valable 5 minutes" {class: boite}
   trois: "3. Le navigateur joint ce jeton à chaque appel de l'API" {class: boite}
   quatre: "4. L'API vérifie la signature, l'émetteur, la date et le rôle" {class: boite}
 }
@@ -89,7 +89,7 @@ etapes: "" {
 | **Inscription libre** | Désactivée | Personne ne peut se créer un compte : ils sont déclarés dans le realm. |
 | **Protection contre les essais répétés** | Après 5 échecs | Un attaquant ne peut pas essayer les mots de passe en masse. |
 | **Attente après blocage** | 60 secondes, doublée à chaque nouvel échec, jusqu'à 15 minutes | Rend une attaque par force brute impraticable. |
-| **Durée d'un jeton d'accès** | 900 secondes | Un jeton volé n'est exploitable que 15 minutes. |
+| **Durée d'un jeton d'accès** | 300 secondes | Un jeton volé n'est exploitable que 5 minutes. |
 | **HTTPS exigé** | Pour toute requête non locale | Le mot de passe ne circule jamais en clair. |
 
 **Les deux applications déclarées**
@@ -135,9 +135,9 @@ permanent à partir des secrets du cluster, puis **supprime le compte d'amorçag
 défaut une fois le déploiement terminé.
 
 !!! note "À savoir"
-    L'interface renouvelle le jeton trente secondes avant son expiration, sans que le membre s'en aperçoive. Si le
-    renouvellement échoue, parce que la session a expiré, elle le renvoie vers la page de connexion plutôt que
-    d'afficher une erreur.
+L'interface renouvelle le jeton trente secondes avant son expiration, sans que le membre s'en aperçoive. Si le
+renouvellement échoue, parce que la session a expiré, elle le renvoie vers la page de connexion plutôt que
+d'afficher une erreur.
 
 ## Ce qui n'est pas couvert
 
@@ -157,7 +157,7 @@ défaut une fois le déploiement terminé.
   certains contrôles sont assouplis et le serveur reconstruit une partie de son code à chaque démarrage. Le mode de
   production exige un certificat, un nom d'hôte fixe et une base dimensionnée.
 - **Pas de révocation immédiate** : désactiver un compte dans Keycloak n'invalide pas le jeton déjà remis. Il reste
-  utilisable jusqu'à quinze minutes.
+  utilisable jusqu'à cinq minutes.
 
 ## Commandes de vérification
 
@@ -176,13 +176,13 @@ Pour vérifier le refus par défaut, trois appels suffisent :
 3. Un appel à `/api/v1/moderation/queue` avec ce même jeton doit répondre **403**, faute du rôle `moderateur`.
 
 !!! warning "Attention"
-    Les comptes `membre` et `moderateur` du realm sont des comptes de démonstration, avec des mots de passe connus et
-    versionnés. Ils n'existent que pour faire fonctionner le POC et les tests, et doivent disparaître de tout realm
-    destiné à de vrais utilisateurs.
+Les comptes `membre` et `moderateur` du realm sont des comptes de démonstration, avec des mots de passe connus et
+versionnés. Ils n'existent que pour faire fonctionner le POC et les tests, et doivent disparaître de tout realm
+destiné à de vrais utilisateurs.
 
 !!! tip "Astuce"
-    Pour lire le contenu d'un jeton sans outil particulier, le coller sur un décodeur hors ligne ou afficher sa partie
-    centrale. Les champs `sub`, `azp`, `exp` et `realm_access.roles` sont exactement ceux que l'API vérifie.
+Pour lire le contenu d'un jeton sans outil particulier, le coller sur un décodeur hors ligne ou afficher sa partie
+centrale. Les champs `sub`, `azp`, `exp` et `realm_access.roles` sont exactement ceux que l'API vérifie.
 
 ## Fichiers principaux
 
