@@ -11,3 +11,10 @@ resources:
   requests:
     cpu: 50m
     memory: 64Mi
+
+# Profil seccomp par defaut du moteur de conteneurs : le noyau refuse les appels systeme dangereux dont l'agent n'a pas
+# besoin. C'est le seul durcissement que le chart permet en plus des capacites deja reduites au minimum (NET_ADMIN,
+# NET_RAW, SYS_PTRACE, SYS_ADMIN, DAC_OVERRIDE). Le compte root et ces capacites sont indispensables pour entrer dans
+# l'espace reseau de chaque pod.
+seccompProfile:
+  type: RuntimeDefault

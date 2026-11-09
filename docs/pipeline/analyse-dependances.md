@@ -41,9 +41,17 @@ Le job ne démarre pas Docker : Trivy lit directement les fichiers du dépôt. I
 - **Automatiquement** quand une dépendance ou son contrôle change : `package.json`, `package-lock.json`, `.trivyignore` ou `.gitlab-ci.yml`.
 - **À la demande** dans les autres cas, avec un bouton de lancement manuel.
 
+**Images du maillage Istio.** Le job `istio-scan` analyse les images d'Istio (plan de contrôle, agent réseau et ztunnel),
+dont deux s'exécutent avec des droits élevés sur le nœud. Ces images sont publiées par Istio et le projet ne les
+reconstruit pas : seule une nouvelle version d'Istio corrige une faille. La règle est donc différente de celle des
+dépendances. Une faille CRITICAL corrigeable fait échouer le job. Les failles HIGH sont comptées dans le journal et
+conservées dans un rapport JSON par image, pour décider d'une montée de version. Le job lit la version d'Istio dans le
+`Makefile`, se lance automatiquement quand les réglages `k8s/istio/` changent, et reste disponible à la demande. En
+local : `make istio-scan`.
+
 !!! warning "Attention"
-    Une nouvelle faille peut être publiée sans que le projet change. Le job ne la voit alors qu'à la prochaine
-    modification des dépendances ou à un lancement manuel. Une analyse planifiée pourra combler ce manque.
+Une nouvelle faille peut être publiée sans que le projet change. Le job ne la voit alors qu'à la prochaine
+modification des dépendances ou à un lancement manuel. Une analyse planifiée pourra combler ce manque.
 
 ## Où voir le résultat
 

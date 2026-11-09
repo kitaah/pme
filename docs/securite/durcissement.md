@@ -102,6 +102,18 @@ Alloy est le seul composant à recevoir un jeton de cluster, parce qu'il doit in
 pods existent et lire leurs journaux. Ses droits sont limités à la lecture des pods et de leurs journaux, et à rien
 d'autre.
 
+**Les composants du maillage : des droits élevés, mais réduits au strict nécessaire**
+Deux composants d'Istio ne peuvent pas respecter les règles ci-dessus. L'agent **istio-cni** et le proxy **ztunnel**
+doivent entrer dans l'espace réseau de chaque pod pour y rediriger le trafic. Cela exige le compte root et des
+capacités réseau et système sur le nœud. Ils ne sont pas pour autant en mode `privileged` : toutes les capacités sont
+retirées, sauf celles qui sont indispensables. Le projet ajoute trois protections autour de ces droits.
+
+| Protection | Ce qu'elle apporte |
+|---|---|
+| **Namespace dédié** | Les composants vivent seuls dans `istio-system`. Ce namespace est le seul à déclarer le niveau `privileged` des standards de sécurité des pods. `pme` reste en `baseline`. |
+| **Profil seccomp par défaut** | L'agent istio-cni se voit appliquer le profil du moteur : le noyau refuse les appels système dangereux dont il n'a pas besoin. Le chart de ztunnel n'offre pas ce réglage. |
+| **Images analysées** | `make istio-scan` et le job `istio-scan` de la pipeline recherchent les failles corrigeables dans les trois images d'Istio. Une faille CRITICAL fait échouer le contrôle. Les failles HIGH sont comptées et conservées dans un rapport, car ces images sont publiées par Istio : le correctif vient d'une nouvelle version d'Istio. |
+
 **Des images qui n'embarquent que le nécessaire**
 Les trois images sont construites en deux étapes : la première compile, la seconde ne reçoit que le résultat. Les
 sources, les outils de développement et les dépendances de compilation restent dans l'étape de construction et ne sont
@@ -116,9 +128,9 @@ Cela n'est pas seulement déclaré, c'est vérifié à chaque passage de la pipe
 | [Trivy](../pipeline/analyse-dependances.md) | Les failles connues des paquets livrés et des dépendances de développement. |
 
 !!! note "À savoir"
-    PostgreSQL, NATS et Adminer ne fixent pas d'identifiant d'exécution : leurs images démarrent en administrateur puis
-    abandonnent elles-mêmes ces droits pour leur propre compte. C'est le fonctionnement prévu par leurs éditeurs ; les
-    autres réglages, eux, leur sont bien appliqués.
+PostgreSQL, NATS et Adminer ne fixent pas d'identifiant d'exécution : leurs images démarrent en administrateur puis
+abandonnent elles-mêmes ces droits pour leur propre compte. C'est le fonctionnement prévu par leurs éditeurs ; les
+autres réglages, eux, leur sont bien appliqués.
 
 ## Ce qui n'est pas couvert
 
@@ -136,14 +148,17 @@ Cela n'est pas seulement déclaré, c'est vérifié à chaque passage de la pipe
   lecture seule. PostgreSQL, Keycloak, Grafana, Adminer, NATS, Prometheus, Loki et Alloy écrivent à plusieurs endroits
   (données, fichiers de travail, extensions) qu'il faudrait recenser et monter un à un, avec un essai composant par
   composant. Keycloak en mode développement reconstruit même une partie de son code au démarrage.
-- **Les composants du maillage sont privilégiés.** Pour rediriger le trafic des pods, ztunnel et istio-cni
-  s'exécutent avec des droits élevés sur le nœud (capacités réseau et système), dans le namespace `istio-system`. Le
-  durcissement de cette page ne s'y applique pas, et leurs images ne passent pas par les contrôles de la pipeline. Une
-  faille dans l'un d'eux aurait une portée bien plus large que dans une application du projet.
+- **Les composants du maillage restent root avec des capacités élevées.** Pour rediriger le trafic des pods, ztunnel et
+  istio-cni gardent le compte root et des capacités réseau et système sur le nœud. Ces droits sont inhérents au mode
+  ambient : aucun réglage du chart ne les retire. Une faille dans l'un d'eux aurait donc une portée bien plus large que
+  dans une application du projet. Les mesures ci-dessus en limitent l'exposition, sans l'annuler.
 - **Les trois composants d'infrastructure gardent le compte de leur image**, comme expliqué ci-dessus. Un durcissement
   plus poussé reviendrait à reconstruire ces images.
 - **Pas de contrôle à l'admission.** Rien n'empêche de déployer dans le cluster un pod qui ne respecterait aucune de ces
   règles. Les standards de sécurité des pods, intégrés à Kubernetes, le feraient respecter au niveau du namespace.
+- **Des failles HIGH connues dans les images d'Istio.** L'analyse en relève plusieurs dizaines par image (bibliothèque
+  standard Go, paquets Ubuntu), toutes corrigeables par une nouvelle version d'Istio. Elles sont suivies, sans bloquer la
+  pipeline. La montée de version d'Istio (`ISTIO_VERSION` dans le `Makefile`) est le remède.
 - **Pas de signature des images.** Rien ne prouve, au déploiement, que l'image provient bien de la pipeline du projet.
 
 ## Commandes de vérification
@@ -155,19 +170,21 @@ Cela n'est pas seulement déclaré, c'est vérifié à chaque passage de la pipe
 | `make image-test` | Rejoue les 22 contrôles de structure et l'analyse Trivy sur les trois images. |
 | `make lint-docker` | Contrôle les quatre Dockerfile avec Hadolint. |
 | `make lint-k8s` | Valide les manifestes Kubernetes. |
+| `make istio-scan` | Analyse Trivy des trois images d'Istio : affiche les failles HIGH, et échoue s'il reste une faille CRITICAL corrigeable. |
+| `kubectl -n istio-system get pod -l k8s-app=istio-cni-node -o yaml \| grep -A1 seccompProfile` | Montre que le profil `RuntimeDefault` est bien appliqué à l'agent istio-cni. |
 | `kubectl -n pme exec deploy/pme-api -- id` | Montre l'identifiant du compte qui exécute l'API : il ne doit pas valoir 0. |
 
 Pour vérifier le disque en lecture seule, essayer d'écrire un fichier dans le conteneur de l'API : la commande échoue,
 sauf dans l'espace temporaire monté à cet effet.
 
 !!! warning "Attention"
-    Le disque en lecture seule casse tout composant qui écrit ailleurs que dans son espace temporaire : un cache, un
-    fichier de session, un journal sur disque. C'est à vérifier avant d'activer le réglage sur un nouveau service, pas
-    après.
+Le disque en lecture seule casse tout composant qui écrit ailleurs que dans son espace temporaire : un cache, un
+fichier de session, un journal sur disque. C'est à vérifier avant d'activer le réglage sur un nouveau service, pas
+après.
 
 !!! tip "Astuce"
-    `kubectl -n pme get pod <nom> -o yaml` affiche les réglages réellement appliqués à un pod, y compris ceux qu'il
-    hérite du niveau du pod. C'est la source de vérité, plus fiable que la relecture du manifeste.
+`kubectl -n pme get pod <nom> -o yaml` affiche les réglages réellement appliqués à un pod, y compris ceux qu'il
+hérite du niveau du pod. C'est la source de vérité, plus fiable que la relecture du manifeste.
 
 ## Fichiers principaux
 
@@ -178,6 +195,7 @@ sauf dans l'espace temporaire monté à cet effet.
 | `k8s/13-alloy.yaml` | La seule exception : jeton de cluster et droits de lecture sur les pods. |
 | `api/Dockerfile`, `moderation-service/Dockerfile`, `frontend/Dockerfile` | Construction en deux étapes, image finale sans outils. |
 | `tests/image/` | Les 22 contrôles de structure appliqués aux images. |
+| `k8s/istio/namespace.yaml` et `k8s/istio/cni-values.yaml` | Namespace dédié aux composants privilégiés du maillage, et profil seccomp de l'agent istio-cni. |
 | `.hadolint.yaml` | Niveau à partir duquel un écart de Dockerfile fait échouer la pipeline. |
 
 ## Pour aller plus loin

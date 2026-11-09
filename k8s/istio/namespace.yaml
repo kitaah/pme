@@ -1,0 +1,11 @@
+# Namespace des composants du maillage Istio (istiod, istio-cni, ztunnel), cree par `make istio` avant les charts Helm.
+# istio-cni et ztunnel s'executent en root avec des capacites reseau et systeme sur le noeud : ils ne passent pas le niveau
+# `baseline`. Le niveau `privileged` est donc declare ici, et ici seulement : `pme` reste en `baseline`.
+# Isoler ces composants dans un namespace dedie a part permet de reserver les droits qui le touchent a l'administrateur
+# du cluster et de reperer tout autre pod qui viendrait s'y installer.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-system
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
