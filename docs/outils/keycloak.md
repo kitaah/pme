@@ -61,7 +61,7 @@ Keycloak n'interrompt pas les utilisateurs déjà connectés.
 **Trois contrôles sur le jeton.**
 L'API ne se contente pas de la signature. Elle vérifie aussi l'**émetteur**, c'est-à-dire que le jeton vient bien du
 realm attendu, et l'**application** qui l'a demandé, afin qu'un jeton délivré pour un autre usage ne soit pas accepté.
-Le jeton a enfin une durée de vie courte, cinq minutes : l'interface le renouvelle silencieusement avant qu'il
+Le jeton a ensuite une durée de vie courte, cinq minutes : l'interface le renouvelle silencieusement avant qu'il
 expire.
 
 **Les rôles décident de ce qui est permis.**
@@ -73,7 +73,7 @@ sans rien demander à Keycloak.
 
 | Terme | Définition |
 |---|---|
-| **Client** | Application autorisée à demander une connexion, ici `pme-web` pour le site et `pme-cli` pour les tests. |
+| **Client** | Application autorisée à demander une connexion, ici `pme-web` pour le site. |
 | **Compte administrateur temporaire** | Compte créé au tout premier démarrage pour amorcer l'installation, puis remplacé. |
 | **Émetteur** | Autorité qui a délivré le jeton. L'API vérifie qu'il correspond bien au realm attendu. |
 | **Jeton (JWT)** | Fichier texte signé, délivré après la connexion, qui porte l'identité et les rôles de l'utilisateur. |
@@ -93,16 +93,21 @@ sans rien demander à Keycloak.
 - Il impose une politique de mots de passe : 12 caractères au moins, avec majuscule, minuscule et chiffre.
 - Sans lui, personne ne peut se connecter : ni dépôt d'annonce, ni modération, ni accès aux tableaux de bord.
 
-Le realm `pme` contient les comptes de démonstration suivants :
+Le realm `pme` ne contient aucun compte d'utilisateur. Pour se connecter au site, il faut en créer un dans la console
+(`make keycloak`), dans Users, puis Add user. Le mot de passe se définit dans l'onglet Credentials, sans cocher
+« Temporary », et doit respecter la politique (12 caractères au moins, majuscule, minuscule et chiffre). Le rôle se
+donne dans l'onglet Role mapping :
 
-| Compte | Rôles | Ce qu'il peut faire |
-|---|---|---|
-| `membre` | `membre` | Déposer une annonce et consulter les siennes. |
-| `moderateur` | `membre`, `moderateur` | En plus : consulter la file de modération. |
+| Rôle à attribuer | Ce que l'utilisateur peut faire |
+|---|---|
+| `membre` | Déposer une annonce et consulter les siennes. |
+| `membre` et `moderateur` | En plus : consulter la file de modération. |
+
+Ces comptes sont conservés tant que la base de Keycloak n'est pas réinitialisée.
 
 !!! warning "Attention"
-Keycloak fonctionne ici en mode développement, qui simplifie la configuration locale. Une mise en production
-imposerait le mode `start`, une base dimensionnée et une double authentification sur le compte administrateur.
+    Keycloak fonctionne ici en mode développement, qui simplifie la configuration locale. Une mise en production
+    imposerait le mode `start`, une base dimensionnée et une double authentification sur le compte administrateur.
 
 ## Fichiers et dossiers principaux
 
@@ -110,7 +115,7 @@ imposerait le mode `start`, une base dimensionnée et une double authentificatio
 |---|---|
 | `k8s/03-keycloak.yaml` | Déploie Keycloak dans le cluster et fixe son adresse publique. |
 | `k8s/03-keycloak-admin-job.yaml` | Crée le compte administrateur permanent, puis supprime le compte temporaire. |
-| `k8s/config/realm-pme.json` | Décrit le realm : rôles, applications autorisées et comptes de démonstration. |
+| `k8s/config/realm-pme.json` | Décrit le realm : rôles et applications autorisées. |
 | `api/src/auth/jwt.strategy.ts` | Vérifie la signature, l'émetteur et l'application du jeton. |
 | `frontend/src/auth.ts` | Redirige vers la page de connexion et renouvelle le jeton. |
 | `.env` | Contient l'identifiant et le mot de passe de l'administrateur. Ce fichier est exclu de Git. |
@@ -123,21 +128,20 @@ imposerait le mode `start`, une base dimensionnée et une double authentificatio
 |---|---|
 | `make deploy` | Installe Keycloak avec le reste de la plateforme. |
 | `make keycloak` | Ouvre Keycloak dans le navigateur. |
-| `make token KC_USER=membre` | Affiche un jeton de test pour le compte indiqué. |
 | `make logs-keycloak` | Affiche le journal de Keycloak, mis à jour en direct. |
 | `make pods` | Indique si Keycloak est prêt. |
 
 !!! note "À savoir"
-Keycloak met environ quarante secondes à démarrer, car il prépare sa configuration à chaque lancement. Attendre
-que `make pods` l'affiche comme prêt avant d'ouvrir la page, sinon le navigateur signale une erreur.
+    Keycloak met environ quarante secondes à démarrer, car il prépare sa configuration à chaque lancement. Attendre
+    que `make pods` l'affiche comme prêt avant d'ouvrir la page, sinon le navigateur signale une erreur.
 
 !!! warning "Attention"
-Le realm n'est importé que s'il n'existe pas encore. Pour appliquer une modification de `realm-pme.json`, il faut
-recréer la base `keycloak`, ce qui supprime les comptes créés depuis.
+    Le realm n'est importé que s'il n'existe pas encore. Pour appliquer une modification de `realm-pme.json`, il faut
+    recréer la base `keycloak`, ce qui supprime les comptes créés depuis.
 
 !!! tip "Astuce"
-Pour ouvrir la console d'administration, utiliser les valeurs `KEYCLOAK_ADMIN` et `KEYCLOAK_ADMIN_PASSWORD` du
-fichier `.env`. Le compte temporaire n'existe plus une fois le déploiement terminé.
+    Pour ouvrir la console d'administration, utiliser les valeurs `KEYCLOAK_ADMIN` et `KEYCLOAK_ADMIN_PASSWORD` du
+    fichier `.env`. Le compte temporaire n'existe plus une fois le déploiement terminé.
 
 ## Pour aller plus loin
 

@@ -135,8 +135,6 @@ L'état du circuit est publié dans la mesure `circuit_breaker_state{name="postg
 | `api/src/common/database-circuit-breaker.ts` | Contient le disjoncteur, ses réglages et sa mesure. |
 | `api/src/listings/listings.service.ts` | Fait passer par le disjoncteur tous les appels à la base. |
 | `api/src/listings/listings.module.ts` | Crée le disjoncteur et publie sa mesure. |
-| `scripts/verify-breaker.sh` | Déroule le protocole de vérification et affiche un résultat OK ou ÉCHEC. |
-| `scripts/demo-breaker.sh` | Montre le disjoncteur en action, sans vérification. |
 
 ## Commandes essentielles
 
@@ -144,24 +142,17 @@ L'état du circuit est publié dans la mesure `circuit_breaker_state{name="postg
 
 | Commande | Description |
 |---|---|
-| `make breaker-test` | Coupe PostgreSQL, vérifie le comportement du circuit, puis remet la base en service. |
-| `make demo-breaker` | Montre le circuit s'ouvrir puis se refermer, sans vérification. |
 | `make logs-api` | Affiche le journal de l'API, où chaque échec d'appel à la base est tracé. |
 
-La vérification se déroule en quatre étapes, que `make breaker-test` enchaîne automatiquement :
+Lors d'une panne de PostgreSQL, le circuit se comporte ainsi :
 
 1. **État initial** : l'API répond 200 et le circuit est fermé.
 2. **Coupure** : la base est arrêtée, puis des appels sont envoyés jusqu'à l'ouverture du circuit.
 3. **Circuit ouvert** : un appel reçoit une erreur 503 en moins d'une seconde.
 4. **Remise en service** : la base est relancée, l'API répond de nouveau 200 et le circuit se referme.
 
-!!! warning "Attention"
-    Ces deux commandes coupent réellement PostgreSQL pendant une à deux minutes. À réserver au cluster local, et à ne
-    jamais lancer pendant un test de charge ou une démonstration.
-
 !!! tip "Astuce"
-    `make breaker-test` remet toujours la base en service, même si elle est interrompue en cours de route. En cas de
-    doute, `make pods` confirme que PostgreSQL est de nouveau prêt.
+    `make pods` confirme que PostgreSQL est prêt, et `make logs-api` montre chaque échec d'appel à la base.
 
 ## Pour aller plus loin
 

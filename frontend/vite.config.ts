@@ -6,7 +6,7 @@ import { defineConfig } from 'vitest/config';
 // En developpement local, le front appelle les services lances sur la machine
 // (voir `make dev-api`). En cluster, c'est l'ingress qui route /api.
 // Le front n'appelle pas le service de moderation : c'est un composant de back-office,
-// interroge par scripts/smoke.sh et par `make db-moderation`.
+// interroge par `make db-moderation`.
 export default defineConfig({
   // tailwindcss() compile src/styles.css : aucun fichier tailwind.config.js, le theme est dans la feuille
   plugins: [react(), tailwindcss()],

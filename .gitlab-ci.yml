@@ -335,7 +335,7 @@ image-tests:
 # ---------- Tests de performance : l'API reelle, PostgreSQL et NATS, mesures par k6 ----------
 # Pas de Docker-in-Docker ni de Keycloak : PostgreSQL et NATS sont des services GitLab, et un faux fournisseur d'identite
 # signe le jeton (voir scripts/perf-ci.sh). Le test echoue si un seuil k6 est depasse (tests/performance/load.js).
-# La charge complete (20 utilisateurs, Keycloak reel, preuve du decouplage) reste a lancer sur l'environnement de recette.
+# La charge complete (20 utilisateurs, Keycloak reel) reste a lancer sur l'environnement de recette.
 performance-tests:
   stage: performance
   needs: []

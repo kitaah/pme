@@ -118,7 +118,6 @@ Chaque contrôle de la pipeline a son équivalent sur l'ordinateur, à lancer de
 | `make test-integration` | Lance les tests d'intégration, Docker démarré. |
 | `make lint-docker` | Contrôle les Dockerfile, comme le job `hadolint`. |
 | `make image-test` | Contrôle les images, comme le job `image-tests`. |
-| `make perf` | Lance les tests de performance sur le cluster local. |
 | `make quality` | Enchaîne les contrôles statiques. |
 
 !!! note "À savoir"

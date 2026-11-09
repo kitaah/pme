@@ -4,13 +4,12 @@
 
 .PHONY: help install test test-integration image-test \
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
-        k6-install perf perf-prepare perf-reset perf-load perf-decoupling \
         minikube-up minikube-down helm ingress inotify istio mesh-check cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
         env kubeseal sealed-secrets sealed-prereqs seal image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         pods logs logs-api logs-moderation logs-keycloak \
         port-forward stop-forward api moderation frontend \
-        smoke token queues db-listings db-moderation create-grafana-db \
-        demo-stop-moderation demo-start-moderation demo-kill-api demo-breaker breaker-test \
+        queues db-listings db-moderation create-grafana-db \
+        demo-stop-moderation demo-start-moderation demo-kill-api \
         app keycloak nats adminer prometheus grafana alloy \
         docs-serve docs-check docs-image docs-run docs-stop scripts-perms
 
@@ -116,13 +115,9 @@ help:
 	@echo ""
 	@echo "  Demonstration"
 	@echo "    make scripts-perms            - Rend les scripts .sh executables (a lancer apres un clonage ou une extraction)"
-	@echo "    make smoke                    - Scenario complet en ligne de commande (connexion, depot, 400, 403, file)"
-	@echo "    make token KC_USER=membre       - Affiche un jeton Keycloak de test"
 	@echo "    make demo-stop-moderation     - Arrete le service de moderation (les messages restent dans NATS)"
 	@echo "    make demo-start-moderation    - Le relance : la file se vide"
 	@echo "    make demo-kill-api            - Supprime le pod de l'API : Kubernetes le recree"
-	@echo "    make demo-breaker             - Coupe PostgreSQL puis la relance : montre le disjoncteur de l'API"
-	@echo "    make breaker-test             - Meme coupure, avec verifications OK/ECHEC du disjoncteur"
 	@echo ""
 	@echo "  Developpement local"
 	@echo "    make install                  - npm ci dans api, moderation-service, frontend"
@@ -133,8 +128,6 @@ help:
 	@echo "    make test                     - Tests unitaires (Jest : api + moderation-service, Vitest : frontend)"
 	@echo "    make test-integration         - Tests d'integration avec PostgreSQL et NATS reels (Testcontainers, Docker requis)"
 	@echo "    make image-test               - Tests des images Docker (container-structure-test + Trivy)"
-	@echo "    make k6-install               - Installe k6 (Debian, Ubuntu, Mint) une seule fois, puis make perf-prepare"
-	@echo "    make perf                     - Tests de performance k6 (charge + decouplage), apres make perf-prepare"
 	@echo ""
 	@echo "  Documentation (MkDocs, Docker requis)"
 	@echo "    make docs-serve               - Apercu en direct : http://localhost:$(DOCS_PORT) (ouvre le navigateur)"
@@ -253,7 +246,7 @@ cert-manager:
 	kubectl -n cert-manager wait --for=condition=ready certificate/pme-ca --timeout=60s
 
 # Ecrit l'autorite locale dans pme-ca.crt (non versionne) : a importer dans le navigateur (Parametres > Certificats >
-# Autorites) pour supprimer l'avertissement. curl, Node (make api) et make smoke s'en servent directement.
+# Autorites) pour supprimer l'avertissement. curl et Node (make api) s'en servent directement.
 # Un cluster recree genere une nouvelle autorite : relancer cette commande et reimporter le fichier.
 ca-cert:
 	@kubectl -n cert-manager get secret pme-ca -o jsonpath='{.data.ca\.crt}' | base64 -d > $(CA_FILE)
@@ -285,7 +278,7 @@ tunnel:
 	sudo env KUBECONFIG="$${KUBECONFIG:-$$HOME/.kube/config}" $(INGRESS_FORWARD)
 
 # N'ecrit rien dans /etc/hosts : affiche la ligne a ajouter (une seule fois) avec un editeur ou "sudo tee -a".
-# Les navigateurs n'en ont pas besoin pour .localhost ; curl, Node (make api, make smoke) peuvent en avoir besoin.
+# Les navigateurs n'en ont pas besoin pour .localhost ; curl et Node (make api) peuvent en avoir besoin.
 hosts:
 	@echo "Ajouter cette ligne dans le fichier hosts de l'ordinateur (/etc/hosts sous Linux et macOS) :"
 	@echo ""
@@ -424,24 +417,11 @@ scripts-perms:
 	@if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then git update-index --chmod=+x scripts/*.sh k8s/config/*.sh 2>/dev/null || true; fi
 	@echo "Scripts executables."
 
-smoke:
-	APP_URL=$(APP_URL) KEYCLOAK_URL=$(KEYCLOAK_URL) ./scripts/smoke.sh
-
-KC_USER ?= membre
-token:
-	@KEYCLOAK_URL=$(KEYCLOAK_URL) ./scripts/token.sh $(KC_USER)
-
 demo-stop-moderation:
 	kubectl -n $(NS) scale deployment pme-moderation --replicas=0
 
 demo-start-moderation:
 	kubectl -n $(NS) scale deployment pme-moderation --replicas=1
-
-demo-breaker:
-	NS=$(NS) APP_URL=$(APP_URL) KEYCLOAK_URL=$(KEYCLOAK_URL) ./scripts/demo-breaker.sh
-
-breaker-test:
-	NS=$(NS) APP_URL=$(APP_URL) KEYCLOAK_URL=$(KEYCLOAK_URL) ./scripts/verify-breaker.sh
 
 demo-kill-api:
 	kubectl -n $(NS) delete pod -l app=pme-api
@@ -487,7 +467,7 @@ stop-forward:
 # --hostname-url le fige (voir k8s/03-keycloak.yaml).
 DEV_KEYCLOAK_ENV = KEYCLOAK_ISSUER=$(KEYCLOAK_URL)/realms/pme \
 	KEYCLOAK_JWKS_URI=$(KEYCLOAK_URL)/realms/pme/protocol/openid-connect/certs \
-	KEYCLOAK_ALLOWED_CLIENTS=pme-web,pme-cli \
+	KEYCLOAK_ALLOWED_CLIENTS=pme-web \
 	NODE_EXTRA_CA_CERTS=$(CURDIR)/$(CA_FILE)
 
 # PostgreSQL et NATS n'acceptent du reseau que des connexions chiffrees : un service lance sur l'ordinateur
@@ -622,40 +602,6 @@ docs-run:
 docs-stop:
 	@ids=$$(docker ps -q --filter 'name=^pme-docs-serve$$' --filter 'name=^pme-docs-run$$'); \
 	if [ -n "$$ids" ]; then docker stop $$ids >/dev/null && echo "MkDocs arrete."; else echo "Aucun MkDocs en cours."; fi
-
-# Performance (k6) : sur le cluster deploye, apres le deploiement en recette.
-# k6 ne lit pas l'autorite locale : la verification TLS est desactivee pour ces tests (cluster local uniquement).
-export K6_INSECURE_SKIP_TLS_VERIFY := true
-# k6 envoie tout depuis une seule IP : on releve la limitation de debit de l'API le temps du test.
-# k6 (Grafana) : depot apt officiel, pour Debian, Ubuntu et Linux Mint. Sans effet si k6 est deja installe.
-# Demande le mot de passe sudo. Pour les autres systemes : https://grafana.com/docs/k6/latest/set-up/install-k6/
-k6-install:
-	@if command -v k6 >/dev/null 2>&1; then echo "k6 est deja installe : $$(k6 version)"; else \
-		sudo gpg -k && \
-		sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
-			--keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69 && \
-		echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
-			| sudo tee /etc/apt/sources.list.d/k6.list >/dev/null && \
-		sudo apt-get update && sudo apt-get install -y k6 && k6 version; \
-	fi
-
-perf-prepare:
-	kubectl -n $(NS) set env deployment/pme-api THROTTLE_LIMIT=100000
-	kubectl -n $(NS) rollout status deployment/pme-api
-
-perf-reset:
-	kubectl -n $(NS) set env deployment/pme-api THROTTLE_LIMIT=200
-	kubectl -n $(NS) rollout status deployment/pme-api
-
-# --insecure-skip-tls-verify : le certificat de l'ingress est signe par l'autorite locale (make ca-cert), que k6 ne
-# connait pas. Reserve a ce test local : ne jamais l'utiliser face a un vrai serveur.
-perf-load:
-	k6 run --insecure-skip-tls-verify -e APP_URL=$(APP_URL) -e KEYCLOAK_URL=$(KEYCLOAK_URL) tests/performance/load.js
-
-perf-decoupling:
-	APP_URL=$(APP_URL) KEYCLOAK_URL=$(KEYCLOAK_URL) NS=$(NS) ./scripts/perf-decoupling.sh
-
-perf: perf-load perf-decoupling
 
 # ---- Ouvrir dans le navigateur ----
 

@@ -1,10 +1,7 @@
 // Test de charge : des utilisateurs virtuels deposent des annonces et consultent les leurs.
 //
 // Deux profils, meme scenario et memes seuils :
-//   - complet (defaut) : 20 utilisateurs virtuels, 1 min 45, sur le cluster deploye.
-//       make perf-prepare   # releve la limitation de debit par IP (sinon k6, une seule IP, recoit des 429)
-//       make perf-load
-//       make perf-reset
+//   - complet (defaut) : 20 utilisateurs virtuels, 1 min 45.
 //   - ci (PROFILE=ci) : 10 utilisateurs virtuels, 1 min, sur l'API demarree dans le pipeline (scripts/perf-ci.sh).
 //
 // Les seuils font echouer la commande (code de sortie 99) : le test est directement exploitable en CI.
@@ -35,7 +32,7 @@ export const options = {
 };
 
 export function setup() {
-  return { token: login('membre') };
+  return { token: login() };
 }
 
 export default function (data) {

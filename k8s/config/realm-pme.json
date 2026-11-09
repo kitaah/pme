@@ -55,55 +55,6 @@
         "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "https://pme.localhost/*##http://localhost:5173/*"
       }
-    },
-    {
-      "clientId": "pme-cli",
-      "name": "Client de test en ligne de commande",
-      "description": "Uniquement pour `make smoke` et `make token` : mot de passe direct (ROPC). A supprimer en production.",
-      "enabled": true,
-      "publicClient": true,
-      "standardFlowEnabled": false,
-      "directAccessGrantsEnabled": true,
-      "protocol": "openid-connect"
-    }
-  ],
-  "users": [
-    {
-      "username": "membre",
-      "enabled": true,
-      "email": "membre@petitemaisonepouvante.local",
-      "emailVerified": true,
-      "firstName": "Morgane",
-      "lastName": "Membre",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "membre",
-          "temporary": false
-        }
-      ],
-      "realmRoles": [
-        "membre"
-      ]
-    },
-    {
-      "username": "moderateur",
-      "enabled": true,
-      "email": "moderateur@petitemaisonepouvante.local",
-      "emailVerified": true,
-      "firstName": "Maxime",
-      "lastName": "Moderateur",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "moderateur",
-          "temporary": false
-        }
-      ],
-      "realmRoles": [
-        "membre",
-        "moderateur"
-      ]
     }
   ]
 }

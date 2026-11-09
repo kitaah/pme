@@ -92,12 +92,11 @@ etapes: "" {
 | **Durée d'un jeton d'accès** | 300 secondes | Un jeton volé n'est exploitable que 5 minutes. |
 | **HTTPS exigé** | Pour toute requête non locale | Le mot de passe ne circule jamais en clair. |
 
-**Les deux applications déclarées**
+**L'application déclarée**
 
 | Application | Flux autorisé | Usage |
 |---|---|---|
 | `pme-web` | Authorization Code avec PKCE (S256) | L'interface du site. Les adresses de retour sont limitées à `pme.localhost` et au serveur de développement. |
-| `pme-cli` | Mot de passe direct | Les scripts du projet et les tests de performance, qui ont besoin d'un jeton sans navigateur. |
 
 **Côté API et service de modération**
 
@@ -126,8 +125,8 @@ mémoire dix minutes, et le nombre d'appels est plafonné à dix par minute.
 **La politique de mots de passe**
 Le realm `pme` impose une politique à tout mot de passe défini après le déploiement : 12 caractères au moins, avec une
 majuscule, une minuscule et un chiffre, et différent de l'identifiant. Elle est posée par le même travail de
-déploiement que l'administrateur, juste après l'import du realm. Les comptes de démonstration, importés avant, gardent
-leurs mots de passe courts : la politique ne s'applique qu'au prochain changement.
+déploiement que l'administrateur, juste après l'import du realm. Le realm ne contient aucun compte d'utilisateur : ceux
+que l'on crée ensuite dans la console de Keycloak la respectent dès leur création.
 
 **L'administrateur de Keycloak**
 Keycloak 26 ne crée au démarrage qu'un compte d'amorçage temporaire. Un travail de déploiement crée l'administrateur
@@ -135,20 +134,19 @@ permanent à partir des secrets du cluster, puis **supprime le compte d'amorçag
 défaut une fois le déploiement terminé.
 
 !!! note "À savoir"
-L'interface renouvelle le jeton trente secondes avant son expiration, sans que le membre s'en aperçoive. Si le
-renouvellement échoue, parce que la session a expiré, elle le renvoie vers la page de connexion plutôt que
-d'afficher une erreur.
+    L'interface renouvelle le jeton trente secondes avant son expiration, sans que le membre s'en aperçoive. Si le
+    renouvellement échoue, parce que la session a expiré, elle le renvoie vers la page de connexion plutôt que
+    d'afficher une erreur.
 
 ## Ce qui n'est pas couvert
 
 - **Politique de mots de passe limitée à la forme** : longueur et types de caractères. Rien n'interdit un mot de passe
-  courant ou déjà divulgué (« Azertyuiop123 »), et il n'y a ni historique ni expiration. Les comptes de démonstration
-  ne la respectent pas.
+  courant ou déjà divulgué (« Azertyuiop123 »), et il n'y a ni historique ni expiration.
 - **Aucun second facteur** : la connexion repose sur le seul mot de passe. Keycloak sait gérer un code à usage unique,
   mais il n'est pas activé.
-- **Le flux par mot de passe reste permis pour `pme-cli`** : il est commode pour les scripts, mais il suppose que le mot
-  de passe transite par l'application appelante. Ce flux est déconseillé par les versions récentes d'OAuth, et devrait
-  être réservé à des comptes de service.
+- **Pas de révocation immédiate** : désactiver un compte dans Keycloak n'invalide pas le jeton déjà remis. Il reste
+  utilisable jusqu'à cinq minutes. Un contrôle de la session à chaque requête l'éviterait, au prix d'une dépendance
+  permanente à Keycloak ; la durée courte du jeton est le compromis usuel.
 - **Les outils d'exploitation n'ont pas d'authentification propre** : Adminer ouvre directement un écran de connexion à
   la base, Prometheus et Alloy répondent sans aucun contrôle. Seule Grafana a un compte administrateur, avec
   l'inscription et l'accès anonyme désactivés. Dans un environnement partagé, ces trois interfaces devraient passer
@@ -156,8 +154,6 @@ d'afficher une erreur.
 - **Keycloak fonctionne en mode développement.** Ce mode simplifie le démarrage, mais il est déconseillé en production :
   certains contrôles sont assouplis et le serveur reconstruit une partie de son code à chaque démarrage. Le mode de
   production exige un certificat, un nom d'hôte fixe et une base dimensionnée.
-- **Pas de révocation immédiate** : désactiver un compte dans Keycloak n'invalide pas le jeton déjà remis. Il reste
-  utilisable jusqu'à cinq minutes.
 
 ## Commandes de vérification
 
@@ -165,8 +161,6 @@ d'afficher une erreur.
 
 | Commande | Description |
 |---|---|
-| `make token KC_USER=membre` | Demande un jeton à Keycloak et l'affiche. |
-| `make smoke` | Déroule un parcours complet : connexion, dépôt, lecture, modération. |
 | `make keycloak` | Ouvre la console d'administration de Keycloak. |
 
 Pour vérifier le refus par défaut, trois appels suffisent :
@@ -176,19 +170,18 @@ Pour vérifier le refus par défaut, trois appels suffisent :
 3. Un appel à `/api/v1/moderation/queue` avec ce même jeton doit répondre **403**, faute du rôle `moderateur`.
 
 !!! warning "Attention"
-Les comptes `membre` et `moderateur` du realm sont des comptes de démonstration, avec des mots de passe connus et
-versionnés. Ils n'existent que pour faire fonctionner le POC et les tests, et doivent disparaître de tout realm
-destiné à de vrais utilisateurs.
+    Le realm ne contient aucun compte d'utilisateur : `membre` et `moderateur` se créent à la main dans la console
+    de Keycloak (voir la fiche Keycloak).
 
 !!! tip "Astuce"
-Pour lire le contenu d'un jeton sans outil particulier, le coller sur un décodeur hors ligne ou afficher sa partie
-centrale. Les champs `sub`, `azp`, `exp` et `realm_access.roles` sont exactement ceux que l'API vérifie.
+    Pour lire le contenu d'un jeton sans outil particulier, le coller sur un décodeur hors ligne ou afficher sa partie
+    centrale. Les champs `sub`, `azp`, `exp` et `realm_access.roles` sont exactement ceux que l'API vérifie.
 
 ## Fichiers principaux
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/config/realm-pme.json` | Déclare le realm, les rôles, les deux applications et les comptes de démonstration. |
+| `k8s/config/realm-pme.json` | Déclare le realm, les rôles et l'application. |
 | `k8s/03-keycloak-admin-job.yaml` | Crée l'administrateur permanent, supprime le compte d'amorçage et pose la politique de mots de passe. |
 | `api/src/auth/jwt.strategy.ts` | Vérifie la signature, l'émetteur, la date et l'application émettrice. |
 | `api/src/auth/jwt-auth.guard.ts` | Garde globale : exige un jeton sauf sur les routes marquées publiques. |

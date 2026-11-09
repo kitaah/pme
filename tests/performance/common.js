@@ -1,28 +1,17 @@
 // Fonctions communes aux scenarios k6.
 import http from 'k6/http';
-import { check, fail } from 'k6';
+import { fail } from 'k6';
 
 export const APP_URL = __ENV.APP_URL || 'https://pme.localhost';
-export const KEYCLOAK_URL = __ENV.KEYCLOAK_URL || 'https://keycloak.localhost';
 
 /**
- * Jeton d'acces. En CI, le jeton est fourni par l'environnement de test (variable ACCESS_TOKEN, voir scripts/perf-ci.sh).
- * Sur le cluster, connexion a Keycloak via le client de test pme-cli (le mot de passe de demonstration vaut le nom
- * d'utilisateur).
+ * Jeton d'acces fourni par l'environnement de test (variable ACCESS_TOKEN, voir scripts/perf-ci.sh).
  */
-export function login(username) {
-  if (__ENV.ACCESS_TOKEN) {
-    return __ENV.ACCESS_TOKEN;
+export function login() {
+  if (!__ENV.ACCESS_TOKEN) {
+    fail('ACCESS_TOKEN manquant : lancer le test via scripts/perf-ci.sh');
   }
-  const res = http.post(
-    `${KEYCLOAK_URL}/realms/pme/protocol/openid-connect/token`,
-    { grant_type: 'password', client_id: 'pme-cli', username, password: __ENV.KC_PASSWORD || username },
-    { tags: { name: 'login' } },
-  );
-  if (!check(res, { 'connexion Keycloak (200)': (r) => r.status === 200 })) {
-    fail(`Connexion impossible pour ${username} : HTTP ${res.status}`);
-  }
-  return res.json('access_token');
+  return __ENV.ACCESS_TOKEN;
 }
 
 function headers(token) {
