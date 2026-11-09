@@ -24,9 +24,9 @@ Un seul job construit les trois images, puis les contrôle en deux temps.
 
 | Image | Contrôles | Ce qui est vérifié |
 |---|---|---|
-| `tests/image/api.yaml` | 8 | Compte non root, Node 24, application compilée, aucune source ni outil de développement, aucun secret, port 3000. |
-| `tests/image/moderation.yaml` | 8 | Les mêmes contrôles que l'API, avec le port 3001. |
-| `tests/image/frontend.yaml` | 6 | Compte non root, configuration nginx valide, site compilé, aucun code source, port 8080. |
+| **`tests/image/api.yaml`** | 8 | Compte non root, Node 24, application compilée, aucune source ni outil de développement, aucun secret, port 3000. |
+| **`tests/image/moderation.yaml`** | 8 | Les mêmes contrôles que l'API, avec le port 3001. |
+| **`tests/image/frontend.yaml`** | 6 | Compte non root, configuration nginx valide, site compilé, aucun code source, port 8080. |
 
 Détail des 8 contrôles des images de l'API et de la modération :
 
@@ -85,14 +85,14 @@ Voir [Publication des images](publication-images.md).
 
 | Fichier ou dossier | Description |
 |---|---|
-| `tests/image/api.yaml` | Décrit les contrôles de l'image de l'API. |
-| `tests/image/moderation.yaml` | Décrit les contrôles de l'image de la modération. |
-| `tests/image/frontend.yaml` | Décrit les contrôles de l'image de l'interface. |
-| `docker-bake.hcl` | Décrit la construction parallèle des trois images. |
-| `.trivyignore` | Liste les failles acceptées temporairement, avec leur expiration. |
-| `api/Dockerfile` | Fabrique l'image de l'API. |
-| `moderation-service/Dockerfile` | Fabrique l'image de la modération. |
-| `frontend/Dockerfile` | Fabrique l'image de l'interface. |
+| **`tests/image/api.yaml`** | Décrit les contrôles de l'image de l'API. |
+| **`tests/image/moderation.yaml`** | Décrit les contrôles de l'image de la modération. |
+| **`tests/image/frontend.yaml`** | Décrit les contrôles de l'image de l'interface. |
+| **`docker-bake.hcl`** | Décrit la construction parallèle des trois images. |
+| **`.trivyignore`** | Liste les failles acceptées temporairement, avec leur expiration. |
+| **`api/Dockerfile`** | Fabrique l'image de l'API. |
+| **`moderation-service/Dockerfile`** | Fabrique l'image de la modération. |
+| **`frontend/Dockerfile`** | Fabrique l'image de l'interface. |
 
 ## Commandes essentielles
 
@@ -100,9 +100,9 @@ Voir [Publication des images](publication-images.md).
 
 | Commande | Description |
 |---|---|
-| `make image` | Construit les trois images dans Minikube. |
-| `make image-test` | Contrôle la structure puis les vulnérabilités des trois images. |
-| `docker buildx bake` | Construit les trois images en parallèle, comme la pipeline. |
+| **`make image`** | Construit les trois images dans Minikube. |
+| **`make image-test`** | Contrôle la structure puis les vulnérabilités des trois images. |
+| **`docker buildx bake`** | Construit les trois images en parallèle, comme la pipeline. |
 
 !!! tip "Astuce"
     Pour retarder une faille sans correctif durable, ajouter son identifiant dans `.trivyignore` avec une date

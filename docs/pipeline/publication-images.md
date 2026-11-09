@@ -28,9 +28,9 @@ tous les contrôles. Une image publiée est donc une image vérifiée.
 
 | Image | Adresse dans le registre |
 |---|---|
-| API | `registry.gitlab.com/kitaah/pme/api:<sha>` |
-| Modération | `registry.gitlab.com/kitaah/pme/moderation:<sha>` |
-| Interface | `registry.gitlab.com/kitaah/pme/frontend:<sha>` |
+| **API** | `registry.gitlab.com/kitaah/pme/api:<sha>` |
+| **Modération** | `registry.gitlab.com/kitaah/pme/moderation:<sha>` |
+| **Interface** | `registry.gitlab.com/kitaah/pme/frontend:<sha>` |
 
 `<sha>` est le SHA court du commit qui a produit l'image.
 
@@ -56,8 +56,8 @@ Les images publiées sont exactement celles qui ont été contrôlées : elles n
 | **Identifiants** | Fournis par GitLab pour la durée du job. Aucun secret à créer. |
 | **Envoi** | Trois images en parallèle. |
 
-!!! note "Pourquoi pas `latest` ?"
-    `latest` change à chaque envoi : on ne sait plus quelle version tourne. Une étiquette liée au commit permet de
+!!! note "À savoir"
+    **Pourquoi pas `latest` ?** `latest` change à chaque envoi : on ne sait plus quelle version tourne. Une étiquette liée au commit permet de
     retrouver le code exact d'une image et de revenir en arrière.
 
 ## Quand elle a lieu

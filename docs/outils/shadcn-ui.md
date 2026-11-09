@@ -110,9 +110,9 @@ Le bouton est aujourd'hui le seul composant installé. Il propose les variantes 
 
 | Variante | Apparence | Usage |
 |---|---|---|
-| `default` | Aplat rouge, texte blanc | Action principale, par exemple déposer une annonce. |
-| `ghost` | Texte souligné, sans fond | Action secondaire, par exemple se déconnecter. |
-| `outline` | Bordure fine sur fond clair | Action neutre, à utiliser au besoin. |
+| **`default`** | Aplat rouge, texte blanc | Action principale, par exemple déposer une annonce. |
+| **`ghost`** | Texte souligné, sans fond | Action secondaire, par exemple se déconnecter. |
+| **`outline`** | Bordure fine sur fond clair | Action neutre, à utiliser au besoin. |
 
 !!! note "À savoir"
     Les boutons écrits avant l'arrivée de shadcn/ui utilisent encore les classes `.btn` et `.btn-ghost` de
@@ -123,12 +123,12 @@ Le bouton est aujourd'hui le seul composant installé. Il propose les variantes 
 
 | Fichier ou dossier | Description |
 |---|---|
-| `frontend/components.json` | Indique à l'outil shadcn où écrire les composants et où lire les styles. |
-| `frontend/src/components/ui/` | Contient les composants copiés dans le projet. |
-| `frontend/src/components/ui/button.tsx` | Le bouton du design system et ses variantes. |
-| `frontend/src/lib/utils.ts` | Contient `cn`, qui assemble les classes Tailwind sans conflit. |
-| `frontend/src/styles.css` | Relie les variables attendues par shadcn/ui aux couleurs du projet. |
-| `frontend/src/theme.test.ts` | Vérifie le contraste de chaque association de couleurs utilisée. |
+| **`frontend/components.json`** | Indique à l'outil shadcn où écrire les composants et où lire les styles. |
+| **`frontend/src/components/ui/`** | Contient les composants copiés dans le projet. |
+| **`frontend/src/components/ui/button.tsx`** | Le bouton du design system et ses variantes. |
+| **`frontend/src/lib/utils.ts`** | Contient `cn`, qui assemble les classes Tailwind sans conflit. |
+| **`frontend/src/styles.css`** | Relie les variables attendues par shadcn/ui aux couleurs du projet. |
+| **`frontend/src/theme.test.ts`** | Vérifie le contraste de chaque association de couleurs utilisée. |
 
 ## Commandes essentielles
 
@@ -136,9 +136,9 @@ Le bouton est aujourd'hui le seul composant installé. Il propose les variantes 
 
 | Commande | Description |
 |---|---|
-| `npx shadcn@latest add dialog` | Copie le composant « dialog », une fenêtre modale, dans le projet. |
-| `npx shadcn@latest add --help` | Affiche la liste des composants disponibles et les options de l'outil. |
-| `npm test` | Lance les tests, dont le contrôle des contrastes de la palette. |
+| **`npx shadcn@latest add dialog`** | Copie le composant « dialog », une fenêtre modale, dans le projet. |
+| **`npx shadcn@latest add --help`** | Affiche la liste des composants disponibles et les options de l'outil. |
+| **`npm test`** | Lance les tests, dont le contrôle des contrastes de la palette. |
 
 Après l'ajout d'un composant, trois vérifications s'imposent :
 

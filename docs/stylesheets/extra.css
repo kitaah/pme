@@ -213,3 +213,10 @@
   justify-content: center;
   margin: 2em 0;
 }
+
+/* ===== Tableaux : une commande ou un chemin trop long passe à la ligne
+   au lieu d'élargir la colonne (les coupures voulues sont posées dans les pages avec <br>) ===== */
+.md-typeset table:not([class]) code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

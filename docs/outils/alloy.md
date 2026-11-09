@@ -96,10 +96,10 @@ ce soit, et ne voit rien des autres namespaces.
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/config/alloy.alloy` | Décrit la chaîne de collecte, étape par étape. |
-| `k8s/13-alloy.yaml` | Déploie Alloy et lui accorde le droit de lire les pods du namespace. |
-| `k8s/08-ingress.yaml` | Rend l'interface accessible sur `alloy.localhost`. |
-| `k8s/12-loki.yaml` | Déploie Loki, destinataire des journaux. |
+| **`k8s/config/alloy.alloy`** | Décrit la chaîne de collecte, étape par étape. |
+| **`k8s/13-alloy.yaml`** | Déploie Alloy et lui accorde le droit de lire les pods du namespace. |
+| **`k8s/08-ingress.yaml`** | Rend l'interface accessible sur `alloy.localhost`. |
+| **`k8s/12-loki.yaml`** | Déploie Loki, destinataire des journaux. |
 
 ## Commandes essentielles
 
@@ -107,10 +107,10 @@ ce soit, et ne voit rien des autres namespaces.
 
 | Commande | Description |
 |---|---|
-| `make deploy` | Installe Alloy avec le reste de la plateforme. |
-| `make alloy` | Ouvre l'interface d'Alloy dans le navigateur. |
-| `make grafana` | Ouvre Grafana, pour vérifier que les journaux arrivent bien. |
-| `make pods` | Indique si Alloy est prêt. |
+| **`make deploy`** | Installe Alloy avec le reste de la plateforme. |
+| **`make alloy`** | Ouvre l'interface d'Alloy dans le navigateur. |
+| **`make grafana`** | Ouvre Grafana, pour vérifier que les journaux arrivent bien. |
+| **`make pods`** | Indique si Alloy est prêt. |
 
 !!! note "À savoir"
     La configuration d'Alloy est fournie par le cluster. La modifier et redéployer suffit : Alloy redémarre

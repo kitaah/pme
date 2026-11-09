@@ -9,7 +9,7 @@
 | **Configuration** | Le fichier `.gitlab-ci.yml`, à la racine du dépôt |
 | **Déclencheur** | Chaque commit ou fusion sur la branche principale (`main`) |
 | **Durée visée** | Moins de 5 minutes par pipeline |
-| **Nombre de jobs** | 9 jobs, répartis en 7 familles de contrôles |
+| **Nombre de jobs** | 10 jobs, répartis en 8 familles de contrôles |
 
 ## Description
 
@@ -24,9 +24,9 @@ Une régression passe alors inaperçue jusqu'à ce qu'un membre la rencontre. La
 procédure : les mêmes contrôles, dans les mêmes conditions, à chaque modification.
 
 **Ce qu'elle vérifie.**
-Six choses : le code se comporte comme prévu, les services fonctionnent ensemble, les Dockerfile respectent les bonnes
-pratiques, les dépendances sont sûres, les images Docker sont sûres, et l'API reste rapide. Une septième analyse note la
-qualité générale du code. Une fois les images contrôlées, elles sont publiées dans le registre de GitLab.
+Sept choses : le code se comporte comme prévu, les services fonctionnent ensemble, les Dockerfile respectent les bonnes
+pratiques, les dépendances sont sûres, les images Docker du projet sont sûres, celles d'Istio aussi, et l'API reste
+rapide. Une huitième analyse note la qualité générale du code. Une fois les images contrôlées, elles sont publiées dans le registre de GitLab.
 
 **Pourquoi publier les images.**
 Cette publication apporte quatre bénéfices. Chaque image est liée à un commit précis, donc traçable. L'image déployée est
@@ -81,6 +81,7 @@ jobs: "Jobs lancés ensemble" {
   unitaires: "Tests unitaires\n3 jobs" {class: boite}
   hadolint: "Contrôle des\nDockerfile" {class: boite}
   dependances: "Analyse des\ndépendances" {class: boite}
+  istio: "Analyse des\nimages d'Istio" {class: boite}
   integration: "Tests\nd'intégration" {class: boite}
   images: "Tests et publication\ndes images" {class: boite}
   performance: "Tests de\nperformance" {class: boite}
@@ -96,15 +97,16 @@ jobs.unitaires -> sonar: "rapports de\ncouverture"
 
 | Job | Ce qu'il contrôle | Se lance si |
 |---|---|---|
-| `unit-tests:api` | Les 14 tests unitaires de l'API et leur couverture. | Le code d'un module change. |
-| `unit-tests:moderation-service` | Les 17 tests unitaires du service de modération. | Le code d'un module change. |
-| `unit-tests:frontend` | Les 35 tests unitaires de l'interface. | Le code d'un module change. |
-| `sonar` | La qualité du code, la couverture et les doublons. | Le code change, sur la branche principale. |
-| `hadolint` | Les bonnes pratiques des 4 Dockerfile du projet. | Un Dockerfile ou `.hadolint.yaml` change. |
-| `integration-tests` | Les 27 tests avec une vraie base et un vrai broker. | L'API ou la modération change. |
-| `dependency-scan` | Les failles connues dans les dépendances, devDependencies comprises. | Une dépendance change. |
-| `image-tests` | La structure et les vulnérabilités des 3 images, puis leur publication dans le registre. | Une image ou ses tests changent. |
-| `performance-tests` | La rapidité de l'API sous charge. | L'API ou les scénarios k6 changent. |
+| **`unit-tests:api`** | Les 14 tests unitaires de l'API et leur couverture. | Le code d'un module change. |
+| **`unit-tests:moderation-service`** | Les 17 tests unitaires du service de modération. | Le code d'un module change. |
+| **`unit-tests:frontend`** | Les 35 tests unitaires de l'interface. | Le code d'un module change. |
+| **`sonar`** | La qualité du code, la couverture et les doublons. | Le code change, sur la branche principale. |
+| **`hadolint`** | Les bonnes pratiques des 4 Dockerfile du projet. | Un Dockerfile ou `.hadolint.yaml` change. |
+| **`integration-tests`** | Les 27 tests avec une vraie base et un vrai broker. | L'API ou la modération change. |
+| **`dependency-scan`** | Les failles connues dans les dépendances, devDependencies comprises. | Une dépendance change. |
+| **`istio-scan`** | Les failles connues dans les 3 images d'Istio. Le job échoue sur une faille CRITICAL corrigeable. | Les réglages Istio changent. |
+| **`image-tests`** | La structure et les vulnérabilités des 3 images, puis leur publication dans le registre. | Une image ou ses tests changent. |
+| **`performance-tests`** | La rapidité de l'API sous charge. | L'API ou les scénarios k6 changent. |
 
 ## Principes de conception
 
@@ -123,16 +125,16 @@ Le détail de ces règles se trouve dans la page [Fonctionnement](fonctionnement
 
 | Page | Ce qu'on y trouve |
 |---|---|
-| [Exigences qualité](exigences-qualite.md) | Les exigences du projet et le test qui prouve chacune. |
-| [Fonctionnement](fonctionnement.md) | Déclenchement, optimisations, quota et lecture des résultats. |
-| [Tests unitaires](tests-unitaires.md) | La liste des 66 tests unitaires. |
-| [Tests d'intégration](tests-integration.md) | La liste des 27 tests d'intégration. |
-| [Contrôle des Dockerfile](controle-dockerfile.md) | Les règles Hadolint appliquées aux 4 Dockerfile. |
-| [Analyse des dépendances](analyse-dependances.md) | La recherche de failles dans les `package-lock.json`. |
-| [Tests des images Docker](tests-images.md) | Les 22 contrôles de structure et l'analyse Trivy. |
-| [Publication des images](publication-images.md) | Le dépôt des images vérifiées dans le registre GitLab. |
-| [Tests de performance](tests-performance.md) | Les scénarios k6 et leurs seuils. |
-| [Analyse SonarCloud](analyse-sonarcloud.md) | La porte qualité et ses résultats. |
+| **[Exigences qualité](exigences-qualite.md)** | Les exigences du projet et le test qui prouve chacune. |
+| **[Fonctionnement](fonctionnement.md)** | Déclenchement, optimisations, quota et lecture des résultats. |
+| **[Tests unitaires](tests-unitaires.md)** | La liste des 66 tests unitaires. |
+| **[Tests d'intégration](tests-integration.md)** | La liste des 27 tests d'intégration. |
+| **[Contrôle des Dockerfile](controle-dockerfile.md)** | Les règles Hadolint appliquées aux 4 Dockerfile. |
+| **[Analyse des dépendances](analyse-dependances.md)** | La recherche de failles dans les `package-lock.json` et dans les images d'Istio. |
+| **[Tests des images Docker](tests-images.md)** | Les 22 contrôles de structure et l'analyse Trivy. |
+| **[Publication des images](publication-images.md)** | Le dépôt des images vérifiées dans le registre GitLab. |
+| **[Tests de performance](tests-performance.md)** | Les scénarios k6 et leurs seuils. |
+| **[Analyse SonarCloud](analyse-sonarcloud.md)** | La porte qualité et ses résultats. |
 
 ## Contrôles prévus
 
@@ -140,25 +142,25 @@ D'autres contrôles existent déjà sur l'ordinateur de chaque développeur. Ils
 
 | Contrôle | Commande locale |
 |---|---|
-| Règles du code et complexité (ESLint) | `make lint` |
-| Mise en forme du code (Prettier) | `make format-check` |
-| Fichiers YAML (yamllint) | `make lint-yaml` |
-| Manifestes Kubernetes (kubeconform) | `make lint-k8s` |
-| Secrets oubliés dans le code (gitleaks) | `make secrets-scan` |
-| Dépendances vulnérables (npm audit) | `make audit` |
-| Tous les contrôles ci-dessus | `make quality` |
+| **Règles du code et complexité (ESLint)** | `make lint` |
+| **Mise en forme du code (Prettier)** | `make format-check` |
+| **Fichiers YAML (yamllint)** | `make lint-yaml` |
+| **Manifestes Kubernetes (kubeconform)** | `make lint-k8s` |
+| **Secrets oubliés dans le code (gitleaks)** | `make secrets-scan` |
+| **Dépendances vulnérables (npm audit)** | `make audit` |
+| **Tous les contrôles ci-dessus** | `make quality` |
 
 !!! note "À savoir"
-Un commit qui ne touche que la documentation ne lance aucun job. Il ne consomme donc aucune minute du quota.
+    Un commit qui ne touche que la documentation ne lance aucun job. Il ne consomme donc aucune minute du quota.
 
 !!! warning "Attention"
-La pipeline ne se lance que sur la branche principale. Un commit poussé sur une autre branche n'est contrôlé par
-aucun job : lancer les commandes locales avant de fusionner.
+    La pipeline ne se lance que sur la branche principale. Un commit poussé sur une autre branche n'est contrôlé par
+    aucun job : lancer les commandes locales avant de fusionner.
 
 !!! tip "Astuce"
-Chaque contrôle de la pipeline a son équivalent sur l'ordinateur, à lancer avant d'envoyer le code. Cela évite un
-aller-retour de plusieurs minutes et économise le quota mensuel. Les commandes sont listées dans la fiche
-[GitLab CI](../outils/gitlab-ci.md).
+    Chaque contrôle de la pipeline a son équivalent sur l'ordinateur, à lancer avant d'envoyer le code. Cela évite un
+    aller-retour de plusieurs minutes et économise le quota mensuel. Les commandes sont listées dans la fiche
+    [GitLab CI](../outils/gitlab-ci.md).
 
 ## Pour aller plus loin
 

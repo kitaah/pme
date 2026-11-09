@@ -79,10 +79,10 @@ app -> base
 
 | Fichier ou dossier | Description |
 |---|---|
-| `api/test/integration/listings.integration-spec.ts` | Envoie les requêtes de dépôt et de lecture des annonces. |
-| `api/test/integration/listings-broker.integration-spec.ts` | Envoie des dépôts et vérifie leur publication dans NATS. |
-| `moderation-service/test/integration/moderation.integration-spec.ts` | Interroge la file de modération selon le rôle. |
-| `*/test/support/jwt-helper.ts` | Fabrique les jetons signés qui accompagnent les requêtes. |
+| **`api/test/integration/`**<br>**`listings.integration-spec.ts`** | Envoie les requêtes de dépôt et de lecture des annonces. |
+| **`api/test/integration/`**<br>**`listings-broker.integration-spec.ts`** | Envoie des dépôts et vérifie leur publication dans NATS. |
+| **`moderation-service/test/integration/`**<br>**`moderation.integration-spec.ts`** | Interroge la file de modération selon le rôle. |
+| **`*/test/support/jwt-helper.ts`** | Fabrique les jetons signés qui accompagnent les requêtes. |
 
 ## Commandes essentielles
 
@@ -91,8 +91,8 @@ Supertest n'a pas de commande propre : il se lance avec [Jest](jest.md), Docker 
 
 | Commande | Description |
 |---|---|
-| `npm run test:integration` | Lance les tests d'intégration du module. |
-| `make test-integration` | Les lance pour les deux modules, depuis la racine du projet. |
+| **`npm run test:integration`** | Lance les tests d'intégration du module. |
+| **`make test-integration`** | Les lance pour les deux modules, depuis la racine du projet. |
 
 !!! warning "Attention"
     Ces tests démarrent de vrais conteneurs : sans Docker, ils échouent dès le démarrage. Vérifier que Docker fonctionne

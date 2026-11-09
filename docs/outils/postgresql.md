@@ -122,10 +122,10 @@ sous cette limite même lorsque l'autoscaler ajoute des exemplaires :
 
 | Composant | Plafond par exemplaire | Exemplaires au maximum | Total |
 |---|---|---|---|
-| API | 10 | 4 | 40 |
-| Service de modération | 5 | 4 | 20 |
-| Keycloak | 10 au total | 1 | 10 |
-| Grafana | 10 au total | 1 | 10 |
+| **API** | 10 | 4 | 40 |
+| **Service de modération** | 5 | 4 | 20 |
+| **Keycloak** | 10 au total | 1 | 10 |
+| **Grafana** | 10 au total | 1 | 10 |
 | **Total** | | | **80** |
 
 !!! note "À savoir"
@@ -137,14 +137,14 @@ sous cette limite même lorsque l'autoscaler ajoute des exemplaires :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/01-postgres.yaml` | Déploie PostgreSQL dans le cluster, avec son volume de données. |
-| `k8s/config/postgres-init.sh` | Crée les bases supplémentaires à la première initialisation du volume. |
-| `k8s/config/postgres-hba.conf` | Impose le chiffrement aux connexions venant du réseau. |
-| `k8s/00-internal-tls.yaml` | Demande à cert-manager le certificat du serveur. |
-| `api/src/migrations/` | Contient les migrations qui créent et font évoluer les tables des annonces. |
-| `moderation-service/src/migrations/` | Contient les migrations de la file de modération. |
-| `api/src/config/configuration.ts` | Lit les paramètres de connexion de l'API, dont le plafond de connexions. |
-| `.env` | Contient l'identifiant et le mot de passe de la base. Ce fichier est exclu de Git. |
+| **`k8s/01-postgres.yaml`** | Déploie PostgreSQL dans le cluster, avec son volume de données. |
+| **`k8s/config/postgres-init.sh`** | Crée les bases supplémentaires à la première initialisation du volume. |
+| **`k8s/config/postgres-hba.conf`** | Impose le chiffrement aux connexions venant du réseau. |
+| **`k8s/00-internal-tls.yaml`** | Demande à cert-manager le certificat du serveur. |
+| **`api/src/migrations/`** | Contient les migrations qui créent et font évoluer les tables des annonces. |
+| **`moderation-service/src/migrations/`** | Contient les migrations de la file de modération. |
+| **`api/src/config/configuration.ts`** | Lit les paramètres de connexion de l'API, dont le plafond de connexions. |
+| **`.env`** | Contient l'identifiant et le mot de passe de la base. Ce fichier est exclu de Git. |
 
 ## Commandes essentielles
 
@@ -152,13 +152,13 @@ sous cette limite même lorsque l'autoscaler ajoute des exemplaires :
 
 | Commande | Description |
 |---|---|
-| `make deploy` | Installe PostgreSQL avec le reste de la plateforme. |
-| `make pods` | Indique si PostgreSQL est prêt. |
-| `make port-forward` | Rend la base joignable depuis l'ordinateur, sur le port 5432. |
-| `make db-listings` | Affiche les annonces enregistrées. |
-| `make db-moderation` | Affiche les annonces en attente de modération. |
-| `make create-grafana-db` | Crée la base de Grafana sur un cluster déjà installé. |
-| `make ca-configmap` | Copie l'autorité locale dans le namespace, pour que les applications vérifient le certificat. |
+| **`make deploy`** | Installe PostgreSQL avec le reste de la plateforme. |
+| **`make pods`** | Indique si PostgreSQL est prêt. |
+| **`make port-forward`** | Rend la base joignable depuis l'ordinateur, sur le port 5432. |
+| **`make db-listings`** | Affiche les annonces enregistrées. |
+| **`make db-moderation`** | Affiche les annonces en attente de modération. |
+| **`make create-grafana-db`** | Crée la base de Grafana sur un cluster déjà installé. |
+| **`make ca-configmap`** | Copie l'autorité locale dans le namespace, pour que les applications vérifient le certificat. |
 
 !!! note "À savoir"
     Le script de création des bases ne s'exécute qu'à la toute première initialisation du volume. Sur un cluster déjà

@@ -84,10 +84,10 @@ Les étiquettes attachées à chaque ligne sont volontairement peu nombreuses :
 
 | Étiquette | Contenu | Usage |
 |---|---|---|
-| `app` | Nom du service, par exemple `pme-api`. | Filtrer sur un composant. |
-| `pod` | Nom de l'exemplaire. | Distinguer les exemplaires créés par l'autoscaler. |
-| `container` | Nom du conteneur dans le pod. | Séparer les conteneurs d'un même pod. |
-| `namespace` | Toujours `pme`. | Garantir l'origine des lignes. |
+| **`app`** | Nom du service, par exemple `pme-api`. | Filtrer sur un composant. |
+| **`pod`** | Nom de l'exemplaire. | Distinguer les exemplaires créés par l'autoscaler. |
+| **`container`** | Nom du conteneur dans le pod. | Séparer les conteneurs d'un même pod. |
+| **`namespace`** | Toujours `pme`. | Garantir l'origine des lignes. |
 
 !!! note "À savoir"
     Multiplier les étiquettes paraît pratique, mais chaque combinaison crée un ensemble distinct à stocker. Une
@@ -98,11 +98,11 @@ Les étiquettes attachées à chaque ligne sont volontairement peu nombreuses :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/12-loki.yaml` | Déploie Loki dans le cluster. |
-| `k8s/config/loki.yml` | Règle le stockage et la durée de conservation. |
-| `k8s/config/grafana-datasource-loki.yml` | Déclare Loki comme source de données de Grafana. |
-| `k8s/config/grafana-dashboard-logs.json` | Décrit le tableau de bord des journaux. |
-| `k8s/config/alloy.alloy` | Décrit la chaîne qui alimente Loki. |
+| **`k8s/12-loki.yaml`** | Déploie Loki dans le cluster. |
+| **`k8s/config/loki.yml`** | Règle le stockage et la durée de conservation. |
+| **`k8s/config/grafana-datasource-loki.yml`** | Déclare Loki comme source de données de Grafana. |
+| **`k8s/config/grafana-dashboard-logs.json`** | Décrit le tableau de bord des journaux. |
+| **`k8s/config/alloy.alloy`** | Décrit la chaîne qui alimente Loki. |
 
 ## Commandes essentielles
 
@@ -110,10 +110,10 @@ Les étiquettes attachées à chaque ligne sont volontairement peu nombreuses :
 
 | Commande | Description |
 |---|---|
-| `make deploy` | Installe Loki avec le reste de la plateforme. |
-| `make grafana` | Ouvre Grafana, seul moyen de consulter les journaux. |
-| `make alloy` | Ouvre l'interface d'Alloy, pour vérifier que les journaux sont bien envoyés. |
-| `make pods` | Indique si Loki est prêt. |
+| **`make deploy`** | Installe Loki avec le reste de la plateforme. |
+| **`make grafana`** | Ouvre Grafana, seul moyen de consulter les journaux. |
+| **`make alloy`** | Ouvre l'interface d'Alloy, pour vérifier que les journaux sont bien envoyés. |
+| **`make pods`** | Indique si Loki est prêt. |
 
 Pour rechercher les journaux d'un service :
 

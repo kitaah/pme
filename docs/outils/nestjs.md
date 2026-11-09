@@ -182,24 +182,24 @@ Les adresses exposées sont les suivantes :
 
 | Adresse | Qui peut l'appeler | Description |
 |---|---|---|
-| `POST /api/v1/listings` | Rôle `membre` | Dépose une annonce et la place en attente de modération. |
-| `GET /api/v1/listings/mine` | Rôle `membre` | Renvoie les annonces du membre, les plus récentes d'abord, 50 par défaut et 100 au maximum. |
-| `GET /api/v1/moderation/queue` | Rôle `moderateur` | Renvoie la file des annonces à relire. Cette adresse appartient au service de modération. |
-| `GET /api/health/liveness` | Kubernetes | Indique que l'application est vivante. |
-| `GET /api/health/readiness` | Kubernetes | Indique qu'elle est prête, c'est-à-dire que la base répond. |
-| `GET /api/metrics` | Prometheus | Fournit les mesures de l'application. Jamais exposée à l'extérieur. |
+| **`POST /api/v1/listings`** | Rôle `membre` | Dépose une annonce et la place en attente de modération. |
+| **`GET /api/v1/listings/mine`** | Rôle `membre` | Renvoie les annonces du membre, les plus récentes d'abord, 50 par défaut et 100 au maximum. |
+| **`GET /api/v1/moderation/queue`** | Rôle `moderateur` | Renvoie la file des annonces à relire. Cette adresse appartient au service de modération. |
+| **`GET /api/health/liveness`** | Kubernetes | Indique que l'application est vivante. |
+| **`GET /api/health/readiness`** | Kubernetes | Indique qu'elle est prête, c'est-à-dire que la base répond. |
+| **`GET /api/metrics`** | Prometheus | Fournit les mesures de l'application. Jamais exposée à l'extérieur. |
 
 La configuration est lue dans des variables d'environnement, fournies par Kubernetes :
 
 | Variable | Valeur par défaut | Rôle |
 |---|---|---|
-| `PORT` | 3000 pour l'API, 3001 pour la modération | Port d'écoute de l'application. |
-| `THROTTLE_LIMIT` | 200 | Nombre de requêtes autorisées par minute et par adresse réseau. |
-| `DB_POOL_SIZE` | 10 | Nombre maximal de connexions ouvertes vers PostgreSQL par exemplaire de l'application. |
-| `DB_SSL_CA` | absente | Fichier de l'autorité de certification. Absente, la connexion à la base n'est pas chiffrée. |
-| `NATS_TLS_CA` | absente | Même principe pour la connexion à NATS. |
-| `KEYCLOAK_ISSUER` | obligatoire | Émetteur attendu dans le jeton. |
-| `KEYCLOAK_JWKS_URI` | obligatoire | Adresse à laquelle l'API récupère les clés publiques de Keycloak. |
+| **`PORT`** | 3000 pour l'API, 3001 pour la modération | Port d'écoute de l'application. |
+| **`THROTTLE_LIMIT`** | 200 | Nombre de requêtes autorisées par minute et par adresse réseau. |
+| **`DB_POOL_SIZE`** | 10 | Nombre maximal de connexions ouvertes vers PostgreSQL par exemplaire de l'application. |
+| **`DB_SSL_CA`** | absente | Fichier de l'autorité de certification. Absente, la connexion à la base n'est pas chiffrée. |
+| **`NATS_TLS_CA`** | absente | Même principe pour la connexion à NATS. |
+| **`KEYCLOAK_ISSUER`** | obligatoire | Émetteur attendu dans le jeton. |
+| **`KEYCLOAK_JWKS_URI`** | obligatoire | Adresse à laquelle l'API récupère les clés publiques de Keycloak. |
 
 !!! note "À savoir"
     Le schéma de la base n'est jamais déduit du code : il est décrit par des migrations, jouées au démarrage. Une
@@ -210,18 +210,18 @@ La configuration est lue dans des variables d'environnement, fournies par Kubern
 
 | Fichier ou dossier | Description |
 |---|---|
-| `api/src/main.ts` | Point d'entrée de l'API : démarre l'application et règle sa sécurité. |
-| `api/src/app.module.ts` | Module principal : assemble les autres modules, la connexion à la base et les contrôles d'entrée. |
-| `api/src/listings/` | Module des annonces : réception, contrôle, enregistrement et publication de l'événement. |
-| `api/src/auth/` | Vérification du jeton et des rôles. |
-| `api/src/common/` | Éléments communs : disjoncteur de la base et mise en forme des erreurs. |
-| `api/src/config/configuration.ts` | Lit la configuration dans les variables d'environnement et refuse de démarrer si l'une manque. |
-| `api/src/health/` | Sondes de santé interrogées par Kubernetes. |
-| `api/src/metrics/` | Mesures exposées à Prometheus. |
-| `api/src/migrations/` | Modifications successives du schéma de la base. |
-| `moderation-service/src/moderation/` | Lecture des événements NATS et constitution de la file de modération. |
-| `api/package.json` | Liste les dépendances et les commandes de l'API. |
-| `api/Dockerfile` | Décrit la fabrication de l'image Docker de l'API. |
+| **`api/src/main.ts`** | Point d'entrée de l'API : démarre l'application et règle sa sécurité. |
+| **`api/src/app.module.ts`** | Module principal : assemble les autres modules, la connexion à la base et les contrôles d'entrée. |
+| **`api/src/listings/`** | Module des annonces : réception, contrôle, enregistrement et publication de l'événement. |
+| **`api/src/auth/`** | Vérification du jeton et des rôles. |
+| **`api/src/common/`** | Éléments communs : disjoncteur de la base et mise en forme des erreurs. |
+| **`api/src/config/configuration.ts`** | Lit la configuration dans les variables d'environnement et refuse de démarrer si l'une manque. |
+| **`api/src/health/`** | Sondes de santé interrogées par Kubernetes. |
+| **`api/src/metrics/`** | Mesures exposées à Prometheus. |
+| **`api/src/migrations/`** | Modifications successives du schéma de la base. |
+| **`moderation-service/src/moderation/`** | Lecture des événements NATS et constitution de la file de modération. |
+| **`api/package.json`** | Liste les dépendances et les commandes de l'API. |
+| **`api/Dockerfile`** | Décrit la fabrication de l'image Docker de l'API. |
 
 ## Commandes essentielles
 
@@ -229,14 +229,14 @@ La configuration est lue dans des variables d'environnement, fournies par Kubern
 
 | Commande | Description |
 |---|---|
-| `make install` | Installe les dépendances des trois applications. |
-| `make api` | Démarre l'API sur l'ordinateur et la redémarre à chaque modification du code. |
-| `make moderation` | Démarre le service de modération de la même façon. |
-| `make test` | Lance les tests unitaires des trois applications. |
-| `make test-integration` | Lance les tests avec une vraie base et un vrai broker, démarrés pour l'occasion par Docker. |
-| `make lint` | Signale les erreurs probables et les écarts aux règles d'écriture de l'équipe. |
-| `make image-api` | Construit l'image Docker de l'API dans le cluster. |
-| `make logs-api` | Affiche le journal de l'API, mis à jour en direct. |
+| **`make install`** | Installe les dépendances des trois applications. |
+| **`make api`** | Démarre l'API sur l'ordinateur et la redémarre à chaque modification du code. |
+| **`make moderation`** | Démarre le service de modération de la même façon. |
+| **`make test`** | Lance les tests unitaires des trois applications. |
+| **`make test-integration`** | Lance les tests avec une vraie base et un vrai broker, démarrés pour l'occasion par Docker. |
+| **`make lint`** | Signale les erreurs probables et les écarts aux règles d'écriture de l'équipe. |
+| **`make image-api`** | Construit l'image Docker de l'API dans le cluster. |
+| **`make logs-api`** | Affiche le journal de l'API, mis à jour en direct. |
 
 Pour travailler sur l'API en local, l'enchaînement est le suivant :
 

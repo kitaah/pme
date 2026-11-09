@@ -111,13 +111,13 @@ Les seuils de couverture, mesurés sur les tests unitaires, sont les suivants :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `api/jest.config.js` | Déclare les deux projets, les fichiers mesurés et les seuils de couverture de l'API. |
-| `moderation-service/jest.config.js` | Même configuration pour le service de modération. |
-| `*/src/**/*.spec.ts` | Les tests unitaires, placés à côté du code qu'ils vérifient. |
-| `*/test/integration/` | Les tests d'intégration. |
-| `*/test/support/jest-setup.ts` | Règle le délai des tests d'intégration. |
-| `*/coverage/lcov.info` | Rapport de couverture, lu par SonarCloud. |
-| `*/reports/junit.xml` | Rapport JUnit, affiché par GitLab. |
+| **`api/jest.config.js`** | Déclare les deux projets, les fichiers mesurés et les seuils de couverture de l'API. |
+| **`moderation-service/jest.config.js`** | Même configuration pour le service de modération. |
+| **`*/src/**/*.spec.ts`** | Les tests unitaires, placés à côté du code qu'ils vérifient. |
+| **`*/test/integration/`** | Les tests d'intégration. |
+| **`*/test/support/jest-setup.ts`** | Règle le délai des tests d'intégration. |
+| **`*/coverage/lcov.info`** | Rapport de couverture, lu par SonarCloud. |
+| **`*/reports/junit.xml`** | Rapport JUnit, affiché par GitLab. |
 
 ## Commandes essentielles
 
@@ -125,10 +125,10 @@ Les seuils de couverture, mesurés sur les tests unitaires, sont les suivants :
 
 | Commande | Description |
 |---|---|
-| `npm test` | Lance les tests unitaires. |
-| `npm run test:cov` | Lance les tests unitaires avec la couverture et ses seuils. |
-| `npm run test:integration` | Lance les tests d'intégration, Docker démarré. |
-| `npm test -- -t "texte"` | Ne lance que les tests dont le nom contient ce texte. |
+| **`npm test`** | Lance les tests unitaires. |
+| **`npm run test:cov`** | Lance les tests unitaires avec la couverture et ses seuils. |
+| **`npm run test:integration`** | Lance les tests d'intégration, Docker démarré. |
+| **`npm test -- -t "texte"`** | Ne lance que les tests dont le nom contient ce texte. |
 
 Depuis la racine du projet, `make test` lance les tests unitaires des trois modules, `make coverage` leur couverture et
 `make test-integration` les tests d'intégration.

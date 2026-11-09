@@ -27,8 +27,8 @@ La pipeline lance **27 tests d'intégration** dans un seul job : 17 pour l'API e
 
 | Fichier | Tests | Ce qui est vérifié |
 |---|---|---|
-| `api/test/integration/listings.integration-spec.ts` | 14 | Authentification, dépôt d'annonce, validation, lecture des annonces, sondes de santé. |
-| `api/test/integration/listings-broker.integration-spec.ts` | 3 | Publication dans le vrai flux NATS, rejeu ignoré, erreur 503 si NATS tombe. |
+| **`api/test/integration/`**<br>**`listings.integration-spec.ts`** | 14 | Authentification, dépôt d'annonce, validation, lecture des annonces, sondes de santé. |
+| **`api/test/integration/`**<br>**`listings-broker.integration-spec.ts`** | 3 | Publication dans le vrai flux NATS, rejeu ignoré, erreur 503 si NATS tombe. |
 
 Dans le premier fichier, NATS est remplacé par une doublure pour tester l'API seule. Le second fichier utilise le vrai NATS.
 
@@ -49,8 +49,8 @@ Détail des 14 tests du premier fichier :
 
 | Fichier | Tests | Ce qui est vérifié |
 |---|---|---|
-| `moderation-service/test/integration/moderation.integration-spec.ts` | 6 | Consommation de l'événement, rejeu sans doublon, message mal formé, accès à la file selon le rôle. |
-| `moderation-service/test/integration/moderation-broker.integration-spec.ts` | 4 | Messages conservés pendant un arrêt, flux des messages en échec, consommateur durable. |
+| **`moderation-service/test/integration/`**<br>**`moderation.integration-spec.ts`** | 6 | Consommation de l'événement, rejeu sans doublon, message mal formé, accès à la file selon le rôle. |
+| **`moderation-service/test/integration/`**<br>**`moderation-broker.integration-spec.ts`** | 4 | Messages conservés pendant un arrêt, flux des messages en échec, consommateur durable. |
 
 Ce que ces tests prouvent d'important :
 
@@ -74,13 +74,13 @@ Ce que ces tests prouvent d'important :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `api/test/integration/` | Contient les tests d'intégration de l'API. |
-| `moderation-service/test/integration/` | Contient les tests d'intégration de la modération. |
-| `api/test/support/infrastructure.ts` | Démarre PostgreSQL et NATS dans des conteneurs jetables. |
-| `api/test/support/jwt-helper.ts` | Fournit le faux Keycloak et ses jetons de test. |
-| `api/test/support/jest-setup.ts` | Fixe un délai large pour le téléchargement des images. |
-| `api/jest.config.js` | Déclare le projet « integration » de Jest. |
-| `.gitlab-ci.yml` | Définit le job `integration-tests` et son service Docker. |
+| **`api/test/integration/`** | Contient les tests d'intégration de l'API. |
+| **`moderation-service/test/integration/`** | Contient les tests d'intégration de la modération. |
+| **`api/test/support/infrastructure.ts`** | Démarre PostgreSQL et NATS dans des conteneurs jetables. |
+| **`api/test/support/jwt-helper.ts`** | Fournit le faux Keycloak et ses jetons de test. |
+| **`api/test/support/jest-setup.ts`** | Fixe un délai large pour le téléchargement des images. |
+| **`api/jest.config.js`** | Déclare le projet « integration » de Jest. |
+| **`.gitlab-ci.yml`** | Définit le job `integration-tests` et son service Docker. |
 
 ## Commandes essentielles
 
@@ -88,8 +88,8 @@ Ce que ces tests prouvent d'important :
 
 | Commande | Description |
 |---|---|
-| `make test-integration` | Lance les tests d'intégration de l'API et de la modération. |
-| `cd api && npm run test:integration` | Lance seulement ceux de l'API. |
+| **`make test-integration`** | Lance les tests d'intégration de l'API et de la modération. |
+| **`cd api && npm run test:integration`** | Lance seulement ceux de l'API. |
 
 !!! note "À savoir"
     Dans la pipeline, un seul job exécute les deux modules. Le démarrage de Docker-in-Docker, environ 40 secondes, n'est

@@ -103,11 +103,11 @@ Le projet applique par ailleurs quelques règles d'hygiène, qui valent indépen
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/14-pme-secrets-sealed.yaml` | Contient les huit valeurs chiffrées. C'est le fichier versionné. |
-| `.env` | Contient les identifiants et les mots de passe en clair. Ce fichier est exclu de Git. |
-| `env.example` | Sert de modèle pour `.env`. Il est versionné et ne contient aucune vraie valeur. |
-| `k8s/kustomization.yaml` | Ajoute le fichier chiffré aux manifestes déployés. |
-| `Makefile` | Définit les commandes `kubeseal`, `sealed-secrets` et `seal`, et la version commune aux deux outils (`KUBESEAL_VERSION`). |
+| **`k8s/14-pme-secrets-sealed.yaml`** | Contient les huit valeurs chiffrées. C'est le fichier versionné. |
+| **`.env`** | Contient les identifiants et les mots de passe en clair. Ce fichier est exclu de Git. |
+| **`env.example`** | Sert de modèle pour `.env`. Il est versionné et ne contient aucune vraie valeur. |
+| **`k8s/kustomization.yaml`** | Ajoute le fichier chiffré aux manifestes déployés. |
+| **`Makefile`** | Définit les commandes `kubeseal`, `sealed-secrets` et `seal`, et la version commune aux deux outils (`KUBESEAL_VERSION`). |
 
 ## Commandes essentielles
 
@@ -115,12 +115,12 @@ Le projet applique par ailleurs quelques règles d'hygiène, qui valent indépen
 
 | Commande | Description |
 |---|---|
-| `make deploy` | Déploie la plateforme et génère le fichier chiffré s'il manque. |
-| `make seal` | Chiffre à nouveau le contenu de `.env` après un changement de mot de passe. |
-| `make kubeseal` | Installe l'outil `kubeseal` en version 0.41.2 s'il est absent. Linux uniquement. |
-| `make sealed-secrets` | Installe le contrôleur seul, à la même version. |
-| `kubectl -n pme get secret pme-secrets` | Vérifie que le contrôleur a bien recréé le Secret. |
-| `kubectl -n pme get sealedsecret` | Affiche l'état du fichier chiffré. |
+| **`make deploy`** | Déploie la plateforme et génère le fichier chiffré s'il manque. |
+| **`make seal`** | Chiffre à nouveau le contenu de `.env` après un changement de mot de passe. |
+| **`make kubeseal`** | Installe l'outil `kubeseal` en version 0.41.2 s'il est absent. Linux uniquement. |
+| **`make sealed-secrets`** | Installe le contrôleur seul, à la même version. |
+| **`kubectl -n pme get secret pme-secrets`** | Vérifie que le contrôleur a bien recréé le Secret. |
+| **`kubectl -n pme get sealedsecret`** | Affiche l'état du fichier chiffré. |
 
 La mise en place se fait une fois par poste et par cluster :
 

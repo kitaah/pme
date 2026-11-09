@@ -21,10 +21,10 @@ Ensuite, chaque job surveille ses propres fichiers :
 
 | Job | Fichiers surveillés |
 |---|---|
-| `unit-tests:*` et `sonar` | Les trois modules, `.gitlab-ci.yml` et `sonar-project.properties`. |
-| `integration-tests` | L'API, la modération et `.gitlab-ci.yml`. |
-| `image-tests` | Les Dockerfile, les dépendances, nginx, les tests d'image, `.trivyignore` et `.gitlab-ci.yml`. |
-| `performance-tests` | L'API, les scénarios k6, `scripts/perf-ci.sh` et `.gitlab-ci.yml`. |
+| **`unit-tests:*`**<br>**`sonar`** | Les trois modules, `.gitlab-ci.yml` et `sonar-project.properties`. |
+| **`integration-tests`** | L'API, la modération et `.gitlab-ci.yml`. |
+| **`image-tests`** | Les Dockerfile, les dépendances, nginx, les tests d'image, `.trivyignore` et `.gitlab-ci.yml`. |
+| **`performance-tests`** | L'API, les scénarios k6, `scripts/perf-ci.sh` et `.gitlab-ci.yml`. |
 
 Si aucun fichier surveillé n'a changé, le job ne se lance pas. Pour `image-tests`, il reste disponible en lancement manuel.
 
@@ -95,8 +95,8 @@ quota : un job qui ne tourne pas ne coûte rien.
 
 | Variable | Rôle |
 |---|---|
-| `SONAR_TOKEN` | Jeton d'accès à SonarCloud. Elle est masquée dans les journaux. |
-| `SONAR_HOST_URL` | Adresse de SonarCloud : `https://sonarcloud.io`. |
+| **`SONAR_TOKEN`** | Jeton d'accès à SonarCloud. Elle est masquée dans les journaux. |
+| **`SONAR_HOST_URL`** | Adresse de SonarCloud : `https://sonarcloud.io`. |
 
 ## Pour aller plus loin
 

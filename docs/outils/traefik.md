@@ -130,12 +130,12 @@ Les six noms d'hôte sont les suivants :
 
 | Adresse | Service | Port | Rôle |
 |---|---|---|---|
-| <https://pme.localhost> | `pme-frontend`, `pme-api`, `pme-moderation` | 8080, 3000 et 3001 | Le site et son API, selon le chemin. |
-| <https://keycloak.localhost> | `keycloak` | 8080 | Connexion et gestion des comptes. |
-| <https://adminer.localhost> | `adminer` | 8080 | Consultation des bases de données. |
-| <https://grafana.localhost> | `grafana` | 3000 | Tableaux de bord. |
-| <https://prometheus.localhost> | `prometheus` | 9090 | Mesures brutes et état de la collecte. |
-| <https://alloy.localhost> | `alloy` | 12345 | Suivi de la collecte des journaux. |
+| **<https://pme.localhost>** | `pme-frontend`, `pme-api`, `pme-moderation` | 8080, 3000 et 3001 | Le site et son API, selon le chemin. |
+| **<https://keycloak.localhost>** | `keycloak` | 8080 | Connexion et gestion des comptes. |
+| **<https://adminer.localhost>** | `adminer` | 8080 | Consultation des bases de données. |
+| **<https://grafana.localhost>** | `grafana` | 3000 | Tableaux de bord. |
+| **<https://prometheus.localhost>** | `prometheus` | 9090 | Mesures brutes et état de la collecte. |
+| **<https://alloy.localhost>** | `alloy` | 12345 | Suivi de la collecte des journaux. |
 
 !!! note "À savoir"
     Ces noms d'hôte figurent aussi dans le `Makefile`, dans la configuration de Keycloak, de l'API, de la modération,
@@ -145,15 +145,15 @@ Les six noms d'hôte sont les suivants :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/traefik/values.yaml` | Réglages de Traefik : ports 80 et 443, redirection vers HTTPS, journal d'accès. |
-| `k8s/08-ingress.yaml` | Déclare les noms d'hôte, les chemins, les services visés et le certificat. |
-| `k8s/08-middlewares.yaml` | Décrit l'en-tête HSTS et la compression des réponses. |
-| `k8s/08-certificate.yaml` | Demande à cert-manager le certificat des six noms d'hôte. |
-| `k8s/03-keycloak.yaml` | Fixe l'adresse publique de Keycloak. |
-| `k8s/config/realm-pme.json` | Liste les adresses de retour autorisées après la connexion. |
-| `k8s/config/frontend-config.js` | Indique au site l'adresse de Keycloak. |
-| `Makefile` | Contient les noms d'hôte, la version du chart et les commandes liées à l'ingress. |
-| `/etc/hosts` | Associe les six noms d'hôte à l'adresse de l'ordinateur. |
+| **`k8s/traefik/values.yaml`** | Réglages de Traefik : ports 80 et 443, redirection vers HTTPS, journal d'accès. |
+| **`k8s/08-ingress.yaml`** | Déclare les noms d'hôte, les chemins, les services visés et le certificat. |
+| **`k8s/08-middlewares.yaml`** | Décrit l'en-tête HSTS et la compression des réponses. |
+| **`k8s/08-certificate.yaml`** | Demande à cert-manager le certificat des six noms d'hôte. |
+| **`k8s/03-keycloak.yaml`** | Fixe l'adresse publique de Keycloak. |
+| **`k8s/config/realm-pme.json`** | Liste les adresses de retour autorisées après la connexion. |
+| **`k8s/config/frontend-config.js`** | Indique au site l'adresse de Keycloak. |
+| **`Makefile`** | Contient les noms d'hôte, la version du chart et les commandes liées à l'ingress. |
+| **`/etc/hosts`** | Associe les six noms d'hôte à l'adresse de l'ordinateur. |
 
 ## Commandes essentielles
 
@@ -161,16 +161,16 @@ Les six noms d'hôte sont les suivants :
 
 | Commande | Description |
 |---|---|
-| `make minikube-up` | Crée le cluster en publiant les ports 80 et 443 sur l'ordinateur, puis installe Traefik. |
-| `make helm` | Installe Helm sur l'ordinateur s'il est absent. Le mot de passe administrateur est demandé. |
-| `make ingress` | Installe ou met à jour Traefik dans le cluster et attend qu'il soit prêt. |
-| `make istio` | Installe le maillage Istio et enrôle le namespace de Traefik (voir [Istio](istio.md)). À lancer après `make ingress`. |
-| `make hosts` | Affiche la ligne à ajouter au fichier hosts de l'ordinateur. |
-| `make deploy` | Installe les règles d'ingress, les middlewares et le certificat avec le reste de la plateforme. |
-| `make app` | Ouvre l'application dans le navigateur. |
-| `make ca-cert` | Écrit l'autorité locale dans `pme-ca.crt`, à importer dans le navigateur. |
-| `make tunnel` | Redirige les ports 80 et 443 vers Traefik, pour un cluster créé sans publication des ports. |
-| `kubectl -n traefik logs deploy/traefik` | Affiche le journal de Traefik, dont les requêtes reçues. |
+| **`make minikube-up`** | Crée le cluster en publiant les ports 80 et 443 sur l'ordinateur, puis installe Traefik. |
+| **`make helm`** | Installe Helm sur l'ordinateur s'il est absent. Le mot de passe administrateur est demandé. |
+| **`make ingress`** | Installe ou met à jour Traefik dans le cluster et attend qu'il soit prêt. |
+| **`make istio`** | Installe le maillage Istio et enrôle le namespace de Traefik (voir [Istio](istio.md)). À lancer après `make ingress`. |
+| **`make hosts`** | Affiche la ligne à ajouter au fichier hosts de l'ordinateur. |
+| **`make deploy`** | Installe les règles d'ingress, les middlewares et le certificat avec le reste de la plateforme. |
+| **`make app`** | Ouvre l'application dans le navigateur. |
+| **`make ca-cert`** | Écrit l'autorité locale dans `pme-ca.crt`, à importer dans le navigateur. |
+| **`make tunnel`** | Redirige les ports 80 et 443 vers Traefik, pour un cluster créé sans publication des ports. |
+| **`kubectl -n traefik logs deploy/traefik`** | Affiche le journal de Traefik, dont les requêtes reçues. |
 
 La ligne à ajouter une seule fois au fichier hosts est la suivante :
 

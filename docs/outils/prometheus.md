@@ -97,11 +97,11 @@ Les mesures principales sont les suivantes :
 
 | Mesure | Ce qu'elle indique |
 |---|---|
-| `http_request_duration_seconds` | Durée des requêtes, par méthode, route et code de réponse. Elle sert aussi à compter les requêtes et les erreurs. |
-| `circuit_breaker_state` | État du disjoncteur devant PostgreSQL : fermé, semi-ouvert ou ouvert. |
-| `nodejs_eventloop_lag_seconds` | Retard de la boucle d'exécution de Node : il révèle un service saturé. |
-| `process_resident_memory_bytes` | Mémoire occupée par le service. |
-| `up` | Disponibilité de chaque cible, relevée à chaque collecte. |
+| **`http_request_duration_seconds`** | Durée des requêtes, par méthode, route et code de réponse. Elle sert aussi à compter les requêtes et les erreurs. |
+| **`circuit_breaker_state`** | État du disjoncteur devant PostgreSQL : fermé, semi-ouvert ou ouvert. |
+| **`nodejs_eventloop_lag_seconds`** | Retard de la boucle d'exécution de Node : il révèle un service saturé. |
+| **`process_resident_memory_bytes`** | Mémoire occupée par le service. |
+| **`up`** | Disponibilité de chaque cible, relevée à chaque collecte. |
 
 !!! note "À savoir"
     L'étiquette `route` enregistre le modèle de la route, par exemple `/api/v1/listings`, et jamais l'adresse réelle
@@ -112,12 +112,12 @@ Les mesures principales sont les suivantes :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `k8s/09-prometheus.yaml` | Déploie Prometheus dans le cluster et fixe sa durée de conservation. |
-| `k8s/config/prometheus.yml` | Liste les cibles à interroger et la fréquence de collecte. |
-| `api/src/metrics/metrics.ts` | Définit les mesures de l'API et chronomètre chaque requête. |
-| `api/src/metrics/metrics.controller.ts` | Publie les mesures de l'API sur le chemin `/api/metrics`. |
-| `moderation-service/src/metrics/metrics.ts` | Définit les mesures du service de modération. |
-| `k8s/08-ingress.yaml` | N'expose que `/api/v1` : les mesures restent internes au cluster. |
+| **`k8s/09-prometheus.yaml`** | Déploie Prometheus dans le cluster et fixe sa durée de conservation. |
+| **`k8s/config/prometheus.yml`** | Liste les cibles à interroger et la fréquence de collecte. |
+| **`api/src/metrics/metrics.ts`** | Définit les mesures de l'API et chronomètre chaque requête. |
+| **`api/src/metrics/metrics.controller.ts`** | Publie les mesures de l'API sur le chemin `/api/metrics`. |
+| **`moderation-service/src/metrics/`**<br>**`metrics.ts`** | Définit les mesures du service de modération. |
+| **`k8s/08-ingress.yaml`** | N'expose que `/api/v1` : les mesures restent internes au cluster. |
 
 ## Commandes essentielles
 
@@ -125,10 +125,10 @@ Les mesures principales sont les suivantes :
 
 | Commande | Description |
 |---|---|
-| `make deploy` | Installe Prometheus avec le reste de la plateforme. |
-| `make prometheus` | Ouvre la page des cibles dans le navigateur. |
-| `make grafana` | Ouvre les tableaux de bord construits à partir de ces mesures. |
-| `make pods` | Indique si Prometheus est prêt. |
+| **`make deploy`** | Installe Prometheus avec le reste de la plateforme. |
+| **`make prometheus`** | Ouvre la page des cibles dans le navigateur. |
+| **`make grafana`** | Ouvre les tableaux de bord construits à partir de ces mesures. |
+| **`make pods`** | Indique si Prometheus est prêt. |
 
 !!! warning "Attention"
     Les mesures ne sont pas écrites sur un volume persistant : elles disparaissent au redémarrage du conteneur. Pour

@@ -23,10 +23,10 @@ rares : une variable qui peut valoir « rien », une condition toujours vraie, u
 
 | Question | Ce que SonarCloud mesure |
 |---|---|
-| Le code risque-t-il de mal fonctionner ? | Les défauts de fiabilité, comme un cas non traité. |
-| Présente-t-il un risque de sécurité ? | Les failles, et les points sensibles à relire à la main. |
-| Sera-t-il facile à faire évoluer ? | La complexité, les doublons et les écarts aux conventions. |
-| Est-il réellement testé ? | La couverture, calculée à partir des rapports produits par les tests. |
+| **Le code risque-t-il de mal fonctionner ?** | Les défauts de fiabilité, comme un cas non traité. |
+| **Présente-t-il un risque de sécurité ?** | Les failles, et les points sensibles à relire à la main. |
+| **Sera-t-il facile à faire évoluer ?** | La complexité, les doublons et les écarts aux conventions. |
+| **Est-il réellement testé ?** | La couverture, calculée à partir des rapports produits par les tests. |
 
 ```d2
 vars: {
@@ -94,10 +94,10 @@ Certains fichiers sont volontairement exclus de l'analyse ou du calcul de couver
 
 | Exclusion | Raison |
 |---|---|
-| Les fichiers de tests | Ils sont le moyen du contrôle, pas son objet. |
-| Les migrations de base de données | Leur contenu est figé une fois appliqué : le modifier serait une erreur. |
-| Les points d'entrée et les modules | Ils se contentent d'assembler des éléments déjà testés. |
-| Les fichiers de configuration | Ils ne contiennent aucune règle de gestion à vérifier. |
+| **Les fichiers de tests** | Ils sont le moyen du contrôle, pas son objet. |
+| **Les migrations de base de données** | Leur contenu est figé une fois appliqué : le modifier serait une erreur. |
+| **Les points d'entrée et les modules** | Ils se contentent d'assembler des éléments déjà testés. |
+| **Les fichiers de configuration** | Ils ne contiennent aucune règle de gestion à vérifier. |
 
 !!! note "À savoir"
     Le job d'analyse est le seul de la pipeline qui attende un autre job : il a besoin des rapports de couverture
@@ -107,11 +107,11 @@ Certains fichiers sont volontairement exclus de l'analyse ou du calcul de couver
 
 | Fichier ou dossier | Description |
 |---|---|
-| `sonar-project.properties` | Déclare le projet, les sources, les tests, les exclusions et les rapports de couverture. |
-| `.gitlab-ci.yml` | Définit le job qui lance l'analyse. |
-| `api/coverage/lcov.info` | Rapport de couverture de l'API, lu par l'analyseur. |
-| `moderation-service/coverage/lcov.info` | Rapport de couverture du service de modération. |
-| `frontend/coverage/lcov.info` | Rapport de couverture de l'interface. |
+| **`sonar-project.properties`** | Déclare le projet, les sources, les tests, les exclusions et les rapports de couverture. |
+| **`.gitlab-ci.yml`** | Définit le job qui lance l'analyse. |
+| **`api/coverage/lcov.info`** | Rapport de couverture de l'API, lu par l'analyseur. |
+| **`moderation-service/coverage/lcov.info`** | Rapport de couverture du service de modération. |
+| **`frontend/coverage/lcov.info`** | Rapport de couverture de l'interface. |
 
 ## Commandes essentielles
 
@@ -119,9 +119,9 @@ Certains fichiers sont volontairement exclus de l'analyse ou du calcul de couver
 
 | Commande | Description |
 |---|---|
-| `make coverage` | Produit les rapports de couverture des trois modules. |
-| `make sonar` | Envoie une analyse à SonarCloud depuis l'ordinateur. |
-| `make lint` | Signale localement une partie des mêmes défauts, avant d'envoyer quoi que ce soit. |
+| **`make coverage`** | Produit les rapports de couverture des trois modules. |
+| **`make sonar`** | Envoie une analyse à SonarCloud depuis l'ordinateur. |
+| **`make lint`** | Signale localement une partie des mêmes défauts, avant d'envoyer quoi que ce soit. |
 
 !!! note "À savoir"
     La porte qualité par défaut exige 80 % de couverture sur le nouveau code, seuil supérieur à celui que le projet

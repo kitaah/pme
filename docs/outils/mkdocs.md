@@ -91,9 +91,9 @@ La documentation est organisée en trois ensembles :
 
 | Ensemble | Contenu |
 |---|---|
-| Accueil | Présentation du projet et de son architecture. |
-| Outils | Une fiche par outil, toutes construites sur le même modèle. |
-| Pipeline CI/CD | Les contrôles automatiques : exigences, fonctionnement et une page par famille de contrôles. |
+| **Accueil** | Présentation du projet et de son architecture. |
+| **Outils** | Une fiche par outil, toutes construites sur le même modèle. |
+| **Pipeline CI/CD** | Les contrôles automatiques : exigences, fonctionnement et une page par famille de contrôles. |
 
 !!! note "À savoir"
     Une version 2.0 de MkDocs est annoncée, qui supprimerait le système d'extensions sur lequel repose le thème
@@ -105,13 +105,13 @@ La documentation est organisée en trois ensembles :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `mkdocs.yml` | Configuration du site : titre, thème, extensions et menu. |
-| `docs/` | Les pages de la documentation, une par fichier. |
-| `docs/stylesheets/extra.css` | Police, taille du texte, tableaux et encadrés propres au projet. |
-| `docs/assets/fonts/` | La police du site, fournie avec le dépôt plutôt que chargée depuis Internet. |
-| `docker/docs/requirements.txt` | Fige les versions de MkDocs, du thème et des extensions. |
-| `docker/docs/Dockerfile` | Fabrique l'image du site et installe l'outil de schémas D2. |
-| `docker/docs/nginx.conf` | Configure le serveur qui sert le site de l'image. |
+| **`mkdocs.yml`** | Configuration du site : titre, thème, extensions et menu. |
+| **`docs/`** | Les pages de la documentation, une par fichier. |
+| **`docs/stylesheets/extra.css`** | Police, taille du texte, tableaux et encadrés propres au projet. |
+| **`docs/assets/fonts/`** | La police du site, fournie avec le dépôt plutôt que chargée depuis Internet. |
+| **`docker/docs/requirements.txt`** | Fige les versions de MkDocs, du thème et des extensions. |
+| **`docker/docs/Dockerfile`** | Fabrique l'image du site et installe l'outil de schémas D2. |
+| **`docker/docs/nginx.conf`** | Configure le serveur qui sert le site de l'image. |
 
 ## Commandes essentielles
 
@@ -119,11 +119,11 @@ La documentation est organisée en trois ensembles :
 
 | Commande | Description |
 |---|---|
-| `make docs-serve` | Ouvre l'aperçu du site et le met à jour à chaque enregistrement d'un fichier. |
-| `make docs-check` | Vérifie qu'aucun lien n'est cassé et qu'aucune page n'est absente du menu. |
-| `make docs-image` | Construit l'image Docker du site terminé. |
-| `make docs-run` | Ouvre le site de l'image, tel qu'il sera livré. |
-| `make docs-stop` | Arrête l'aperçu ou le site lancé précédemment. |
+| **`make docs-serve`** | Ouvre l'aperçu du site et le met à jour à chaque enregistrement d'un fichier. |
+| **`make docs-check`** | Vérifie qu'aucun lien n'est cassé et qu'aucune page n'est absente du menu. |
+| **`make docs-image`** | Construit l'image Docker du site terminé. |
+| **`make docs-run`** | Ouvre le site de l'image, tel qu'il sera livré. |
+| **`make docs-stop`** | Arrête l'aperçu ou le site lancé précédemment. |
 
 Pour ajouter une fiche :
 

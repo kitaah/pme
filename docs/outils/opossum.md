@@ -120,9 +120,9 @@ L'état du circuit est publié dans la mesure `circuit_breaker_state{name="postg
 
 | Valeur | État |
 |---|---|
-| 0 | Fermé |
-| 1 | Semi-ouvert |
-| 2 | Ouvert |
+| **0** | Fermé |
+| **1** | Semi-ouvert |
+| **2** | Ouvert |
 
 !!! note "À savoir"
     Ce mécanisme correspond à celui que la bibliothèque Resilience4j assure dans le monde Java. Le projet initial, écrit
@@ -132,9 +132,9 @@ L'état du circuit est publié dans la mesure `circuit_breaker_state{name="postg
 
 | Fichier ou dossier | Description |
 |---|---|
-| `api/src/common/database-circuit-breaker.ts` | Contient le disjoncteur, ses réglages et sa mesure. |
-| `api/src/listings/listings.service.ts` | Fait passer par le disjoncteur tous les appels à la base. |
-| `api/src/listings/listings.module.ts` | Crée le disjoncteur et publie sa mesure. |
+| **`api/src/common/`**<br>**`database-circuit-breaker.ts`** | Contient le disjoncteur, ses réglages et sa mesure. |
+| **`api/src/listings/listings.service.ts`** | Fait passer par le disjoncteur tous les appels à la base. |
+| **`api/src/listings/listings.module.ts`** | Crée le disjoncteur et publie sa mesure. |
 
 ## Commandes essentielles
 
@@ -142,7 +142,7 @@ L'état du circuit est publié dans la mesure `circuit_breaker_state{name="postg
 
 | Commande | Description |
 |---|---|
-| `make logs-api` | Affiche le journal de l'API, où chaque échec d'appel à la base est tracé. |
+| **`make logs-api`** | Affiche le journal de l'API, où chaque échec d'appel à la base est tracé. |
 
 Lors d'une panne de PostgreSQL, le circuit se comporte ainsi :
 

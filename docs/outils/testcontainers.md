@@ -89,10 +89,10 @@ Les conteneurs démarrés sont les suivants :
 
 | Fichier ou dossier | Description |
 |---|---|
-| `api/test/support/infrastructure.ts` | Fonctions qui démarrent PostgreSQL et NATS, et attendent qu'une condition soit vraie. |
-| `moderation-service/test/support/infrastructure.ts` | Les mêmes fonctions pour le service de modération. |
-| `*/test/support/jest-setup.ts` | Fixe à 180 secondes le délai accordé aux tests. |
-| `*/test/support/jwt-helper.ts` | Faux Keycloak qui signe les jetons de test, sans conteneur. |
+| **`api/test/support/infrastructure.ts`** | Fonctions qui démarrent PostgreSQL et NATS, et attendent qu'une condition soit vraie. |
+| **`moderation-service/test/support/`**<br>**`infrastructure.ts`** | Les mêmes fonctions pour le service de modération. |
+| **`*/test/support/jest-setup.ts`** | Fixe à 180 secondes le délai accordé aux tests. |
+| **`*/test/support/jwt-helper.ts`** | Faux Keycloak qui signe les jetons de test, sans conteneur. |
 
 ## Commandes essentielles
 
@@ -100,9 +100,9 @@ Testcontainers se lance avec [Jest](jest.md), Docker démarré.
 
 | Commande | Description |
 |---|---|
-| `make test-integration` | Lance les tests d'intégration des deux services depuis la racine du projet. |
-| `npm run test:integration` | Les lance pour un seul module, depuis son dossier. |
-| `docker ps` | Montre les conteneurs de test en cours d'exécution, le temps de la série. |
+| **`make test-integration`** | Lance les tests d'intégration des deux services depuis la racine du projet. |
+| **`npm run test:integration`** | Les lance pour un seul module, depuis son dossier. |
+| **`docker ps`** | Montre les conteneurs de test en cours d'exécution, le temps de la série. |
 
 Les tests d'intégration s'exécutent l'un après l'autre (option `--runInBand`) : chaque fichier démarre ses propres
 conteneurs, et les lancer en parallèle saturerait l'ordinateur.

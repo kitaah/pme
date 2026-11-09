@@ -18,7 +18,7 @@ servent qu'à construire et tester l'application.
 
 | Analyse | Ce qu'elle voit | Ce qu'elle ne voit pas |
 |---|---|---|
-| [Images Docker](tests-images.md) | Les paquets présents dans l'image livrée. | Les devDependencies, absentes de l'image. |
+| **[Images Docker](tests-images.md)** | Les paquets présents dans l'image livrée. | Les devDependencies, absentes de l'image. |
 | **Dépendances** | Les trois `package-lock.json`, devDependencies comprises. | Le système de l'image (Alpine, nginx). |
 
 Une faille dans un outil de build ne part pas en production, mais elle peut compromettre le poste d'un développeur ou
@@ -50,8 +50,8 @@ conservées dans un rapport JSON par image, pour décider d'une montée de versi
 local : `make istio-scan`.
 
 !!! warning "Attention"
-Une nouvelle faille peut être publiée sans que le projet change. Le job ne la voit alors qu'à la prochaine
-modification des dépendances ou à un lancement manuel. Une analyse planifiée pourra combler ce manque.
+    Une nouvelle faille peut être publiée sans que le projet change. Le job ne la voit alors qu'à la prochaine
+    modification des dépendances ou à un lancement manuel. Une analyse planifiée pourra combler ce manque.
 
 ## Où voir le résultat
 
