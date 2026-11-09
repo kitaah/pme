@@ -90,10 +90,10 @@ sur les Dockerfile, Trivy sur les images et les dépendances, container-structur
 porte qualité de SonarCloud signale en plus les secrets oubliés et les failles du code.
 
 !!! note "À savoir"
-    Aucune mesure de cette section ne dépend d'une action manuelle au moment du déploiement. Tout est déclaré dans le
-    dépôt : les manifestes Kubernetes, la configuration de Keycloak et le fichier de la pipeline. Un déploiement depuis
-    un dépôt neuf reproduit donc exactement le même niveau de sécurité. Seul le maillage suppose un réglage de
-    l'ordinateur (la limite `inotify`), que `make inotify` applique, avec le mot de passe `sudo`.
+Aucune mesure de cette section ne dépend d'une action manuelle au moment du déploiement. Tout est déclaré dans le
+dépôt : les manifestes Kubernetes, la configuration de Keycloak et le fichier de la pipeline. Un déploiement depuis
+un dépôt neuf reproduit donc exactement le même niveau de sécurité. Seul le maillage suppose un réglage de
+l'ordinateur (la limite `inotify`), que `make inotify` applique, avec le mot de passe `sudo`.
 
 ## Ce qui n'est pas couvert
 
@@ -120,17 +120,17 @@ connus sont les suivants. Chacun est repris, avec son contexte, dans la page con
 | **Basse** | **HSTS court, sans préchargement** | La première visite d'un navigateur n'est protégée que par la redirection. | [Chiffrement](chiffrement.md) |
 | **Basse** | **Port de supervision de NATS en HTTP** | Il n'expose que des compteurs. Entre pods, l'échange est chiffré par le maillage ; seul son accès local reste en clair. | [Chiffrement](chiffrement.md) |
 | **Basse** | **Maillage dépendant d'un réglage de l'ordinateur** | Si la limite `inotify` est trop basse, ztunnel plante ; `make inotify` la relève. | [Istio](../outils/istio.md) |
-| **Basse** | **Révocation différée et flux par mot de passe** | Un jeton reste valable jusqu'à 15 minutes ; `pme-cli` utilise le flux déconseillé. | [Authentification](authentification.md) |
+| **Basse** | **Révocation différée et flux par mot de passe** | Un jeton reste valable jusqu'à 5 minutes ; `pme-cli` utilise le flux déconseillé. | [Authentification](authentification.md) |
 | **Basse** | **Débit limité par exemplaire, sans détection d'abus** | La limite réelle dépend du nombre d'exemplaires de l'API. | [Application](application.md) |
 
 !!! warning "Attention"
-    Ces limites sont acceptables pour une démonstration sur un ordinateur, qui ne contient aucune donnée réelle et n'est
-    joignable depuis aucun réseau. Elles ne le seraient pas pour une plateforme exposée à des membres : la liste
-    ci-dessus est donc aussi la liste des travaux à mener avant toute mise en service.
+Ces limites sont acceptables pour une démonstration sur un ordinateur, qui ne contient aucune donnée réelle et n'est
+joignable depuis aucun réseau. Elles ne le seraient pas pour une plateforme exposée à des membres : la liste
+ci-dessus est donc aussi la liste des travaux à mener avant toute mise en service.
 
 !!! tip "Astuce"
-    Pour juger du niveau de sécurité d'un composant, lire sa page dans cette section, puis les commentaires de son
-    manifeste dans `k8s/`. Chaque réglage non évident y est justifié à l'endroit où il est écrit.
+Pour juger du niveau de sécurité d'un composant, lire sa page dans cette section, puis les commentaires de son
+manifeste dans `k8s/`. Chaque réglage non évident y est justifié à l'endroit où il est écrit.
 
 ## Pour aller plus loin
 
