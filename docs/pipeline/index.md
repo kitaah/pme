@@ -134,7 +134,7 @@ Le détail de ces règles se trouve dans la page [Fonctionnement](fonctionnement
 | **[Tests des images Docker](tests-images.md)** | Les 22 contrôles de structure et l'analyse Trivy. |
 | **[Publication des images](publication-images.md)** | Le dépôt des images vérifiées dans le registre GitLab. |
 | **[Tests de performance](tests-performance.md)** | Les scénarios k6 et leurs seuils. |
-| **[Analyse SonarCloud](analyse-sonarcloud.md)** | La porte qualité et ses résultats. |
+| **[Analyse SonarCloud](analyse-sonarcloud.md)** | La Quality Gate et ses résultats. |
 
 ## Contrôles prévus
 
