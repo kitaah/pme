@@ -119,8 +119,7 @@ describe('API annonces avec NATS (integration)', () => {
     expect(await consumer.next({ expires: 2000 })).toBeNull();
   });
 
-  // Temporaire : ce test laisse une connexion ouverte (Jest ne se ferme pas). A reactiver une fois la connexion identifiee.
-  it.skip("repond 503 et ne garde pas l'annonce quand NATS tombe", async () => {
+  it("repond 503 et ne garde pas l'annonce quand NATS tombe", async () => {
     // Given : le broker est arrete
     await dataSource.query('TRUNCATE listings');
     await connection.close().catch(() => undefined);
