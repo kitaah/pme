@@ -118,12 +118,12 @@ Certains fichiers sont volontairement exclus de l'analyse ou du calcul de couver
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`../../sonar-project.properties`** | Déclare le projet, les sources, les tests, les exclusions et les rapports de couverture. |
-| **`../../.gitlab-ci.yml`** | Définit le job qui lance l'analyse. |
-| **`../../libs/common/coverage/lcov.info`** | Rapport de couverture du module commun. |
-| **`../../api/coverage/lcov.info`** | Rapport de couverture de l'API, lu par l'analyseur. |
-| **`../../moderation-service/coverage/lcov.info`** | Rapport de couverture du service de modération. |
-| **`../../frontend/coverage/lcov.info`** | Rapport de couverture de l'interface. |
+| **`sonar-project.properties`** | Déclare le projet, les sources, les tests, les exclusions et les rapports de couverture. |
+| **`.gitlab-ci.yml`** | Définit le job qui lance l'analyse. |
+| **`libs/common/coverage/lcov.info`** | Rapport de couverture du module commun. |
+| **`api/coverage/lcov.info`** | Rapport de couverture de l'API, lu par l'analyseur. |
+| **`moderation-service/coverage/lcov.info`** | Rapport de couverture du service de modération. |
+| **`frontend/coverage/lcov.info`** | Rapport de couverture de l'interface. |
 
 ## Commandes essentielles
 
@@ -136,8 +136,8 @@ Certains fichiers sont volontairement exclus de l'analyse ou du calcul de couver
 | **`make lint`** | Signale localement une partie des mêmes défauts, avant d'envoyer quoi que ce soit. |
 
 !!! note "À savoir"
-    La Quality Gate par défaut exige 80 % de couverture sur le nouveau code, seuil supérieur à celui que le projet
-    applique localement. Le détail figure sur la page
+    La Quality Gate par défaut exige 80 % de couverture sur le nouveau code. Le projet applique des seuils locaux à 100 %, donc
+    la porte est réussie. Le détail figure sur la page
     [Analyse SonarCloud](../pipeline/analyse-sonarcloud.md).
 
 !!! warning "Attention"

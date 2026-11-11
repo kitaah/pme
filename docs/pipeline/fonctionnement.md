@@ -17,16 +17,12 @@ gratuit de GitLab est de 400 minutes par mois : chaque règle ci-dessous sert à
 
 La pipeline ne se lance que sur la branche principale. Un commit sur une autre branche ne déclenche rien.
 
-Ensuite, chaque job surveille ses propres fichiers :
+Ensuite, **tous les jobs se lancent à chaque pipeline**, quels que soient les fichiers modifiés. Aucun job n'est manuel :
+une pipeline donne donc toujours le tableau complet des contrôles, ce qui rend le résultat lisible d'un coup d'œil et
+simple à présenter.
 
-| Job | Fichiers surveillés |
-|---|---|
-| **`unit-tests:*`**<br>**`sonar`** | Les quatre modules (module commun, API, modération, interface), les `package.json`, `package-lock.json`, `.gitlab-ci.yml` et `sonar-project.properties`. |
-| **`integration-tests`** | L'API, la modération, le module commun, les `package.json` et `.gitlab-ci.yml`. |
-| **`image-tests`** | Les Dockerfile et leurs `.dockerignore`, les dépendances, nginx, les tests d'image, `.trivyignore` et `.gitlab-ci.yml`. |
-| **`performance-tests`** | L'API, les scénarios k6, `scripts/perf-ci.sh` et `.gitlab-ci.yml`. |
-
-Si aucun fichier surveillé n'a changé, le job ne se lance pas. Pour `image-tests`, il reste disponible en lancement manuel.
+Ce choix a un coût : chaque pipeline consomme le temps de tous les jobs. Il est compensé par la rapidité de chaque job
+(voir les optimisations ci-dessous) et par l'annulation automatique d'une pipeline devenue obsolète.
 
 !!! tip "Astuce"
     Ajouter `[skip ci]` dans le message d'un commit empêche toute pipeline pour ce commit. À éviter sur la fusion
@@ -44,12 +40,16 @@ Si aucun fichier surveillé n'a changé, le job ne se lance pas. Pour `image-tes
 | **Un seul Docker pour l'intégration** | L'API et la modération partagent un démarrage de Docker-in-Docker. |
 | **Miroir d'images** | PostgreSQL et NATS sont téléchargés depuis le miroir de Google. |
 | **Construction parallèle** | Les trois images sont construites en même temps avec BuildKit. |
-| **Analyses parallèles** | La base de Trivy est téléchargée une fois, puis les trois images sont analysées ensemble. |
+| **Cache de construction** | Les couches des images (notamment `npm ci`) sont conservées dans le registre GitLab, dans les dépôts `cache/`. Une couche n'est reconstruite que si ses fichiers changent. |
+| **Dépendances de production à part** | Dans les Dockerfile de l'API et de la modération, les dépendances de production sont installées dans une étape dédiée, mise en cache tant que `package-lock.json` ne change pas. |
+| **Outils installés en parallèle** | container-structure-test et Trivy sont téléchargés en même temps, et la base de Trivy pendant la construction des images. |
+| **Cache de construction** | Les couches des images, dont l'installation des dépendances, sont conservées dans le registre GitLab. Une modification du code ne les refait pas. |
+| **Analyses parallèles** | Les trois images sont contrôlées ensemble : structure puis vulnérabilités. |
 | **Annulation automatique** | Un nouveau commit annule la pipeline devenue inutile. |
 
 ## Fiabilité
 
-- Un job s'arrête après 5 minutes, ce qui protège le quota contre un blocage.
+- Un job s'arrête après 5 minutes, ce qui protège le quota contre un blocage. `image-tests`, qui construit et publie trois images, dispose de 6 minutes.
 - Un job n'est relancé qu'en cas de panne du runner ou de l'API de GitLab, jamais après un test échoué.
 - Les versions de Trivy, container-structure-test et k6 sont fixées. Chaque téléchargement est vérifié par sa somme de contrôle.
 - Les mots de passe de test de la pipeline sont jetables : leurs services disparaissent à la fin du job.
@@ -57,12 +57,13 @@ Si aucun fichier surveillé n'a changé, le job ne se lance pas. Pour `image-tes
 ## Quota
 
 La durée d'une pipeline est celle de son job le plus long. Le quota, lui, compte la **somme** des durées de tous les
-jobs, car chaque job est facturé pour son temps d'exécution. Les règles de déclenchement servent donc à économiser le
-quota : un job qui ne tourne pas ne coûte rien.
+jobs, car chaque job est facturé pour son temps d'exécution. Comme tous les jobs tournent à chaque pipeline, il vaut mieux
+grouper les modifications en peu de commits plutôt que d'en pousser de nombreux petits.
 
 !!! warning "Attention"
-    Le job `image-tests` est le plus coûteux. Il se lance seul uniquement quand une image change. Éviter de le relancer
-    à la main sans raison. Il publie aussi les images dans le registre : l'envoi allonge sa durée de quelques secondes.
+    Le job `image-tests` est le plus long. Au premier passage, ou quand `package-lock.json` change, le cache de construction
+    est vide ou périmé et le job approche sa limite de 6 minutes. Avant une démonstration, lancer deux pipelines de suite :
+    le premier remplit le cache, le second donne la durée réelle.
 
 ## Lire un résultat
 
@@ -76,16 +77,17 @@ quota : un job qui ne tourne pas ne coûte rien.
 | Statut | Signification |
 |---|---|
 | **Réussi (vert)** | Tous les contrôles sont passés. |
-| **Avertissement (orange)** | Un job toléré a échoué. Aujourd'hui, c'est la Quality Gate de Sonar. |
+| **Avertissement (orange)** | Un job toléré a échoué. Seul `sonar` est toléré ; il est vert tant que la Quality Gate est réussie. |
 | **Échoué (rouge)** | Un contrôle obligatoire a échoué. |
-| **Manuel (gris)** | Le job attend un clic pour se lancer. |
+| **Manuel (gris)** | Le job attend un clic pour se lancer. Aucun job du projet n'est manuel aujourd'hui. |
 
 ## Dépannage
 
 | Symptôme | Cause probable et action |
 |---|---|
-| **Aucune pipeline après un push** | Branche autre que la principale, `[skip ci]` dans le message, ou aucun fichier surveillé modifié. |
+| **Aucune pipeline après un push** | Branche autre que la principale, ou `[skip ci]` dans le message. |
 | **`sonar` refuse la branche** | L'offre gratuite n'analyse que la branche principale. |
+| **`image-tests` vert, mais rien dans le registre** | Le journal s'arrête après les tests de structure : un bloc du script se terminait par `exit`, ce qui arrête tout le script avec succès. Ne jamais utiliser `exit` dans le script d'un job, mais `test "$status" -eq 0`. |
 | **`image-tests` échoue sur Trivy** | Une faille grave est corrigeable : mettre à jour la dépendance, sinon l'excuser dans `.trivyignore`. |
 | **`integration-tests` dépasse le délai** | Le téléchargement des images est lent : relancer le job. |
 | **`performance-tests` sort avec le code 99** | Un seuil k6 est dépassé : lire le résumé et `api.log`. |

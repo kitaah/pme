@@ -48,7 +48,7 @@ du travail ne soit engagé.
 
 ## Rôle dans le projet
 
-- Il contrôle les trois images avant leur publication, avec une vingtaine de vérifications au total.
+- Il contrôle les trois images avant leur publication, avec 24 vérifications au total.
 - Il garantit qu'aucune image ne s'exécute avec les droits d'administrateur.
 - Il garantit qu'aucun secret, aucune source et aucun outil de développement n'est livré.
 - Il vérifie que chaque image démarre avec le bon port, la bonne commande et la bonne version de Node.

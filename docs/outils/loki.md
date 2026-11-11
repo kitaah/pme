@@ -5,7 +5,7 @@
 | Information | Détail |
 |---|---|
 | **Rôle** | Rassemble les journaux de tous les services et permet de les rechercher au même endroit |
-| **Version** | Loki 3.7.1 |
+| **Version** | Loki 3.7.8 |
 | **Adresse en local** | Aucune : Loki se consulte depuis [Grafana](grafana.md) |
 
 ## Description

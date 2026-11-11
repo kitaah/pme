@@ -96,10 +96,10 @@ Sa configuration se trouve dans le bloc `test` de `vite.config.ts` :
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`../../frontend/vite.config.ts`** | Contient la configuration des tests et de la couverture. |
-| **`../../frontend/src/test/setup.ts`** | Prépare chaque test : vérifications dédiées à l'interface, nettoyage de la page. |
+| **`frontend/vite.config.ts`** | Contient la configuration des tests et de la couverture. |
+| **`frontend/src/test/setup.ts`** | Prépare chaque test : vérifications dédiées à l'interface, nettoyage de la page. |
 | **`frontend/src/**/*.test.ts(x)`** | Les tests, placés à côté des composants qu'ils vérifient. |
-| **`../../frontend/coverage/lcov.info`** | Rapport de couverture, lu par SonarCloud. |
+| **`frontend/coverage/lcov.info`** | Rapport de couverture, lu par SonarCloud. |
 | **`frontend/reports/junit.xml`** | Rapport JUnit, affiché par GitLab. |
 
 ## Commandes essentielles

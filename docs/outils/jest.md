@@ -112,10 +112,10 @@ Les seuils de couverture, mesurés sur les tests unitaires, sont les suivants :
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`../../libs/common/jest.config.js`** | Déclare le projet de tests, les fichiers mesurés et les seuils du module commun. |
-| **`../../api/jest.config.js`** | Déclare les deux projets, les fichiers mesurés et les seuils de couverture de l'API. |
-| **`../../moderation-service/jest.config.js`** | Même configuration pour le service de modération. |
-| **`../../scripts/jest.cjs`** | Lance Jest avec l'option que NestJS exige, quel que soit le module. |
+| **`libs/common/jest.config.js`** | Déclare le projet de tests, les fichiers mesurés et les seuils du module commun. |
+| **`api/jest.config.js`** | Déclare les deux projets, les fichiers mesurés et les seuils de couverture de l'API. |
+| **`moderation-service/jest.config.js`** | Même configuration pour le service de modération. |
+| **`scripts/jest.cjs`** | Lance Jest avec l'option que NestJS exige, quel que soit le module. |
 | **`*/src/**/*.spec.ts`** | Les tests unitaires, placés à côté du code qu'ils vérifient. |
 | **`*/test/integration/`** | Les tests d'intégration. |
 | **`*/test/support/jest-setup.ts`** | Règle le délai des tests d'intégration. |
@@ -124,7 +124,7 @@ Les seuils de couverture, mesurés sur les tests unitaires, sont les suivants :
 
 ## Commandes essentielles
 
-À lancer dans un terminal, depuis le dossier `../../libs/common`, `api` ou `moderation-service`.
+À lancer dans un terminal, depuis le dossier `libs/common`, `api` ou `moderation-service`.
 
 | Commande | Description |
 |---|---|
@@ -137,11 +137,11 @@ Depuis la racine du projet, `make test` lance les tests unitaires des quatre mod
 `make test-integration` les tests d'intégration.
 
 !!! note "À savoir"
-    L'API et la modération utilisent le module commun dans sa version compilée (`../../libs/common/dist`). Leurs commandes
+    L'API et la modération utilisent le module commun dans sa version compilée (`libs/common/dist`). Leurs commandes
     de test le compilent d'abord toutes seules (script `pretest`). Node 24 ou plus est requis.
 
 !!! warning "Attention"
-    Les commandes de test passent l'option `--experimental-vm-modules` à Node, par le script `../../scripts/jest.cjs`. Dans WebStorm, il faut l'ajouter aux
+    Les commandes de test passent l'option `--experimental-vm-modules` à Node, par le script `scripts/jest.cjs`. Dans WebStorm, il faut l'ajouter aux
     options de Node de la configuration Jest, sinon les tests ne démarrent pas.
 
 !!! tip "Astuce"

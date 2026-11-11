@@ -5,7 +5,7 @@
 | Information | Détail |
 |---|---|
 | **Rôle** | Lit les journaux de tous les pods du projet, les étiquette, écarte le bruit et les envoie à Loki |
-| **Version** | Alloy 1.21.0 |
+| **Version** | Alloy 1.21.2 |
 | **Adresse en local** | <https://alloy.localhost> |
 
 ## Description

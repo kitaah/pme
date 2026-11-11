@@ -36,8 +36,7 @@ les tests des images n'interviennent qu'après une construction complète.
 
 ## Quand il se lance
 
-- **Automatiquement** quand un Dockerfile ou son contrôle change : l'un des 4 Dockerfile, `.hadolint.yaml` ou `.gitlab-ci.yml`.
-- **À la demande** dans les autres cas, avec un bouton de lancement manuel.
+- Sur la branche principale, à chaque pipeline, sans lancement manuel.
 
 ## Où voir le résultat
 
