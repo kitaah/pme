@@ -32,7 +32,7 @@ export function MyListings({ refreshKey }: Readonly<{ refreshKey: number }>) {
           Impossible de charger vos annonces.
         </p>
       )}
-      {listings && listings.length === 0 && <p className="text-sm text-ink-muted">Aucune annonce pour le moment.</p>}
+      {listings?.length === 0 && <p className="text-sm text-ink-muted">Aucune annonce pour le moment.</p>}
       <ul className="grid gap-3">
         {listings?.map((listing) => (
           <li key={listing.id} className="rounded-md border border-line bg-inset p-3">
