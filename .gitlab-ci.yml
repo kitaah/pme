@@ -120,9 +120,7 @@ sonar:
         sed -i "s#^SF:src/#SF:${module}/src/#" "${module}/coverage/lcov.info"
       done
   script: [sonar-scanner]
-  # Temporaire : la porte qualite de SonarCloud exige 80 % de couverture sur le code nouveau, bien plus que nos seuils.
-  # Retirer cette ligne une fois la porte qualite reglee.
-  allow_failure: true
+  # Bloquant : la porte qualite de SonarCloud (« Sonar way ») doit etre reussie, sinon la pipeline echoue.
 
 # ---------- Controle des Dockerfile : Hadolint (linter, sans Docker ni construction d'image) ----------
 # Regles et seuil d'echec (warning) definis dans .hadolint.yaml, partage avec `make lint-docker`.
