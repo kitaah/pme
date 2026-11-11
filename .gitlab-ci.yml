@@ -288,7 +288,8 @@ integration-tests:
 # Publication dans le registre de conteneurs GitLab en derniere etape : seulement si tous les controles ont reussi
 # (le script s'arrete a la premiere etape en echec) et seulement sur la branche principale. Une image n'est donc
 # jamais publiee sans avoir ete controlee. Pas de nouvelle construction : ce sont les images deja testees.
-# Job couteux : lance automatiquement seulement si le contenu d'une image ou ses tests changent, sinon a la demande.
+# Job couteux : lance automatiquement seulement si le contenu d'une image ou ses tests changent (code des services compris,
+# puisqu'il est copie dans l'image). Sinon il n'est pas cree : un commit sans effet sur les images ne coute aucune minute.
 image-tests:
   stage: image
   needs: []
@@ -300,6 +301,7 @@ image-tests:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_TLS_CERTDIR: ""
     TAG: "ci-$CI_COMMIT_SHORT_SHA"
+    CACHE_REPO: "$CI_REGISTRY_IMAGE/cache"
     CST_VERSION: v1.19.3
     TRIVY_VERSION: 0.71.2
     TRIVY_CACHE_DIR: "$CI_PROJECT_DIR/.trivycache"
@@ -311,7 +313,8 @@ image-tests:
     key: trivy-db
     paths: [.trivycache]
   rules:
-    # Ce qui change le contenu d'une image ou sa securite : Dockerfile, dependances, configuration nginx, tests d'image, exceptions Trivy.
+    # Ce qui change le contenu d'une image ou sa securite : code des services, Dockerfile, dependances, configuration nginx,
+    # tests d'image, exceptions Trivy. Sans correspondance, le job n'est pas cree (pas de lancement manuel de repli).
     - changes:
         - ".gitlab-ci.yml"
         - ".trivyignore"
@@ -325,8 +328,10 @@ image-tests:
         - "libs/*/package.json"
         - "*/package-lock.json"
         - "frontend/nginx.conf"
-    - when: manual
-      allow_failure: true
+        - "libs/common/src/**/*"
+        - "api/src/**/*"
+        - "moderation-service/src/**/*"
+        - "frontend/src/**/*"
   before_script:
     - apk add --no-cache curl
     # container-structure-test : version epinglee et binaire verifie par sa somme de controle (SHA-256) avant installation.
@@ -351,8 +356,12 @@ image-tests:
         tar -xzf "$archive" -C /usr/local/bin trivy
       )
   script:
-    # 1. Construction des trois images en parallele
-    - docker buildx bake
+    # 1. Construction des trois images en parallele. Le cache de couches vit dans le registre GitLab (voir docker-bake.hcl) :
+    #    il demande un builder docker-container, donc `--load` pour retrouver les images dans le Docker du job.
+    #    La connexion au registre se fait avant : elle sert au cache et, plus bas, a la publication.
+    - echo "$CI_REGISTRY_PASSWORD" | docker login --username "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - docker buildx create --name pme-ci --driver docker-container --use
+    - docker buildx bake --load
     # 2. Structure de chaque image
     - |
       status=0
@@ -377,7 +386,6 @@ image-tests:
     #    CI_REGISTRY_USER et CI_REGISTRY_PASSWORD sont fournis par GitLab pour la duree du job.
     - |
       if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
-        echo "$CI_REGISTRY_PASSWORD" | docker login --username "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
         for svc in api moderation frontend; do
           docker tag "pme-$svc:$TAG" "$CI_REGISTRY_IMAGE/$svc:$CI_COMMIT_SHORT_SHA"
         done
