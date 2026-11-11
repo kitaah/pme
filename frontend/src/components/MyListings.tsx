@@ -8,7 +8,7 @@ const STATUS_STYLES: Record<ListingStatus, string> = {
   REJECTED: 'border-blood text-blood',
 };
 
-export function MyListings({ refreshKey }: { refreshKey: number }) {
+export function MyListings({ refreshKey }: Readonly<{ refreshKey: number }>) {
   const [listings, setListings] = useState<Listing[] | null>(null);
   const [error, setError] = useState(false);
 

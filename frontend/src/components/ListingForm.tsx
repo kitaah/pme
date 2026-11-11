@@ -8,7 +8,7 @@ const MESSAGE_STYLES: Record<Message['kind'], string> = {
   error: 'border-blood bg-blood/10',
 };
 
-export function ListingForm({ onSubmitted }: { onSubmitted: () => void }) {
+export function ListingForm({ onSubmitted }: Readonly<{ onSubmitted: () => void }>) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [condition, setCondition] = useState<Condition>('GOOD');
@@ -36,6 +36,8 @@ export function ListingForm({ onSubmitted }: { onSubmitted: () => void }) {
       setBusy(false);
     }
   }
+
+  const Notice = message?.kind === 'error' ? 'div' : 'output';
 
   return (
     <section className="card" aria-labelledby="form-title">
@@ -90,19 +92,19 @@ export function ListingForm({ onSubmitted }: { onSubmitted: () => void }) {
 
       <div aria-live="polite">
         {message && (
-          <div
-            className={`notice ${MESSAGE_STYLES[message.kind]}`}
-            role={message.kind === 'error' ? 'alert' : 'status'}
+          <Notice
+            className={`notice block ${MESSAGE_STYLES[message.kind]}`}
+            role={message.kind === 'error' ? 'alert' : undefined}
           >
             {message.text}
-            {message.details && message.details.length > 0 && (
+            {(message.details?.length ?? 0) > 0 && (
               <ul className="mt-1 list-disc pl-5">
-                {message.details.map((detail) => (
+                {message.details?.map((detail) => (
                   <li key={detail}>{detail}</li>
                 ))}
               </ul>
             )}
-          </div>
+          </Notice>
         )}
       </div>
     </section>
