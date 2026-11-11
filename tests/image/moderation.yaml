@@ -16,6 +16,9 @@ fileExistenceTests:
   - name: "l'application compilee est presente"
     path: "/app/dist/main.js"
     shouldExist: true
+  - name: "le module commun compile (@pme/common) est livre"
+    path: "/app/libs/common/dist/index.js"
+    shouldExist: true
   - name: "les sources TypeScript ne sont pas livrees"
     path: "/app/src"
     shouldExist: false

@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { NatsClient } from '@pme/common';
 import { loadConfiguration } from '../config/configuration';
 import { ListingSubmittedConsumer } from './listing-submitted.consumer';
 import { ModerationController } from './moderation.controller';
 import { ModerationItem } from './moderation-item.entity';
 import { ModerationService } from './moderation.service';
-import { NatsClient } from './nats.client';
 
 @Module({
   imports: [TypeOrmModule.forFeature([ModerationItem])],
@@ -15,7 +15,7 @@ import { NatsClient } from './nats.client';
     ListingSubmittedConsumer,
     {
       provide: NatsClient,
-      useFactory: () => new NatsClient(loadConfiguration().nats),
+      useFactory: () => new NatsClient(loadConfiguration().nats, 'pme-moderation'),
     },
   ],
 })

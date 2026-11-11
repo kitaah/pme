@@ -49,14 +49,15 @@ tcp_open() {
 }
 
 echo "== Construction de l'API"
-(cd "$ROOT/api" && npm ci --prefer-offline && npm run build)
+# api et libs/common sont des workspaces npm : installation a la racine, le module commun est compile avant l'API.
+(cd "$ROOT" && npm ci --prefer-offline --workspace=api --workspace=libs/common && npm run build --workspace=libs/common && npm run build --workspace=api)
 
 echo "== Attente de PostgreSQL"
 wait_for "PostgreSQL ($DB_HOST:$DB_PORT)" tcp_open "$DB_HOST" "$DB_PORT"
 
 echo "== Faux Keycloak et flux NATS"
 rm -f "$OUT/token.txt"
-API_DIR="$ROOT/api" TOKEN_FILE="$OUT/token.txt" NODE_PATH="$ROOT/api/node_modules" \
+API_DIR="$ROOT/api" TOKEN_FILE="$OUT/token.txt" NODE_PATH="$ROOT/node_modules" \
   node "$ROOT/tests/performance/support/ci-environment.cjs" >"$OUT/environment.log" 2>&1 &
 PIDS="$PIDS $!"
 wait_for "jeton de test" test -s "$OUT/token.txt"

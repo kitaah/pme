@@ -1,7 +1,6 @@
 import { Controller, Get, Header } from '@nestjs/common';
+import { Public, registry } from '@pme/common';
 import { SkipThrottle } from '@nestjs/throttler';
-import { Public } from '../auth/public.decorator';
-import { registry } from './metrics';
 
 /**
  * Metriques au format Prometheus, lues par Prometheus a l'interieur du cluster.

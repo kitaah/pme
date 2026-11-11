@@ -3,10 +3,9 @@ import { Test } from '@nestjs/testing';
 import { JsMsg } from 'nats';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
+import { NatsClient, ProblemDetailsFilter } from '@pme/common';
 import { AppModule } from '../../src/app.module';
-import { ProblemDetailsFilter } from '../../src/common/problem-details.filter';
 import { ListingSubmittedConsumer } from '../../src/moderation/listing-submitted.consumer';
-import { NatsClient } from '../../src/moderation/nats.client';
 import { FakeKeycloak } from '../support/jwt-helper';
 import { PostgresInfo, startPostgres } from '../support/infrastructure';
 

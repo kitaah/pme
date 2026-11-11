@@ -1,7 +1,7 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuthenticatedUser } from '../auth/authenticated-user';
+import { AuthenticatedUser } from '@pme/common';
 import { DatabaseCircuitBreaker } from '../common/database-circuit-breaker';
 import { CreateListingDto } from './create-listing.dto';
 import { ListingStatus } from './listing.enums';

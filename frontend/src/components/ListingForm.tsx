@@ -90,7 +90,10 @@ export function ListingForm({ onSubmitted }: { onSubmitted: () => void }) {
 
       <div aria-live="polite">
         {message && (
-          <p className={`notice ${MESSAGE_STYLES[message.kind]}`} role={message.kind === 'error' ? 'alert' : 'status'}>
+          <div
+            className={`notice ${MESSAGE_STYLES[message.kind]}`}
+            role={message.kind === 'error' ? 'alert' : 'status'}
+          >
             {message.text}
             {message.details && message.details.length > 0 && (
               <ul className="mt-1 list-disc pl-5">
@@ -99,7 +102,7 @@ export function ListingForm({ onSubmitted }: { onSubmitted: () => void }) {
                 ))}
               </ul>
             )}
-          </p>
+          </div>
         )}
       </div>
     </section>

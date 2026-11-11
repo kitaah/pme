@@ -1,11 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard, ProblemDetailsFilter } from '@pme/common';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
-import { JwtAuthGuard } from './auth/jwt-auth.guard';
-import { ProblemDetailsFilter } from './common/problem-details.filter';
 import { loadConfiguration } from './config/configuration';
 import { HealthController } from './health/health.controller';
 import { MetricsController } from './metrics/metrics.controller';

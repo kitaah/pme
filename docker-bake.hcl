@@ -9,14 +9,18 @@ group "default" {
   targets = ["api", "moderation", "frontend"]
 }
 
+# api et moderation partagent le module commun libs/common : leur contexte est la racine du depot.
+# La liste blanche de chaque image est dans <service>/Dockerfile.dockerignore.
 target "api" {
-  context = "api"
-  tags    = ["pme-api:${TAG}"]
+  context    = "."
+  dockerfile = "api/Dockerfile"
+  tags       = ["pme-api:${TAG}"]
 }
 
 target "moderation" {
-  context = "moderation-service"
-  tags    = ["pme-moderation:${TAG}"]
+  context    = "."
+  dockerfile = "moderation-service/Dockerfile"
+  tags       = ["pme-moderation:${TAG}"]
 }
 
 target "frontend" {

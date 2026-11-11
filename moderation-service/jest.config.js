@@ -16,7 +16,7 @@ module.exports = {
     '!src/**/*.spec.ts',
   ],
   coverageReporters: ['text-summary', 'lcov'],
-  coverageThreshold: { global: { lines: 40, branches: 20 } },
+  coverageThreshold: { global: { statements: 100, branches: 100, functions: 100, lines: 100 } },
   projects: [
     { ...base, displayName: 'unit', rootDir: '.', testMatch: ['<rootDir>/src/**/*.spec.ts'] },
     {

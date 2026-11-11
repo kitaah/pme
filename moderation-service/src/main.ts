@@ -1,10 +1,10 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { httpMetricsMiddleware } from '@pme/common';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { loadConfiguration } from './config/configuration';
-import { httpMetricsMiddleware } from './metrics/metrics';
 import { LISTINGS_STREAM } from './moderation/listing-submitted.event';
 import { ListingSubmittedConsumer } from './moderation/listing-submitted.consumer';
 import { ensureStreams } from './moderation/nats-topology';

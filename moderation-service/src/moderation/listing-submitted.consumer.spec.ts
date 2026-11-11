@@ -2,7 +2,7 @@ import { JsMsg } from 'nats';
 import { LISTING_SUBMITTED_DLQ_SUBJECT } from './listing-submitted.event';
 import { ListingSubmittedConsumer } from './listing-submitted.consumer';
 import { ModerationService } from './moderation.service';
-import { NatsClient } from './nats.client';
+import { NatsClient } from '@pme/common';
 
 describe('ListingSubmittedConsumer', () => {
   const validEvent = {

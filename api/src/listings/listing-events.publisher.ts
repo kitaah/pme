@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { NatsClient } from '@pme/common';
+import { JetStreamClient } from 'nats';
 import { LISTING_SUBMITTED_SUBJECT, ListingSubmittedEvent } from './listing-events';
 import { Listing } from './listing.entity';
-import { NatsClient } from './nats.client';
 
 /** Delai maximal d'attente de l'accuse de reception du flux, et nouvelles tentatives. */
 const PUBLISH_TIMEOUT_MS = 3000;
@@ -36,20 +37,23 @@ export class ListingEventsPublisher {
     };
 
     const jetstream = await this.nats.jetstream();
-    for (let attempt = 0; ; attempt++) {
-      try {
-        await jetstream.publish(LISTING_SUBMITTED_SUBJECT, JSON.stringify(event), {
-          msgID: listing.id,
-          timeout: PUBLISH_TIMEOUT_MS,
-        });
-        break;
-      } catch (error) {
-        if (attempt >= PUBLISH_RETRIES) {
-          throw error;
-        }
-        await sleep(RETRY_DELAY_MS);
-      }
-    }
+    await this.publishWithRetry(jetstream, event);
     this.logger.log(`Evenement ${LISTING_SUBMITTED_SUBJECT} publie pour l'annonce ${listing.id}`);
+  }
+
+  /** Recursion plutot qu'une boucle : chaque nouvelle tentative attend la precedente (voir RETRY_DELAY_MS). */
+  private async publishWithRetry(jetstream: JetStreamClient, event: ListingSubmittedEvent, attempt = 0): Promise<void> {
+    try {
+      await jetstream.publish(LISTING_SUBMITTED_SUBJECT, JSON.stringify(event), {
+        msgID: event.listingId,
+        timeout: PUBLISH_TIMEOUT_MS,
+      });
+    } catch (error) {
+      if (attempt >= PUBLISH_RETRIES) {
+        throw error;
+      }
+      await sleep(RETRY_DELAY_MS);
+      return this.publishWithRetry(jetstream, event, attempt + 1);
+    }
   }
 }

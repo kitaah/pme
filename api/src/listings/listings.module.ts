@@ -1,13 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { NatsClient, registry } from '@pme/common';
 import { DatabaseCircuitBreaker } from '../common/database-circuit-breaker';
-import { registry } from '../metrics/metrics';
 import { loadConfiguration } from '../config/configuration';
 import { Listing } from './listing.entity';
 import { ListingEventsPublisher } from './listing-events.publisher';
 import { ListingsController } from './listings.controller';
 import { ListingsService } from './listings.service';
-import { NatsClient } from './nats.client';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Listing])],
@@ -25,7 +24,7 @@ import { NatsClient } from './nats.client';
     },
     {
       provide: NatsClient,
-      useFactory: () => new NatsClient(loadConfiguration().nats),
+      useFactory: () => new NatsClient(loadConfiguration().nats, 'pme-api'),
     },
   ],
 })

@@ -43,4 +43,28 @@ describe('MyListings', () => {
     // Then : le membre est prevenu, sans liste vide silencieuse
     expect(await screen.findByRole('alert')).toHaveTextContent('Impossible de charger vos annonces.');
   });
+
+  it('invite à déposer une première annonce quand la liste est vide', async () => {
+    // Given : le membre n'a encore rien déposé
+    myListings.mockResolvedValue([]);
+
+    render(<MyListings refreshKey={0} />);
+
+    // Then
+    expect(await screen.findByText('Aucune annonce pour le moment.')).toBeInTheDocument();
+  });
+
+  it('recharge la liste quand la page parente demande un rafraîchissement', async () => {
+    // Given : une première liste vide, puis une annonce déposée entre-temps
+    myListings.mockResolvedValueOnce([]).mockResolvedValueOnce([listing('9', 'PUBLISHED')]);
+    const { rerender } = render(<MyListings refreshKey={0} />);
+    await screen.findByText('Aucune annonce pour le moment.');
+
+    // When : la clé de rafraîchissement change
+    rerender(<MyListings refreshKey={1} />);
+
+    // Then : la nouvelle annonce apparaît et l'ancien message disparaît
+    expect(await screen.findByText('Annonce 9')).toBeInTheDocument();
+    expect(screen.queryByText('Aucune annonce pour le moment.')).not.toBeInTheDocument();
+  });
 });
