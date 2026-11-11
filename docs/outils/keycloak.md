@@ -113,12 +113,12 @@ Ces comptes sont conservés tant que la base de Keycloak n'est pas réinitialis�
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/03-keycloak.yaml`** | Déploie Keycloak dans le cluster et fixe son adresse publique. |
-| **`k8s/03-keycloak-admin-job.yaml`** | Crée le compte administrateur permanent, puis supprime le compte temporaire. |
-| **`k8s/config/realm-pme.json`** | Décrit le realm : rôles et applications autorisées. |
-| **`api/src/auth/jwt.strategy.ts`** | Vérifie la signature, l'émetteur et l'application du jeton. |
-| **`frontend/src/auth.ts`** | Redirige vers la page de connexion et renouvelle le jeton. |
-| **`.env`** | Contient l'identifiant et le mot de passe de l'administrateur. Ce fichier est exclu de Git. |
+| **`../../k8s/03-keycloak.yaml`** | Déploie Keycloak dans le cluster et fixe son adresse publique. |
+| **`../../k8s/03-keycloak-admin-job.yaml`** | Crée le compte administrateur permanent, puis supprime le compte temporaire. |
+| **`../../k8s/config/realm-pme.json`** | Décrit le realm : rôles et applications autorisées. |
+| **`../../libs/common/src/auth`**<br>**`jwt.strategy.ts`** | Vérifie la signature, l'émetteur et l'application du jeton, dans l'API comme dans la modération. |
+| **`../../frontend/src/auth.ts`** | Redirige vers la page de connexion et renouvelle le jeton. |
+| **`../../.env`** | Contient l'identifiant et le mot de passe de l'administrateur. Ce fichier est exclu de Git. |
 
 ## Commandes essentielles
 
@@ -141,7 +141,7 @@ Ces comptes sont conservés tant que la base de Keycloak n'est pas réinitialis�
 
 !!! tip "Astuce"
     Pour ouvrir la console d'administration, utiliser les valeurs `KEYCLOAK_ADMIN` et `KEYCLOAK_ADMIN_PASSWORD` du
-    fichier `.env`. Le compte temporaire n'existe plus une fois le déploiement terminé.
+    fichier `../../.env`. Le compte temporaire n'existe plus une fois le déploiement terminé.
 
 ## Pour aller plus loin
 

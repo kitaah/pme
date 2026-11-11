@@ -30,8 +30,8 @@ qui est propre au projet : les règles des annonces et de la modération.
 **Deux applications construites avec NestJS.**
 Le projet en compte deux, bâties sur le même socle, mais aux responsabilités distinctes :
 
-- l'**API** (dossier `api/`) reçoit les demandes de l'interface : dépôt d'une annonce, consultation de ses annonces ;
-- le **service de modération** (dossier `moderation-service/`) ne reçoit rien du navigateur. Il écoute les événements
+- l' **API** (dossier `../../api`) reçoit les demandes de l'interface : dépôt d'une annonce, consultation de ses annonces ;
+- le **service de modération** (dossier `../../moderation-service`) ne reçoit rien du navigateur. Il écoute les événements
   publiés dans [NATS](nats.md) et constitue la file des annonces à relire.
 
 Les séparer permet de les faire évoluer et de les redémarrer indépendamment : une modération interrompue n'empêche pas
@@ -210,18 +210,19 @@ La configuration est lue dans des variables d'environnement, fournies par Kubern
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`api/src/main.ts`** | Point d'entrée de l'API : démarre l'application et règle sa sécurité. |
-| **`api/src/app.module.ts`** | Module principal : assemble les autres modules, la connexion à la base et les contrôles d'entrée. |
-| **`api/src/listings/`** | Module des annonces : réception, contrôle, enregistrement et publication de l'événement. |
-| **`api/src/auth/`** | Vérification du jeton et des rôles. |
-| **`api/src/common/`** | Éléments communs : disjoncteur de la base et mise en forme des erreurs. |
-| **`api/src/config/configuration.ts`** | Lit la configuration dans les variables d'environnement et refuse de démarrer si l'une manque. |
-| **`api/src/health/`** | Sondes de santé interrogées par Kubernetes. |
-| **`api/src/metrics/`** | Mesures exposées à Prometheus. |
-| **`api/src/migrations/`** | Modifications successives du schéma de la base. |
-| **`moderation-service/src/moderation/`** | Lecture des événements NATS et constitution de la file de modération. |
-| **`api/package.json`** | Liste les dépendances et les commandes de l'API. |
-| **`api/Dockerfile`** | Décrit la fabrication de l'image Docker de l'API. |
+| **`../../api/src/main.ts`** | Point d'entrée de l'API : démarre l'application et règle sa sécurité. |
+| **`../../api/src/app.module.ts`** | Module principal : assemble les autres modules, la connexion à la base et les contrôles d'entrée. |
+| **`../../api/src/listings`** | Module des annonces : réception, contrôle, enregistrement et publication de l'événement. |
+| **`../../api/src/auth`** | Module d'authentification : il branche les gardes du module commun. |
+| **`../../api/src/common`** | Disjoncteur de la base. |
+| **`../../libs/common`** | Module commun `@pme/common`, partagé avec la modération : vérification du jeton et des rôles, mise en forme des erreurs (RFC 9457), mesures, client NATS et lecture de la configuration. |
+| **`../../api/src/config/configuration.ts`** | Lit la configuration dans les variables d'environnement et refuse de démarrer si l'une manque. |
+| **`../../api/src/health`** | Sondes de santé interrogées par Kubernetes. |
+| **`../../api/src/metrics`** | Route qui expose les mesures à Prometheus. |
+| **`../../api/src/migrations`** | Modifications successives du schéma de la base. |
+| **`../../moderation-service/src/moderation`** | Lecture des événements NATS et constitution de la file de modération. |
+| **`../../api/package.json`** | Liste les dépendances et les commandes de l'API. |
+| **`../../api/Dockerfile`** | Décrit la fabrication de l'image Docker de l'API. |
 
 ## Commandes essentielles
 
@@ -229,7 +230,7 @@ La configuration est lue dans des variables d'environnement, fournies par Kubern
 
 | Commande | Description |
 |---|---|
-| **`make install`** | Installe les dépendances des trois applications. |
+| **`make install`** | Installe les dépendances : un seul `npm ci` à la racine pour le module commun, l'API et la modération, puis un autre pour l'interface. |
 | **`make api`** | Démarre l'API sur l'ordinateur et la redémarre à chaque modification du code. |
 | **`make moderation`** | Démarre le service de modération de la même façon. |
 | **`make test`** | Lance les tests unitaires des trois applications. |

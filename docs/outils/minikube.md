@@ -88,7 +88,7 @@ L'exécution de la plateforme se déroule en trois étapes :
 1. Chaque application est livrée sous la forme d'une **image Docker** : un modèle figé qui contient l'application et tout
    ce dont elle a besoin pour fonctionner. Un fichier appelé Dockerfile décrit la fabrication de l'image, qui est
    construite directement dans le cluster.
-2. Les **manifestes** du dossier `k8s/` décrivent le résultat attendu : quelles applications exécuter, en combien
+2. Les **manifestes** du dossier `../../k8s` décrivent le résultat attendu : quelles applications exécuter, en combien
    d'exemplaires, avec quelle configuration et comment les rendre accessibles. Cette approche est dite
    **déclarative** : on indique l'état souhaité (« plusieurs exemplaires de l'API en fonctionnement »), et non les
    étapes pour y parvenir. C'est comparable à la commande d'un plat au restaurant, où l'on demande le plat sans
@@ -106,7 +106,7 @@ liste de règles reconnues, identifiées par un code (`DL3006`, `DL4006`…). Po
 instructions `RUN`, il s'appuie aussi sur ShellCheck, un linter de scripts shell. Pour chaque écart, il indique le
 fichier, la ligne, le code de la règle, sa gravité (`error`, `warning`, `info` ou `style`) et une explication.
 
-Le projet fait échouer le contrôle dès la gravité `warning`, réglage placé dans le fichier `.hadolint.yaml`. Les écarts
+Le projet fait échouer le contrôle dès la gravité `warning`, réglage placé dans le fichier `../../.hadolint.yaml`. Les écarts
 de gravité `info` et `style` s'affichent, mais ne bloquent pas. Voici quelques règles courantes :
 
 | Règle | Ce qu'elle vérifie | Pourquoi c'est important |
@@ -143,7 +143,7 @@ plusieurs étapes et exécution sans droits `root`. Ce contrôle se lance sur l'
 | **Kubernetes** | Orchestrateur de conteneurs open source. Il démarre les conteneurs, les surveille, les relance en cas d'arrêt et répartit la charge entre eux. |
 | **Kustomize** | Outil intégré à `kubectl` qui assemble plusieurs manifestes en un seul déploiement. |
 | **Linter** | Outil qui analyse un fichier sans l'exécuter, pour y repérer des erreurs et des écarts aux bonnes pratiques. |
-| **`make`** | Outil qui exécute les commandes nommées du fichier `Makefile`, par exemple `make deploy`. |
+| **`make`** | Outil qui exécute les commandes nommées du fichier `../../Makefile`, par exemple `make deploy`. |
 | **Manifeste** | Fichier de configuration, écrit en YAML, qui décrit l'état souhaité d'un composant dans Kubernetes. |
 | **Namespace** | Espace de noms qui isole un groupe de ressources au sein d'un cluster. |
 | **Nœud** | Machine, réelle ou virtuelle, qui exécute les conteneurs d'un cluster. |
@@ -200,21 +200,21 @@ Le cluster est créé avec les paramètres suivants :
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`Makefile`** | Regroupe les commandes de création du cluster, de construction des images et de déploiement. |
-| **`k8s/`** | Contient les manifestes, à raison d'un fichier par composant à déployer. |
-| **`k8s/kustomization.yaml`** | Liste les manifestes déployés ensemble et génère les ConfigMaps à partir de `k8s/config/`. |
-| **`k8s/namespace.yaml`** | Crée le namespace `pme`, lui applique la règle de sécurité `baseline` et l'enrôle dans le maillage Istio. |
-| **`k8s/istio/`** | Contient les réglages des charts Helm d'Istio (voir [Istio](istio.md)). |
-| **`k8s/16-mesh-mtls.yaml`** | Impose le mode strict du maillage : toute connexion hors mTLS est refusée. |
-| **`k8s/config/`** | Contient les fichiers de configuration fournis aux composants : PostgreSQL, NATS, Grafana, Alloy et interface. |
-| **`k8s/14-pme-secrets-sealed.yaml`** | Contient les mots de passe chiffrés, sous une forme qui peut être versionnée dans Git sans risque (voir [Sealed Secrets](sealed-secrets.md)). |
-| **`k8s/11-autoscaling.yaml`** | Définit, pour l'interface, l'API et la modération, l'autoscaling et le nombre minimal de réplicas disponibles. |
-| **`api/Dockerfile`** | Décrit la fabrication de l'image de l'API. |
-| **`moderation-service/Dockerfile`** | Décrit la fabrication de l'image du service de modération. |
-| **`frontend/Dockerfile`** | Décrit la fabrication de l'image de l'interface. |
-| **`docker/docs/Dockerfile`** | Décrit la fabrication de l'image de la documentation, y compris l'installation de l'outil de schémas D2. |
-| **`.hadolint.yaml`** | Règle le niveau à partir duquel Hadolint signale un échec : le niveau « warning ». |
-| **`.env`** | Contient les mots de passe de démonstration, que `make seal` chiffre. Ce fichier est exclu de Git. |
+| **`../../Makefile`** | Regroupe les commandes de création du cluster, de construction des images et de déploiement. |
+| **`../../k8s`** | Contient les manifestes, à raison d'un fichier par composant à déployer. |
+| **`../../k8s/kustomization.yaml`** | Liste les manifestes déployés ensemble et génère les ConfigMaps à partir de `../../k8s/config`. |
+| **`../../k8s/namespace.yaml`** | Crée le namespace `pme`, lui applique la règle de sécurité `baseline` et l'enrôle dans le maillage Istio. |
+| **`../../k8s/istio`** | Contient les réglages des charts Helm d'Istio (voir [Istio](istio.md)). |
+| **`../../k8s/16-mesh-mtls.yaml`** | Impose le mode strict du maillage : toute connexion hors mTLS est refusée. |
+| **`../../k8s/config`** | Contient les fichiers de configuration fournis aux composants : PostgreSQL, NATS, Grafana, Alloy et interface. |
+| **`../../k8s/14-pme-secrets-sealed.yaml`** | Contient les mots de passe chiffrés, sous une forme qui peut être versionnée dans Git sans risque (voir [Sealed Secrets](sealed-secrets.md)). |
+| **`../../k8s/11-autoscaling.yaml`** | Définit, pour l'interface, l'API et la modération, l'autoscaling et le nombre minimal de réplicas disponibles. |
+| **`../../api/Dockerfile`** | Décrit la fabrication de l'image de l'API. |
+| **`../../moderation-service/Dockerfile`** | Décrit la fabrication de l'image du service de modération. |
+| **`../../frontend/Dockerfile`** | Décrit la fabrication de l'image de l'interface. |
+| **`../../docker/docs/Dockerfile`** | Décrit la fabrication de l'image de la documentation, y compris l'installation de l'outil de schémas D2. |
+| **`../../.hadolint.yaml`** | Règle le niveau à partir duquel Hadolint signale un échec : le niveau « warning ». |
+| **`../../.env`** | Contient les mots de passe de démonstration, que `make seal` chiffre. Ce fichier est exclu de Git. |
 
 ## Commandes essentielles
 
@@ -226,11 +226,11 @@ Le cluster est créé avec les paramètres suivants :
 | **`make inotify`** | Relève la limite `inotify` de l'ordinateur si elle est trop basse (mot de passe `sudo` demandé). Elle est nécessaire à Istio. |
 | **`make istio`** | Installe ou met à jour le maillage Istio sur un cluster existant, sans le recréer. |
 | **`make mesh-check`** | Vérifie le chiffrement entre pods (voir [Istio](istio.md)). |
-| **`make image`** | Construit les trois images (API, modération, interface) directement dans le cluster. |
+| **`make image`** | Construit les trois images (API, modération, interface) puis les rend disponibles dans le cluster. |
 | **`make lint-docker`** | Lance Hadolint sur les quatre Dockerfile du projet. La commande échoue dès qu'une règle de gravité `warning` ou `error` est enfreinte. |
 | **`make deploy`** | Applique les manifestes et déploie toute la plateforme. |
 | **`make pods`** | Affiche l'état de chaque pod. |
-| **`make redeploy`** | Reconstruit les images, puis redémarre progressivement l'API, la modération et l'interface pour appliquer une modification du code. |
+| **`make redeploy`** | Reconstruit et recharge les images, puis redémarre progressivement l'API, la modération et l'interface pour appliquer une modification du code. |
 | **`make undeploy`** | Supprime le namespace `pme`, donc la plateforme et ses données. |
 | **`make minikube-down`** | Arrête le cluster sans le supprimer. |
 
@@ -247,6 +247,11 @@ Lors du premier démarrage, l'enchaînement est le suivant :
     dépassée et ztunnel plante avec l'erreur `Too many open files`. `make istio` lance donc d'abord `make inotify`, qui
     porte la limite à 1024 de façon permanente. Ce réglage concerne Linux ; sous un autre système, il faut ajuster la
     limite équivalente à la main.
+
+!!! note "Pourquoi pas `minikube docker-env` ?"
+    Le cluster utilise le runtime containerd. Avec lui, `minikube docker-env` n'est qu'une émulation qui fait échouer
+    `docker build`. L'API et la modération sont donc construites par le Docker de l'ordinateur, puis chargées dans le
+    cluster avec `minikube image load`. L'interface est construite par `minikube image build`.
 
 !!! warning "Attention"
     `make undeploy` supprime aussi les données (annonces, comptes). À réserver au cas où l'on souhaite repartir de zéro.

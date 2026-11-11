@@ -21,9 +21,9 @@ Ensuite, chaque job surveille ses propres fichiers :
 
 | Job | Fichiers surveillés |
 |---|---|
-| **`unit-tests:*`**<br>**`sonar`** | Les trois modules, `.gitlab-ci.yml` et `sonar-project.properties`. |
-| **`integration-tests`** | L'API, la modération et `.gitlab-ci.yml`. |
-| **`image-tests`** | Les Dockerfile, les dépendances, nginx, les tests d'image, `.trivyignore` et `.gitlab-ci.yml`. |
+| **`unit-tests:*`**<br>**`sonar`** | Les quatre modules (module commun, API, modération, interface), les `package.json`, `package-lock.json`, `.gitlab-ci.yml` et `sonar-project.properties`. |
+| **`integration-tests`** | L'API, la modération, le module commun, les `package.json` et `.gitlab-ci.yml`. |
+| **`image-tests`** | Les Dockerfile et leurs `.dockerignore`, les dépendances, nginx, les tests d'image, `.trivyignore` et `.gitlab-ci.yml`. |
 | **`performance-tests`** | L'API, les scénarios k6, `scripts/perf-ci.sh` et `.gitlab-ci.yml`. |
 
 Si aucun fichier surveillé n'a changé, le job ne se lance pas. Pour `image-tests`, il reste disponible en lancement manuel.
@@ -37,7 +37,7 @@ Si aucun fichier surveillé n'a changé, le job ne se lance pas. Pour `image-tes
 | Technique | Effet |
 |---|---|
 | **Jobs indépendants** | Les jobs démarrent ensemble. La durée est celle du job le plus long. |
-| **Cache des paquets npm** | Un cache par module, renouvelé quand `package-lock.json` change. |
+| **Cache des paquets npm** | Un cache partagé par le module commun, l'API et la modération (un seul `npm ci` à la racine), un autre pour l'interface. Ils sont renouvelés quand `package-lock.json` change. |
 | **Clonage minimal** | Seul le dernier commit est récupéré. Sonar récupère tout l'historique. |
 | **Artefacts légers** | Seul le fichier de couverture utile est conservé, pas le rapport HTML. |
 | **Compression rapide** | Les archives de cache et d'artefacts se compressent vite plutôt que petit. |

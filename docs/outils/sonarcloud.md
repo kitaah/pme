@@ -94,8 +94,8 @@ modifications.
 
 ## Rôle dans le projet
 
-- Il analyse les trois modules écrits en TypeScript : l'API, le service de modération et l'interface.
-- Il rassemble la couverture des trois modules en une seule mesure, à partir des rapports produits par les tests.
+- Il analyse les quatre modules écrits en TypeScript : le module commun, l'API, le service de modération et l'interface.
+- Il rassemble la couverture des quatre modules en une seule mesure, à partir des rapports produits par les tests.
 - Il signale aussi les secrets oubliés dans les fichiers du dépôt.
 - Il conserve l'historique des analyses, ce qui montre l'évolution de la qualité dans le temps.
 - Il rend un verdict lisible sans expertise, consultable dans son tableau de bord.
@@ -118,11 +118,12 @@ Certains fichiers sont volontairement exclus de l'analyse ou du calcul de couver
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`sonar-project.properties`** | Déclare le projet, les sources, les tests, les exclusions et les rapports de couverture. |
-| **`.gitlab-ci.yml`** | Définit le job qui lance l'analyse. |
-| **`api/coverage/lcov.info`** | Rapport de couverture de l'API, lu par l'analyseur. |
-| **`moderation-service/coverage/lcov.info`** | Rapport de couverture du service de modération. |
-| **`frontend/coverage/lcov.info`** | Rapport de couverture de l'interface. |
+| **`../../sonar-project.properties`** | Déclare le projet, les sources, les tests, les exclusions et les rapports de couverture. |
+| **`../../.gitlab-ci.yml`** | Définit le job qui lance l'analyse. |
+| **`../../libs/common/coverage/lcov.info`** | Rapport de couverture du module commun. |
+| **`../../api/coverage/lcov.info`** | Rapport de couverture de l'API, lu par l'analyseur. |
+| **`../../moderation-service/coverage/lcov.info`** | Rapport de couverture du service de modération. |
+| **`../../frontend/coverage/lcov.info`** | Rapport de couverture de l'interface. |
 
 ## Commandes essentielles
 
@@ -130,7 +131,7 @@ Certains fichiers sont volontairement exclus de l'analyse ou du calcul de couver
 
 | Commande | Description |
 |---|---|
-| **`make coverage`** | Produit les rapports de couverture des trois modules. |
+| **`make coverage`** | Produit les rapports de couverture des quatre modules. |
 | **`make sonar`** | Envoie une analyse à SonarCloud depuis l'ordinateur. |
 | **`make lint`** | Signale localement une partie des mêmes défauts, avant d'envoyer quoi que ce soit. |
 

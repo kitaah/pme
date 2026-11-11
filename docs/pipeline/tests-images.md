@@ -64,8 +64,8 @@ Détail des 6 contrôles de l'image de l'interface :
 
 ## Quand il se lance
 
-- **Automatiquement** quand une image ou son contrôle change : Dockerfile, `.dockerignore`, `package-lock.json`,
-  `frontend/nginx.conf`, `docker-bake.hcl`, `tests/image/`, `.trivyignore` ou `.gitlab-ci.yml`.
+- **Automatiquement** quand une image ou son contrôle change : Dockerfile, `.dockerignore` ou `Dockerfile.dockerignore`,
+  `package.json`, `package-lock.json`, `frontend/nginx.conf`, `docker-bake.hcl`, `tests/image/`, `.trivyignore` ou `.gitlab-ci.yml`.
 - **À la demande** dans les autres cas : le job reste disponible, avec un bouton de lancement manuel.
 
 Ce job est le plus coûteux de la pipeline. Il ne se lance donc que s'il peut trouver quelque chose de nouveau.
@@ -90,8 +90,8 @@ Voir [Publication des images](publication-images.md).
 | **`tests/image/frontend.yaml`** | Décrit les contrôles de l'image de l'interface. |
 | **`docker-bake.hcl`** | Décrit la construction parallèle des trois images. |
 | **`.trivyignore`** | Liste les failles acceptées temporairement, avec leur expiration. |
-| **`api/Dockerfile`** | Fabrique l'image de l'API. |
-| **`moderation-service/Dockerfile`** | Fabrique l'image de la modération. |
+| **`api/Dockerfile`** | Fabrique l'image de l'API. Son contexte de construction est la racine du dépôt, car l'image embarque aussi `libs/common`. |
+| **`moderation-service/Dockerfile`** | Fabrique l'image de la modération, avec le même contexte. |
 | **`frontend/Dockerfile`** | Fabrique l'image de l'interface. |
 
 ## Commandes essentielles
@@ -100,7 +100,7 @@ Voir [Publication des images](publication-images.md).
 
 | Commande | Description |
 |---|---|
-| **`make image`** | Construit les trois images dans Minikube. |
+| **`make image`** | Construit les trois images, puis les rend disponibles dans Minikube. |
 | **`make image-test`** | Contrôle la structure puis les vulnérabilités des trois images. |
 | **`docker buildx bake`** | Construit les trois images en parallèle, comme la pipeline. |
 

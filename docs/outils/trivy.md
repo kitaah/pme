@@ -81,7 +81,7 @@ pipeline. Une exception sans échéance deviendrait une dette oubliée.
 ## Rôle dans le projet
 
 - Il analyse les trois images avant leur publication : l'API, le service de modération et l'interface.
-- Il analyse aussi les dépendances des trois modules, outils de développement compris.
+- Il analyse aussi les dépendances du back-end (module commun, API, modération) et de l'interface, outils de développement compris.
 - Il bloque la pipeline dès qu'une faille élevée ou critique dispose d'un correctif.
 - Il conserve un rapport par analyse, ce qui garde une trace de l'état de sécurité à chaque publication.
 - Sans lui, une image pourrait partir en production avec une faille connue et déjà corrigée ailleurs.
@@ -102,11 +102,11 @@ Les deux analyses se répartissent ainsi :
 | Fichier ou dossier | Description |
 |---|---|
 | **`.trivyignore`** | Liste les exceptions : identifiant de la faille, justification et date d'expiration. |
-| **`.gitlab-ci.yml`** | Définit les deux analyses, dans les jobs des images et des dépendances. |
+| **`../../.gitlab-ci.yml`** | Définit les deux analyses, dans les jobs des images et des dépendances. |
 | **`docker-bake.hcl`** | Décrit la construction des images analysées. |
-| **`api/Dockerfile`** | Décrit la fabrication de l'image de l'API, dont son image de base. |
-| **`moderation-service/Dockerfile`** | Même rôle pour le service de modération. |
-| **`frontend/Dockerfile`** | Même rôle pour l'interface. |
+| **`../../api/Dockerfile`** | Décrit la fabrication de l'image de l'API, dont son image de base. |
+| **`../../moderation-service/Dockerfile`** | Même rôle pour le service de modération. |
+| **`../../frontend/Dockerfile`** | Même rôle pour l'interface. |
 
 ## Commandes essentielles
 

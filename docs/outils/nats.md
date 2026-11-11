@@ -144,13 +144,13 @@ Le serveur est configuré ainsi :
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/02-nats.yaml`** | Déploie le serveur NATS dans le cluster, avec JetStream activé. |
-| **`k8s/config/nats.conf`** | Configure le chiffrement et les comptes du serveur. |
-| **`api/src/listings/nats.client.ts`** | Gère la connexion de l'API au broker. |
-| **`api/src/listings/`**<br>**`listing-events.publisher.ts`** | Publie l'événement « annonce déposée ». |
-| **`api/src/listings/listing-events.ts`** | Décrit le contenu de l'événement, partagé avec la modération. |
-| **`moderation-service/src/moderation/`**<br>**`nats-topology.ts`** | Crée les flux et le consommateur durable au démarrage. |
-| **`moderation-service/src/moderation/`**<br>**`listing-submitted.consumer.ts`** | Lit les messages et décide de leur sort. |
+| **`../../k8s/02-nats.yaml`** | Déploie le serveur NATS dans le cluster, avec JetStream activé. |
+| **`../../k8s/config/nats.conf`** | Configure le chiffrement et les comptes du serveur. |
+| **`../../libs/common/src/nats`**<br>**`nats.client.ts`** | Gère la connexion au broker, pour l'API comme pour la modération. |
+| **`../../api/src/listings`**<br>**`listing-events.publisher.ts`** | Publie l'événement « annonce déposée ». |
+| **`../../api/src/listings/listing-events.ts`** | Décrit le contenu de l'événement côté API. La modération en garde sa propre description (`listing-submitted.event.ts`). |
+| **`../../moderation-service/src/moderation`**<br>**`nats-topology.ts`** | Crée les flux et le consommateur durable au démarrage. |
+| **`../../moderation-service/src/moderation`**<br>**`listing-submitted.consumer.ts`** | Lit les messages et décide de leur sort. |
 
 ## Commandes essentielles
 

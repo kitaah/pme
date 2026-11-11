@@ -181,7 +181,7 @@ dans Keycloak, sans toucher aux données métier.
 | **`api/src/main.ts`** | Active Helmet, la validation stricte et la confiance limitée à un seul relais. |
 | **`api/src/app.module.ts`** | Déclare la limitation de débit, puis les gardes, dans leur ordre d'exécution. |
 | **`api/src/listings/create-listing.dto.ts`** | Les règles de validation du dépôt d'annonce. |
-| **`api/src/common/problem-details.filter.ts`** | Traduit toutes les erreurs au format RFC 9457. |
+| **`libs/common/src/common/`**<br>**`problem-details.filter.ts`** | Traduit toutes les erreurs au format RFC 9457, dans l'API comme dans la modération. |
 | **`api/src/listings/listings.controller.ts`** | Borne le nombre de résultats et exige le rôle `membre`. |
 | **`frontend/nginx.conf`** | En-têtes de sécurité, dont la politique de contenu, et refus des adresses `/api/`. |
 
