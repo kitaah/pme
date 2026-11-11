@@ -267,6 +267,7 @@ image-tests:
   stage: image
   needs: []
   image: docker:27
+  timeout: 6 minutes # plafond maximal du projet pour un job ; un pipeline normal (cache de construction rempli) reste sous 5 minutes
   services:
     - name: docker:27-dind
       command: ["--registry-mirror", "https://mirror.gcr.io"]
@@ -287,20 +288,19 @@ image-tests:
     paths: [.trivycache]
   before_script:
     - apk add --no-cache curl
-    # container-structure-test : version epinglee et binaire verifie par sa somme de controle (SHA-256) avant installation.
+    # container-structure-test et Trivy : versions epinglees, binaires verifies par leur somme de controle (SHA-256).
+    # Les deux telechargements se font en parallele.
     - |
-      (
-        cd /tmp
+      install_cst() (
+        set -e; cd /tmp
         base="https://github.com/GoogleContainerTools/container-structure-test/releases/download/${CST_VERSION}"
         curl -sSfLO "$base/container-structure-test-linux-amd64"
         curl -sSfLO "$base/checksums.txt"
         grep " container-structure-test-linux-amd64\$" checksums.txt | sha256sum -c -
         install -m 0755 container-structure-test-linux-amd64 /usr/local/bin/cst
       )
-    # Trivy : version epinglee et archive verifiee par sa somme de controle (SHA-256) avant installation.
-    - |
-      (
-        cd /tmp
+      install_trivy() (
+        set -e; cd /tmp
         base="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}"
         archive="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
         curl -sSfLO "$base/$archive"
@@ -308,23 +308,33 @@ image-tests:
         grep " $archive\$" "trivy_${TRIVY_VERSION}_checksums.txt" | sha256sum -c -
         tar -xzf "$archive" -C /usr/local/bin trivy
       )
+      install_cst & cst_pid=$!
+      install_trivy & trivy_pid=$!
+      wait $cst_pid && wait $trivy_pid
   script:
     # 1. Construction des trois images en parallele. Le cache de couches vit dans le registre GitLab (voir docker-bake.hcl) :
     #    il demande un builder docker-container, donc `--load` pour retrouver les images dans le Docker du job.
     #    La connexion au registre se fait avant : elle sert au cache et, plus bas, a la publication.
     - echo "$CI_REGISTRY_PASSWORD" | docker login --username "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    #    La base Trivy se telecharge en arriere-plan pendant la construction (reseau libre, CPU peu utilise).
     - docker buildx create --name pme-ci --driver docker-container --use
+    - trivy image --download-db-only > trivy-db.log 2>&1 & echo $! > trivy-db.pid
     - docker buildx bake --load
+    - wait "$(cat trivy-db.pid)" || { cat trivy-db.log; exit 1; }
     # 2. Structure de chaque image
+    #    Les trois controles tournent en parallele ; le job echoue si l'un d'eux echoue.
     - |
+      for svc in api moderation frontend; do
+        cst test --image "pme-$svc:$TAG" --config "tests/image/$svc.yaml" > "cst-$svc.log" 2>&1 & echo $! > "cst-$svc.pid"
+      done
       status=0
       for svc in api moderation frontend; do
-        cst test --image "pme-$svc:$TAG" --config "tests/image/$svc.yaml" || status=1
+        wait "$(cat "cst-$svc.pid")" || status=1
+        echo "== structure pme-$svc"; cat "cst-$svc.log"
       done
       exit $status
     # 3. Vulnerabilites : base telechargee une fois, puis les trois analyses en parallele (vulnerabilites des paquets uniquement,
     #    failles sans correctif ignorees). Un rapport JSON par image est conserve en artefact.
-    - trivy image --download-db-only
     - printf '%s\n' api moderation frontend | xargs -P 3 -I{} trivy image --skip-db-update --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --format json --output "trivy-{}.json" --exit-code 0 "pme-{}:$TAG"
     # 4. Lecture des rapports : tableau dans le journal, et echec s'il reste une faille HIGH ou CRITICAL non justifiee (.trivyignore).
     - |
