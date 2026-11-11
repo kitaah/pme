@@ -1,4 +1,4 @@
-# Chaine CI/CD (GitLab CI) - tests unitaires, analyse SonarCloud, controle des Dockerfile (Hadolint), tests d'integration, analyse des dependances, tests des images Docker (puis leur publication), tests de performance.
+# Chaine CI/CD (GitLab CI) - tests unitaires (api, moderation-service, libs/common, frontend), analyse SonarCloud, controle des Dockerfile (Hadolint), tests d'integration, analyse des dependances, tests des images Docker (puis leur publication), tests de performance.
 # Les autres etapes (qualite statique) seront ajoutees une a une.
 # Tous les jobs sont independants (needs: []) : la duree du pipeline est celle du job le plus long.
 # Quota GitLab gratuit : 400 minutes de pipeline par mois. Peu de jobs, et un job ne tourne que si son code change.
@@ -30,10 +30,10 @@ variables:
   ARTIFACT_COMPRESSION_LEVEL: fastest
 
 # Declencheur commun des tests unitaires et de l'analyse Sonar : un changement de code dans l'un des trois modules.
-# Les trois modules sont testes ensemble : Sonar a besoin de la couverture des trois pour ne pas la compter a 0 %.
+# Les quatre modules sont testes ensemble : Sonar a besoin de la couverture de tous pour ne pas la compter a 0 %.
 .code-changes:
   rules:
-    - changes: [".gitlab-ci.yml", "sonar-project.properties", "api/**/*", "moderation-service/**/*", "frontend/**/*"]
+    - changes: [".gitlab-ci.yml", "sonar-project.properties", "package.json", "package-lock.json", "libs/**/*", "api/**/*", "moderation-service/**/*", "frontend/**/*"]
 
 # ---------- Tests unitaires : un job par module, execute en parallele ----------
 # Les jobs ne tournent que si le code change : un commit de documentation ne coute aucune minute.
@@ -42,9 +42,16 @@ variables:
 .unit-tests:
   stage: test
   needs: []
+  # api, moderation-service et libs/common sont des workspaces npm : un seul npm ci, a la racine (package-lock.json commun).
+  # Le frontend a son propre package.json. Les modules qui dependent de @pme/common le compilent via leur script "pretest:cov".
   before_script:
+    - |
+      if [ "$MODULE" = "frontend" ]; then
+        (cd frontend && npm ci --prefer-offline)
+      else
+        npm ci --prefer-offline --workspace="$MODULE" --workspace=libs/common
+      fi
     - cd "$MODULE"
-    - npm ci --prefer-offline
   script:
     - npm run test:cov -- $TEST_ARGS
   coverage: '/Lines\s*:\s*(\d+\.?\d*)%/'
@@ -59,28 +66,37 @@ variables:
         coverage_format: cobertura
         path: "$MODULE/coverage/cobertura-coverage.xml"
 
+# Cache des paquets npm des workspaces : un seul, partage par les jobs de api, moderation-service et libs/common.
+.backend-cache:
+  cache:
+    key: { prefix: backend, files: [package-lock.json] }
+    paths: [.npm]
+
+unit-tests:common:
+  extends: [.unit-tests, .backend-cache]
+  variables:
+    MODULE: libs/common
+    JEST_JUNIT_OUTPUT_DIR: reports
+    JEST_JUNIT_OUTPUT_NAME: junit.xml
+    TEST_ARGS: --reporters=default --reporters=jest-junit
+  rules: !reference [.code-changes, rules]
+
 unit-tests:api:
-  extends: .unit-tests
+  extends: [.unit-tests, .backend-cache]
   variables:
     MODULE: api
     JEST_JUNIT_OUTPUT_DIR: reports
     JEST_JUNIT_OUTPUT_NAME: junit.xml
     TEST_ARGS: --reporters=default --reporters=jest-junit
-  cache:
-    key: { prefix: api, files: [api/package-lock.json] }
-    paths: [.npm]
   rules: !reference [.code-changes, rules]
 
 unit-tests:moderation-service:
-  extends: .unit-tests
+  extends: [.unit-tests, .backend-cache]
   variables:
     MODULE: moderation-service
     JEST_JUNIT_OUTPUT_DIR: reports
     JEST_JUNIT_OUTPUT_NAME: junit.xml
     TEST_ARGS: --reporters=default --reporters=jest-junit
-  cache:
-    key: { prefix: moderation-service, files: [moderation-service/package-lock.json] }
-    paths: [.npm]
   rules: !reference [.code-changes, rules]
 
 unit-tests:frontend:
@@ -101,7 +117,7 @@ unit-tests:frontend:
 sonar:
   stage: quality
   image: { name: sonarsource/sonar-scanner-cli:11, entrypoint: [""] }
-  needs: ["unit-tests:api", "unit-tests:moderation-service", "unit-tests:frontend"]
+  needs: ["unit-tests:common", "unit-tests:api", "unit-tests:moderation-service", "unit-tests:frontend"]
   variables:
     GIT_DEPTH: "0" # historique complet : Sonar en a besoin pour reperer le « nouveau code »
     SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar" # cache de l'analyseur entre deux pipelines
@@ -109,9 +125,9 @@ sonar:
     key: sonar
     paths: [.sonar/cache]
   before_script:
-    # Les rapports lcov nomment les fichiers depuis leur module (src/...) : Sonar, lui, part de la racine du depot (api/src/...).
+    # Les rapports lcov nomment les fichiers depuis leur module (src/...) : Sonar, lui, part de la racine du depot (libs/common/src/..., api/src/...).
     - |
-      for module in api moderation-service frontend; do
+      for module in libs/common api moderation-service frontend; do
         sed -i "s#^SF:src/#SF:${module}/src/#" "${module}/coverage/lcov.info"
       done
   script: [sonar-scanner]
@@ -175,7 +191,7 @@ dependency-scan:
         tar -xzf "$archive" -C /usr/local/bin trivy
       )
   script:
-    # 1. Analyse des trois modules (devDependencies comprises), rapport JSON conserve.
+    # 1. Analyse du depot : package-lock.json de la racine (api, moderation-service, libs/common) et du frontend, devDependencies comprises.
     - trivy fs --scanners vuln --include-dev-deps --severity HIGH,CRITICAL --ignore-unfixed --format json --output trivy-dependencies.json --exit-code 0 .
     # 2. Lecture du rapport : tableau dans le journal, et echec s'il reste une faille HIGH ou CRITICAL non justifiee (.trivyignore).
     - trivy convert --format table --severity HIGH,CRITICAL --exit-code 1 trivy-dependencies.json
@@ -184,7 +200,7 @@ dependency-scan:
     expire_in: 1 week
     paths: [trivy-dependencies.json]
   rules:
-    - changes: [".gitlab-ci.yml", ".trivyignore", "*/package.json", "*/package-lock.json"]
+    - changes: [".gitlab-ci.yml", ".trivyignore", "package.json", "package-lock.json", "*/package.json", "*/package-lock.json", "libs/*/package.json"]
     - when: manual
       allow_failure: true
 
@@ -247,17 +263,15 @@ integration-tests:
     JEST_JUNIT_OUTPUT_DIR: reports
     JEST_JUNIT_OUTPUT_NAME: junit-integration.xml
   cache:
-    - key: { prefix: api, files: [api/package-lock.json] }
-      paths: [.npm]
-      policy: pull
-    - key: { prefix: moderation-service, files: [moderation-service/package-lock.json] }
-      paths: [.npm]
-      policy: pull
+    key: { prefix: backend, files: [package-lock.json] }
+    paths: [.npm]
+    policy: pull
   script:
+    - npm ci --prefer-offline --workspace=api --workspace=moderation-service --workspace=libs/common
     - |
       status=0
       for module in api moderation-service; do
-        (cd "$module" && npm ci --prefer-offline && npm run test:integration -- --forceExit --reporters=default --reporters=jest-junit) || status=1
+        (cd "$module" && npm run test:integration -- --forceExit --reporters=default --reporters=jest-junit) || status=1
       done
       exit $status
   artifacts:
@@ -266,7 +280,7 @@ integration-tests:
     reports:
       junit: ["api/reports/junit-integration.xml", "moderation-service/reports/junit-integration.xml"]
   rules:
-    - changes: [".gitlab-ci.yml", "api/**/*", "moderation-service/**/*"]
+    - changes: [".gitlab-ci.yml", "package.json", "package-lock.json", "libs/**/*", "api/**/*", "moderation-service/**/*"]
 
 # ---------- Tests des images Docker : construction, structure (container-structure-test), vulnerabilites (Trivy), publication ----------
 # Un seul job, un seul Docker-in-Docker : les trois images sont construites en parallele (docker-bake.hcl),
@@ -305,6 +319,10 @@ image-tests:
         - "tests/image/**/*"
         - "*/Dockerfile"
         - "*/.dockerignore"
+        - "*/Dockerfile.dockerignore"
+        - "package.json"
+        - "package-lock.json"
+        - "libs/*/package.json"
         - "*/package-lock.json"
         - "frontend/nginx.conf"
     - when: manual
@@ -399,7 +417,7 @@ performance-tests:
     NATS_USER: pme
     NATS_PASSWORD: ci
   cache:
-    key: { prefix: api, files: [api/package-lock.json] }
+    key: { prefix: backend, files: [package-lock.json] }
     paths: [.npm]
     policy: pull
   before_script:

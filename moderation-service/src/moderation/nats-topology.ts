@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { AckPolicy, JetStreamManager, RetentionPolicy, StorageType, StreamConfig, connect, nanos } from 'nats';
-import { AppConfig } from '../config/configuration';
+import { NatsConfig } from '@pme/common';
 import {
   LISTINGS_DLQ_STREAM,
   LISTINGS_STREAM,
@@ -47,6 +47,39 @@ async function upsertStream(jsm: JetStreamManager, config: Partial<StreamConfig>
   }
 }
 
+/** Une tentative : connexion, declaration des flux et du consommateur, fermeture de la connexion. */
+async function declareTopology(nats: NatsConfig, logger: Logger): Promise<void> {
+  const connection = await connect({
+    servers: `${nats.host}:${nats.port}`,
+    user: nats.user,
+    pass: nats.password,
+    name: 'pme-moderation-topology',
+    timeout: 3000,
+    // Meme reglage TLS que NatsClient : cette connexion, ouverte avant le consommateur, passe par le
+    // meme port et doit donc etre chiffree de la meme facon.
+    ...(nats.tlsCaFile ? { tls: { caFile: nats.tlsCaFile } } : {}),
+  });
+  try {
+    const jsm = await connection.jetstreamManager();
+    await upsertStream(jsm, LISTINGS_CONFIG);
+    await upsertStream(jsm, LISTINGS_DLQ_CONFIG);
+    await jsm.consumers.add(LISTINGS_STREAM, {
+      durable_name: MODERATION_CONSUMER,
+      ack_policy: AckPolicy.Explicit,
+      // Delai au-dela duquel un message non acquitte est remis : couvre un traitement lent.
+      ack_wait: nanos(30_000),
+      // Equivalent du prefetchCount de RabbitMQ : messages remis sans attendre l'acquittement.
+      max_ack_pending: 10,
+      // Remise illimitee : c'est le consommateur qui decide du sort de chaque message
+      // (acquittement, remise en file, ou envoi dans le flux d'echec).
+      max_deliver: -1,
+    });
+    logger.log(`Flux ${LISTINGS_STREAM} et ${LISTINGS_DLQ_STREAM} declares, consommateur ${MODERATION_CONSUMER}`);
+  } finally {
+    await connection.close();
+  }
+}
+
 /**
  * Declare les flux et le consommateur durable avant de consommer, puis sert aussi d'attente du
  * broker au demarrage (nouvelles tentatives toutes les 3 s).
@@ -55,46 +88,20 @@ async function upsertStream(jsm: JetStreamManager, config: Partial<StreamConfig>
  * (`AckPolicy.Explicit`). Sans acquittement manuel, un message serait considere comme traite des
  * sa remise, et une annonce serait perdue si la base tombait au mauvais moment.
  */
-export async function ensureStreams(nats: AppConfig['nats'], attempts = 20): Promise<void> {
+export async function ensureStreams(nats: NatsConfig, attempts = 20): Promise<void> {
   const logger = new Logger('NatsTopology');
-  for (let attempt = 1; ; attempt++) {
+  // Recursion plutot qu'une boucle : chaque tentative attend la fin de la precedente et de son delai.
+  const tryFrom = async (attempt: number): Promise<void> => {
     try {
-      const connection = await connect({
-        servers: `${nats.host}:${nats.port}`,
-        user: nats.user,
-        pass: nats.password,
-        name: 'pme-moderation-topology',
-        timeout: 3000,
-        // Meme reglage TLS que NatsClient : cette connexion, ouverte avant le consommateur, passe par le
-        // meme port et doit donc etre chiffree de la meme facon.
-        ...(nats.tlsCaFile ? { tls: { caFile: nats.tlsCaFile } } : {}),
-      });
-      try {
-        const jsm = await connection.jetstreamManager();
-        await upsertStream(jsm, LISTINGS_CONFIG);
-        await upsertStream(jsm, LISTINGS_DLQ_CONFIG);
-        await jsm.consumers.add(LISTINGS_STREAM, {
-          durable_name: MODERATION_CONSUMER,
-          ack_policy: AckPolicy.Explicit,
-          // Delai au-dela duquel un message non acquitte est remis : couvre un traitement lent.
-          ack_wait: nanos(30_000),
-          // Equivalent du prefetchCount de RabbitMQ : messages remis sans attendre l'acquittement.
-          max_ack_pending: 10,
-          // Remise illimitee : c'est le consommateur qui decide du sort de chaque message
-          // (acquittement, remise en file, ou envoi dans le flux d'echec).
-          max_deliver: -1,
-        });
-        logger.log(`Flux ${LISTINGS_STREAM} et ${LISTINGS_DLQ_STREAM} declares, consommateur ${MODERATION_CONSUMER}`);
-      } finally {
-        await connection.close();
-      }
-      return;
+      await declareTopology(nats, logger);
     } catch (error) {
       if (attempt >= attempts) {
         throw error;
       }
       logger.warn(`NATS injoignable (tentative ${attempt}/${attempts}) : ${String(error)}`);
       await sleep(3000);
+      return tryFrom(attempt + 1);
     }
-  }
+  };
+  return tryFrom(1);
 }

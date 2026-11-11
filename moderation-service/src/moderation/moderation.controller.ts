@@ -1,9 +1,6 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
-import { ROLE_MODERATOR } from '../auth/authenticated-user';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Roles } from '../auth/roles.decorator';
-import { RolesGuard } from '../auth/roles.guard';
+import { JwtAuthGuard, ROLE_MODERATOR, Roles, RolesGuard } from '@pme/common';
 import { ModerationService } from './moderation.service';
 
 /**

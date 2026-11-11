@@ -1,0 +1,18 @@
+# Liste blanche pour moderation-service/Dockerfile (contexte = racine du depot) : seul ce que le Dockerfile copie part vers le moteur
+# Docker. Ni secret (.env), ni node_modules, ni sources des autres applications. Ce fichier est lu par BuildKit
+# (docker build / docker buildx bake) a la place du .dockerignore de la racine, reserve a la documentation.
+*
+!package.json
+!package-lock.json
+!libs/common/package.json
+!libs/common/tsconfig.json
+!libs/common/tsconfig.build.json
+!libs/common/src/
+!api/package.json
+!moderation-service/package.json
+!moderation-service/tsconfig.json
+!moderation-service/tsconfig.build.json
+!moderation-service/nest-cli.json
+!moderation-service/src/
+# Les tests ne sont pas compiles dans l'image.
+**/*.spec.ts

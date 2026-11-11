@@ -121,12 +121,12 @@ help:
 	@echo "    make demo-kill-api            - Supprime le pod de l'API : Kubernetes le recree"
 	@echo ""
 	@echo "  Developpement local"
-	@echo "    make install                  - npm ci dans api, moderation-service, frontend"
+	@echo "    make install                  - npm ci a la racine (api, moderation-service, libs/common) puis dans frontend"
 	@echo "    make port-forward             - Pour developper : NATS :8222 et :4222, Postgres :5432 -> localhost, et l'ingress sur le port 80 s'il n'y est pas deja"
 	@echo "    make api | moderation | frontend"
 	@echo ""
 	@echo "  Tests"
-	@echo "    make test                     - Tests unitaires (Jest : api + moderation-service, Vitest : frontend)"
+	@echo "    make test                     - Tests unitaires (Jest : libs/common + api + moderation-service, Vitest : frontend)"
 	@echo "    make test-integration         - Tests d'integration avec PostgreSQL et NATS reels (Testcontainers, Docker requis)"
 	@echo "    make image-test               - Tests des images Docker (container-structure-test + Trivy)"
 	@echo ""
@@ -357,11 +357,15 @@ $(SEALED_FILE): | .env
 
 image: image-api image-moderation image-frontend
 
+# api et moderation embarquent le module commun libs/common : contexte = racine du depot (liste blanche dans
+# <service>/Dockerfile.dockerignore, lue par BuildKit). Construction avec le Docker de l'ordinateur, puis chargement dans Minikube (runtime containerd : docker-env ne convient pas).
 image-api:
-	minikube image build -t pme-api:dev ./api
+	docker build -f api/Dockerfile -t pme-api:dev .
+	minikube image load pme-api:dev
 
 image-moderation:
-	minikube image build -t pme-moderation:dev ./moderation-service
+	docker build -f moderation-service/Dockerfile -t pme-moderation:dev .
+	minikube image load pme-moderation:dev
 
 image-frontend:
 	minikube image build -t pme-frontend:dev ./frontend
@@ -443,9 +447,9 @@ demo-kill-api:
 
 # ---- Developpement local (services lances sur la machine, infrastructure dans Minikube) ----
 
+# api, moderation-service et libs/common sont des workspaces npm : un seul npm ci, a la racine.
 install:
-	cd api && npm ci
-	cd moderation-service && npm ci
+	npm ci
 	cd frontend && npm ci
 
 # Tout ce qu'il faut pour developper sur l'ordinateur : NATS et PostgreSQL (qui n'ont pas d'ingress) et, si
@@ -507,6 +511,7 @@ frontend:
 
 # Lint du code TypeScript (ESLint : regles + complexite cyclomatique <= 10 et cognitive <= 15) puis typage strict (tsc)
 lint:
+	cd libs/common && npm run lint
 	cd api && npm run lint
 	cd moderation-service && npm run lint
 	cd frontend && npm run lint
@@ -517,12 +522,14 @@ lint:
 ROOT_PRETTIER := ./frontend/node_modules/.bin/prettier "tests/**/*.js" "k8s/config/*.js"
 
 format:
+	cd libs/common && npm run format
 	cd api && npm run format
 	cd moderation-service && npm run format
 	cd frontend && npm run format
 	$(ROOT_PRETTIER) --write
 
 format-check:
+	cd libs/common && npm run format:check
 	cd api && npm run format:check
 	cd moderation-service && npm run format:check
 	cd frontend && npm run format:check
@@ -553,6 +560,7 @@ audit:
 
 # Couverture des tests unitaires (rapports lcov dans <module>/coverage, lus par Sonar) avec seuils minimaux
 coverage:
+	cd libs/common && npm run test:cov
 	cd api && npm run test:cov
 	cd moderation-service && npm run test:cov
 	cd frontend && npm run test:cov
@@ -570,6 +578,7 @@ quality: lint format-check lint-yaml lint-docker lint-k8s secrets-scan audit
 
 # Unitaires : rapides, sans Docker, a chaque commit
 test:
+	cd libs/common && npm test
 	cd api && npm test
 	cd moderation-service && npm test
 	cd frontend && npm test
@@ -582,8 +591,7 @@ test-integration:
 # Images Docker : structure (utilisateur non-root, port, contenu) puis vulnerabilites HIGH/CRITICAL.
 # Prerequis : container-structure-test et trivy installes, images construites (make image).
 image-test:
-	@eval $$(minikube docker-env) && \
-	for svc in api moderation frontend; do \
+	@for svc in api moderation frontend; do \
 		echo "== pme-$$svc:dev"; \
 		container-structure-test test --image pme-$$svc:dev --config tests/image/$$svc.yaml || exit 1; \
 		trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 pme-$$svc:dev || exit 1; \

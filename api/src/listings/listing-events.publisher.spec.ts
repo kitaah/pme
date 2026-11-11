@@ -2,7 +2,7 @@ import { ListingCondition, ListingStatus } from './listing.enums';
 import { Listing } from './listing.entity';
 import { LISTING_SUBMITTED_SUBJECT } from './listing-events';
 import { ListingEventsPublisher } from './listing-events.publisher';
-import { NatsClient } from './nats.client';
+import { NatsClient } from '@pme/common';
 
 describe('ListingEventsPublisher', () => {
   const listing = {

@@ -1,5 +1,5 @@
 import { Controller, Get, Header } from '@nestjs/common';
-import { registry } from './metrics';
+import { registry } from '@pme/common';
 
 /**
  * Metriques au format Prometheus, lues par Prometheus a l'interieur du cluster.

@@ -1,6 +1,6 @@
-import { ServiceUnavailableException } from '@nestjs/common';
+import { Logger, ServiceUnavailableException } from '@nestjs/common';
 import { Repository } from 'typeorm';
-import { AuthenticatedUser } from '../auth/authenticated-user';
+import { AuthenticatedUser } from '@pme/common';
 import { CreateListingDto } from './create-listing.dto';
 import { ListingCondition, ListingStatus } from './listing.enums';
 import { Listing } from './listing.entity';
@@ -69,6 +69,18 @@ describe('ListingsService', () => {
   });
 
   describe('findByOwner', () => {
+    it("repond quand meme 503 si le retrait de l'annonce echoue a son tour (base tombee)", async () => {
+      jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      publisher.publishSubmitted.mockRejectedValue(new Error('broker injoignable'));
+      repository.delete.mockRejectedValue(new Error('base indisponible'));
+
+      await expect(service.submit(user, dto)).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+      expect(repository.delete).toHaveBeenCalledWith('listing-1');
+      expect(Logger.prototype.error).toHaveBeenCalledWith(expect.stringContaining('non retiree'));
+      jest.restoreAllMocks();
+    });
+
     it("ne cherche que les annonces du membre, les plus recentes d'abord, limitees a 50", async () => {
       repository.find.mockResolvedValue([]);
 

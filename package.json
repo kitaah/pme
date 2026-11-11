@@ -1,0 +1,15 @@
+{
+  "name": "pme",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Monorepo du POC La Petite Maison de l'Epouvante : API, service de moderation et module commun (workspaces npm). Le frontend a son propre package.json.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "libs/common",
+    "api",
+    "moderation-service"
+  ]
+}

@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
+import { NatsClient } from '@pme/common';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { ConsumerMessages, JsMsg, headers } from 'nats';
@@ -10,7 +11,6 @@ import {
   ListingSubmittedEvent,
 } from './listing-submitted.event';
 import { ModerationService } from './moderation.service';
-import { NatsClient } from './nats.client';
 
 /** Attente avant la remise d'un message dont le traitement a echoue passagerement. */
 const REDELIVERY_DELAY_MS = 3000;

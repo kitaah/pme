@@ -1,7 +1,7 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
+import { Public } from '@pme/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import { DataSource } from 'typeorm';
-import { Public } from '../auth/public.decorator';
 
 /** Sondes Kubernetes (equivalent des /actuator/health/liveness et /readiness de Spring). */
 @Public()

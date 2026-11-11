@@ -2,9 +2,8 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
+import { NatsClient, ProblemDetailsFilter } from '@pme/common';
 import { AppModule } from '../../src/app.module';
-import { ProblemDetailsFilter } from '../../src/common/problem-details.filter';
-import { NatsClient } from '../../src/listings/nats.client';
 import { FakeKeycloak } from '../support/jwt-helper';
 import { PostgresInfo, startPostgres } from '../support/infrastructure';
 

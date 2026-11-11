@@ -62,4 +62,52 @@ describe('ListingForm', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('en attente de modération');
     expect(screen.getByLabelText('Titre')).toHaveValue('');
   });
+
+  it("envoie l'état choisi par le membre", async () => {
+    // Given : l'API accepte l'annonce
+    createListing.mockResolvedValue({
+      id: '2',
+      title: 'Disque',
+      description: 'Rayé',
+      condition: 'FAIR',
+      status: 'PENDING_MODERATION',
+      createdAt: new Date().toISOString(),
+    });
+    render(<ListingForm onSubmitted={vi.fn()} />);
+
+    // When : le membre choisit « État correct » avant de déposer
+    await userEvent.selectOptions(screen.getByLabelText('État'), 'FAIR');
+    await userEvent.click(screen.getByRole('button', { name: "Déposer l'annonce" }));
+
+    // Then : l'état sélectionné est celui envoyé à l'API
+    await waitFor(() => expect(createListing).toHaveBeenCalledWith(expect.objectContaining({ condition: 'FAIR' })));
+  });
+
+  it("affiche un message générique quand l'erreur ne vient pas de l'API (réseau coupé)", async () => {
+    // Given : la requête échoue avant d'atteindre l'API
+    createListing.mockRejectedValue(new TypeError('Failed to fetch'));
+    render(<ListingForm onSubmitted={vi.fn()} />);
+
+    // When
+    await userEvent.click(screen.getByRole('button', { name: "Déposer l'annonce" }));
+
+    // Then : message générique, sans liste de détails
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Une erreur est survenue.');
+    expect(alert.querySelector('ul')).toBeNull();
+  });
+
+  it("n'affiche pas de liste quand l'API renvoie une erreur sans détail", async () => {
+    // Given : une erreur HTTP sans liste d'erreurs de validation
+    createListing.mockRejectedValue(new ApiError(503, 'La modération est indisponible'));
+    render(<ListingForm onSubmitted={vi.fn()} />);
+
+    // When
+    await userEvent.click(screen.getByRole('button', { name: "Déposer l'annonce" }));
+
+    // Then
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('La modération est indisponible');
+    expect(alert.querySelector('ul')).toBeNull();
+  });
 });
