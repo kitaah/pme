@@ -6,12 +6,13 @@ jest.mock('nats', () => ({ connect: jest.fn() }));
 describe('NatsClient', () => {
   const options = { host: 'nats', port: 4222, user: 'api', password: 'secret' };
   const connectMock = connect as jest.Mock;
-  let connection: { jetstream: jest.Mock; drain: jest.Mock };
+  let connection: { jetstream: jest.Mock; drain: jest.Mock; close: jest.Mock };
 
   beforeEach(() => {
     connection = {
       jetstream: jest.fn().mockReturnValue({ publish: jest.fn() }),
       drain: jest.fn().mockResolvedValue(undefined),
+      close: jest.fn().mockResolvedValue(undefined),
     };
     connectMock.mockReset().mockResolvedValue(connection);
   });
@@ -68,6 +69,34 @@ describe('NatsClient', () => {
     await client.onApplicationShutdown();
 
     expect(connection.drain).toHaveBeenCalledTimes(1);
+    expect(connection.close).not.toHaveBeenCalled();
+  });
+
+  it('ferme de force la connexion quand le broker est injoignable et que drain() ne termine pas', async () => {
+    jest.useFakeTimers();
+    try {
+      connection.drain.mockReturnValue(new Promise(() => undefined));
+      const client = new NatsClient(options, 'pme-test');
+      await client.jetstream();
+
+      const shutdown = client.onApplicationShutdown();
+      await jest.advanceTimersByTimeAsync(5000);
+      await shutdown;
+
+      expect(connection.close).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('ferme de force la connexion quand drain() echoue', async () => {
+    connection.drain.mockRejectedValue(new Error('connexion deja fermee'));
+    const client = new NatsClient(options, 'pme-test');
+    await client.jetstream();
+
+    await expect(client.onApplicationShutdown()).resolves.toBeUndefined();
+
+    expect(connection.close).toHaveBeenCalledTimes(1);
   });
 
   it("ne fait rien a l'arret quand aucune connexion n'a ete ouverte", async () => {
