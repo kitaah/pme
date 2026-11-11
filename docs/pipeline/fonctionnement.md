@@ -77,7 +77,7 @@ grouper les modifications en peu de commits plutôt que d'en pousser de nombreux
 | Statut | Signification |
 |---|---|
 | **Réussi (vert)** | Tous les contrôles sont passés. |
-| **Avertissement (orange)** | Un job toléré a échoué. Seul `sonar` est toléré ; il est vert tant que la Quality Gate est réussie. |
+| **Avertissement (orange)** | Un job toléré a échoué. Aucun job n'est toléré aujourd'hui : tous les contrôles sont bloquants. |
 | **Échoué (rouge)** | Un contrôle obligatoire a échoué. |
 | **Manuel (gris)** | Le job attend un clic pour se lancer. Aucun job du projet n'est manuel aujourd'hui. |
 

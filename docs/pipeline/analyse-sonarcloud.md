@@ -57,8 +57,8 @@ Mesures relevées le 11 novembre 2026, sur la branche principale (1,7 millier de
 !!! note "À savoir"
     Le 7 novembre, la Quality Gate était échouée : 58,97 % de couverture sur le nouveau code et 11,32 % de duplications.
     Les corrections faites depuis (code commun mutualisé dans `libs/common`, tests complétés jusqu'à 100 % de couverture,
-    anomalies corrigées) l'ont fait passer au vert. Le job `sonar` reste toléré en échec dans la pipeline : cette tolérance
-    n'est plus nécessaire et pourra être retirée.
+    anomalies corrigées) l'ont fait passer au vert. Le job `sonar` est désormais bloquant : si la Quality Gate
+    redevient échouée, la pipeline échoue.
 
 ## Quand il se lance
 
@@ -74,7 +74,7 @@ Mesures relevées le 11 novembre 2026, sur la branche principale (1,7 millier de
 
 - **Logs du job** : le verdict de la Quality Gate et le lien vers le détail.
 - **Tableau de bord SonarCloud** : l'onglet « Summary » donne les conditions, l'onglet « Issues » les anomalies, et la mention « Last analysis » l'heure de la dernière analyse.
-- **Statut de la pipeline** : le job `sonar` passe en échec si la Quality Gate est échouée. Tant qu'il est toléré, la pipeline reste en avertissement au lieu d'échouer.
+- **Statut de la pipeline** : le job `sonar` est bloquant. Il échoue, et la pipeline avec lui, si la Quality Gate est échouée.
 
 ## Fichiers et dossiers principaux
 
