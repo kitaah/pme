@@ -15,7 +15,7 @@ unitaires utilisent des doublures. Ces tests-ci prouvent que les vrais composant
 
 ## Ce qui est vérifié
 
-La pipeline lance **27 tests d'intégration** dans un seul job : 17 pour l'API et 10 pour le service de modération.
+La pipeline lance **27 tests d'intégration** dans un seul job : 17 pour l'API et 10 pour le service de modération. Un test de l'API est désactivé temporairement (voir plus bas) : 26 s'exécutent.
 
 | Élément réel | Version | Rôle dans les tests |
 |---|---|---|
@@ -28,9 +28,14 @@ La pipeline lance **27 tests d'intégration** dans un seul job : 17 pour l'API e
 | Fichier | Tests | Ce qui est vérifié |
 |---|---|---|
 | **`api/test/integration/`**<br>**`listings.integration-spec.ts`** | 14 | Authentification, dépôt d'annonce, validation, lecture des annonces, sondes de santé. |
-| **`api/test/integration/`**<br>**`listings-broker.integration-spec.ts`** | 3 | Publication dans le vrai flux NATS, rejeu ignoré, erreur 503 si NATS tombe. |
+| **`api/test/integration/`**<br>**`listings-broker.integration-spec.ts`** | 3 | Publication dans le vrai flux NATS, rejeu ignoré, erreur 503 si NATS tombe (ce dernier test est désactivé). |
 
 Dans le premier fichier, NATS est remplacé par une doublure pour tester l'API seule. Le second fichier utilise le vrai NATS.
+
+!!! warning "Attention"
+    Le test « erreur 503 quand NATS tombe » du second fichier est marqué `it.skip` : il laisse une connexion ouverte et
+    Jest ne se ferme plus. Il sera réactivé quand cette connexion sera identifiée. Le même comportement (annonce
+    retirée et erreur 503) reste vérifié par le premier fichier, avec une doublure de NATS.
 
 Détail des 14 tests du premier fichier :
 
@@ -61,7 +66,7 @@ Ce que ces tests prouvent d'important :
 
 ## Quand il se lance
 
-- Sur la branche principale, quand `.gitlab-ci.yml`, l'API ou la modération change.
+- Sur la branche principale, quand `.gitlab-ci.yml`, les `package.json`, le module commun, l'API ou la modération change.
 - Un changement de l'interface seule ne le lance pas.
 
 ## Où voir le résultat
@@ -78,8 +83,9 @@ Ce que ces tests prouvent d'important :
 | **`moderation-service/test/integration/`** | Contient les tests d'intégration de la modération. |
 | **`api/test/support/infrastructure.ts`** | Démarre PostgreSQL et NATS dans des conteneurs jetables. |
 | **`api/test/support/jwt-helper.ts`** | Fournit le faux Keycloak et ses jetons de test. |
+| **`moderation-service/test/support/`** | Les mêmes fichiers d'appui pour la modération. |
 | **`api/test/support/jest-setup.ts`** | Fixe un délai large pour le téléchargement des images. |
-| **`api/jest.config.js`** | Déclare le projet « integration » de Jest. |
+| **`api/jest.config.js`** | Déclare le projet « integration » de Jest (même fichier pour la modération). |
 | **`.gitlab-ci.yml`** | Définit le job `integration-tests` et son service Docker. |
 
 ## Commandes essentielles

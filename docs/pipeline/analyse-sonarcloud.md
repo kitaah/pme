@@ -16,21 +16,21 @@ projet.
 
 ## Ce qui est vérifié
 
-L'analyse lit le code des trois modules et les rapports de couverture des tests unitaires.
+L'analyse lit le code des quatre modules et les rapports de couverture des tests unitaires.
 
 | Ce qui est mesuré | Détail |
 |---|---|
 | **Fiabilité** | Bugs probables dans le code TypeScript. |
-| **Sécurité** | Failles du code et secrets oubliés dans les 75 fichiers analysés. |
+| **Sécurité** | Failles du code et secrets oubliés dans les fichiers analysés. |
 | **Maintenabilité** | Mauvaises pratiques, complexité, code dupliqué. |
-| **Couverture** | Part du code exécutée par les tests unitaires, pour les trois modules. |
+| **Couverture** | Part du code exécutée par les tests unitaires, pour les quatre modules. |
 
 **Périmètre**
 
-- Les sources analysées sont `api/src`, `moderation-service/src` et `frontend/src`.
+- Les sources analysées sont `libs/common/src`, `api/src`, `moderation-service/src` et `frontend/src`.
 - Les fichiers de tests sont reconnus comme tels et ne sont pas comptés dans le code.
 - Les fichiers de démarrage, de configuration, les modules NestJS et les objets de transfert sont exclus de la couverture.
-- Les migrations et la configuration sont exclues des doublons : les deux services sont symétriques.
+- Seules les migrations sont exclues des doublons : chaque service a son schéma. Le code commun aux deux services vit dans `libs/common`, il n'est donc plus dupliqué.
 
 **Quality Gate**
 
@@ -61,7 +61,7 @@ Mesures relevées le 7 novembre 2026, sur la branche principale (1,8 millier de 
 ## Quand il se lance
 
 - Sur la branche principale uniquement, quand le code d'un module, `.gitlab-ci.yml` ou `sonar-project.properties` change.
-- Après les trois jobs de tests unitaires, dont il lit les rapports de couverture.
+- Après les quatre jobs de tests unitaires, dont il lit les rapports de couverture.
 
 !!! warning "Attention"
     L'offre gratuite de SonarCloud ne donne accès qu'à la branche principale. Sur une autre branche, le verdict est refusé
@@ -80,6 +80,7 @@ Mesures relevées le 7 novembre 2026, sur la branche principale (1,8 millier de 
 |---|---|
 | **`sonar-project.properties`** | Configure l'analyse : sources, tests, exclusions et rapports de couverture. |
 | **`.gitlab-ci.yml`** | Définit le job `sonar`. |
+| **`libs/common/coverage/lcov.info`** | Rapport de couverture du module commun. |
 | **`api/coverage/lcov.info`** | Rapport de couverture de l'API, produit par les tests unitaires. |
 | **`moderation-service/coverage/lcov.info`** | Rapport de couverture de la modération. |
 | **`frontend/coverage/lcov.info`** | Rapport de couverture de l'interface. |
@@ -90,7 +91,7 @@ Mesures relevées le 7 novembre 2026, sur la branche principale (1,8 millier de 
 
 | Commande | Description |
 |---|---|
-| **`make coverage`** | Produit les rapports de couverture des trois modules. |
+| **`make coverage`** | Produit les rapports de couverture des quatre modules. |
 | **`make sonar`** | Lance l'analyse depuis le poste, avec `sonar-scanner`. |
 
 !!! tip "Astuce"

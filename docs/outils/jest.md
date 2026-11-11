@@ -4,7 +4,7 @@
 
 | Information | Détail |
 |---|---|
-| **Rôle** | Exécute les tests automatiques de l'API et du service de modération, et mesure la couverture du code |
+| **Rôle** | Exécute les tests automatiques du module commun, de l'API et du service de modération, et mesure la couverture du code |
 | **Version** | Jest 30, avec ts-jest 29 pour le TypeScript et jest-junit 17 pour les rapports |
 | **Adresse en local** | Aucune : se lance en ligne de commande |
 
@@ -82,13 +82,13 @@ rapport -> sonar
 
 ## Rôle dans le projet
 
-- Il exécute les tests unitaires de l'API et du service de modération, en parallèle dans la pipeline.
+- Il exécute les tests unitaires du module commun, de l'API et du service de modération, en parallèle dans la pipeline.
 - Il exécute aussi les tests d'intégration des deux services, avec les vrais PostgreSQL et NATS.
 - Il mesure la couverture avec Istanbul et fait échouer le job si elle passe sous le seuil.
 - Il produit le rapport JUnit, affiché dans l'onglet « Tests » de GitLab, grâce à jest-junit.
-- Sans lui, aucune régression des deux services ne serait détectée avant la mise en ligne.
+- Sans lui, aucune régression du back-end ne serait détectée avant la mise en ligne.
 
-Chaque service déclare **deux projets** Jest, qui se lancent séparément :
+L'API et le service de modération déclarent **deux projets** Jest, qui se lancent séparément. Le module commun n'a que des tests unitaires, donc un seul projet :
 
 | Projet | Fichiers recherchés | Particularité |
 |---|---|---|
@@ -97,10 +97,11 @@ Chaque service déclare **deux projets** Jest, qui se lancent séparément :
 
 Les seuils de couverture, mesurés sur les tests unitaires, sont les suivants :
 
-| Module | Seuil de lignes | Seuil de branches |
+| Module | Seuil de lignes et d'instructions | Seuil de branches et de fonctions |
 |---|---|---|
-| **API** | 40 % | 20 % |
-| **Service de modération** | 40 % | 20 % |
+| **Module commun** | 100 % | 100 % |
+| **API** | 100 % | 100 % |
+| **Service de modération** | 100 % | 100 % |
 
 !!! note "À savoir"
     ts-jest vérifie aussi les types : une erreur de typage fait échouer le test, même si le code se serait exécuté
@@ -111,8 +112,10 @@ Les seuils de couverture, mesurés sur les tests unitaires, sont les suivants :
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`api/jest.config.js`** | Déclare les deux projets, les fichiers mesurés et les seuils de couverture de l'API. |
-| **`moderation-service/jest.config.js`** | Même configuration pour le service de modération. |
+| **`../../libs/common/jest.config.js`** | Déclare le projet de tests, les fichiers mesurés et les seuils du module commun. |
+| **`../../api/jest.config.js`** | Déclare les deux projets, les fichiers mesurés et les seuils de couverture de l'API. |
+| **`../../moderation-service/jest.config.js`** | Même configuration pour le service de modération. |
+| **`../../scripts/jest.cjs`** | Lance Jest avec l'option que NestJS exige, quel que soit le module. |
 | **`*/src/**/*.spec.ts`** | Les tests unitaires, placés à côté du code qu'ils vérifient. |
 | **`*/test/integration/`** | Les tests d'intégration. |
 | **`*/test/support/jest-setup.ts`** | Règle le délai des tests d'intégration. |
@@ -121,7 +124,7 @@ Les seuils de couverture, mesurés sur les tests unitaires, sont les suivants :
 
 ## Commandes essentielles
 
-À lancer dans un terminal, depuis le dossier `api` ou `moderation-service`.
+À lancer dans un terminal, depuis le dossier `../../libs/common`, `api` ou `moderation-service`.
 
 | Commande | Description |
 |---|---|
@@ -130,11 +133,15 @@ Les seuils de couverture, mesurés sur les tests unitaires, sont les suivants :
 | **`npm run test:integration`** | Lance les tests d'intégration, Docker démarré. |
 | **`npm test -- -t "texte"`** | Ne lance que les tests dont le nom contient ce texte. |
 
-Depuis la racine du projet, `make test` lance les tests unitaires des trois modules, `make coverage` leur couverture et
+Depuis la racine du projet, `make test` lance les tests unitaires des quatre modules, `make coverage` leur couverture et
 `make test-integration` les tests d'intégration.
 
+!!! note "À savoir"
+    L'API et la modération utilisent le module commun dans sa version compilée (`../../libs/common/dist`). Leurs commandes
+    de test le compilent d'abord toutes seules (script `pretest`). Node 24 ou plus est requis.
+
 !!! warning "Attention"
-    Les commandes de test passent l'option `--experimental-vm-modules` à Node. Dans WebStorm, il faut l'ajouter aux
+    Les commandes de test passent l'option `--experimental-vm-modules` à Node, par le script `../../scripts/jest.cjs`. Dans WebStorm, il faut l'ajouter aux
     options de Node de la configuration Jest, sinon les tests ne démarrent pas.
 
 !!! tip "Astuce"

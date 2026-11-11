@@ -177,15 +177,20 @@ Pour vérifier le refus par défaut, trois appels suffisent :
     Pour lire le contenu d'un jeton sans outil particulier, le coller sur un décodeur hors ligne ou afficher sa partie
     centrale. Les champs `sub`, `azp`, `exp` et `realm_access.roles` sont exactement ceux que l'API vérifie.
 
+!!! note "À savoir"
+    Le code qui vérifie le jeton est écrit une seule fois, dans le module commun `libs/common`, puis utilisé par l'API et
+    par le service de modération. Chaque service reste pourtant responsable de sa propre vérification : il récupère
+    lui-même les clés publiques et valide chaque jeton qu'il reçoit, sans faire confiance à l'autre.
+
 ## Fichiers principaux
 
 | Fichier ou dossier | Description |
 |---|---|
 | **`k8s/config/realm-pme.json`** | Déclare le realm, les rôles et l'application. |
 | **`k8s/03-keycloak-admin-job.yaml`** | Crée l'administrateur permanent, supprime le compte d'amorçage et pose la politique de mots de passe. |
-| **`api/src/auth/jwt.strategy.ts`** | Vérifie la signature, l'émetteur, la date et l'application émettrice. |
-| **`api/src/auth/jwt-auth.guard.ts`** | Garde globale : exige un jeton sauf sur les routes marquées publiques. |
-| **`api/src/auth/roles.guard.ts`** | Contrôle des rôles, erreur 403 en cas de refus. |
+| **`libs/common/src/auth/`**<br>**`jwt.strategy.ts`** | Vérifie la signature, l'émetteur, la date et l'application émettrice. |
+| **`libs/common/src/auth/`**<br>**`jwt-auth.guard.ts`** | Garde globale : exige un jeton sauf sur les routes marquées publiques. |
+| **`libs/common/src/auth/`**<br>**`roles.guard.ts`** | Contrôle des rôles, erreur 403 en cas de refus. |
 | **`moderation-service/src/moderation/`**<br>**`moderation.controller.ts`** | Pose les gardes sur le contrôleur, pas sur le service entier. |
 | **`frontend/src/auth.ts`** | Connexion par PKCE et renouvellement du jeton côté navigateur. |
 

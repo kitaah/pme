@@ -29,7 +29,7 @@ affichés et manipulés sans ouvrir de vrai navigateur. Pour s'en servir, voir [
 V8 est le moteur JavaScript de Chrome et de Node. Il sait déjà noter, tout seul, quelles parties du code il exécute. Le
 module `@vitest/coverage-v8` récupère cette information : le code n'a pas besoin d'être modifié avant la mesure, ce qui
 la rend rapide. Le résultat est le même type de rapport *lcov* que pour les services, si bien que
-[SonarCloud](sonarcloud.md) additionne les trois couvertures.
+[SonarCloud](sonarcloud.md) additionne les quatre couvertures.
 
 ```d2
 vars: {
@@ -73,7 +73,7 @@ v8 -> rapport
 
 ## Rôle dans le projet
 
-- Il exécute les 35 tests unitaires de l'interface dans la pipeline.
+- Il exécute les 62 tests unitaires de l'interface dans la pipeline.
 - Il vérifie notamment les contrastes de la palette de couleurs, selon les exigences du RGAA.
 - Il mesure la couverture avec V8 et fait échouer le job si elle passe sous le seuil.
 - Il produit un rapport JUnit, affiché dans l'onglet « Tests » de GitLab.
@@ -86,8 +86,7 @@ Sa configuration se trouve dans le bloc `test` de `vite.config.ts` :
 | **Environnement** | jsdom | Fournit un faux navigateur aux tests. |
 | **Fichier de préparation** | `src/test/setup.ts` | Charge les vérifications dédiées à l'interface et nettoie la page après chaque test. |
 | **Fichiers mesurés** | `src/**/*.ts` et `.tsx` | Tout le code de l'interface, hors démarrage (`main.tsx`) et fichiers de test. |
-| **Seuil de lignes** | 50 % | En dessous, la commande échoue. |
-| **Seuil de branches** | 35 % | Même règle pour les embranchements. |
+| **Seuils** | 100 % | Lignes, instructions, fonctions et branches : en dessous, la commande échoue. |
 
 !!! note "À savoir"
     Contrairement aux services, l'interface ne démarre aucun conteneur : tous ses tests s'exécutent dans jsdom, en
@@ -97,10 +96,10 @@ Sa configuration se trouve dans le bloc `test` de `vite.config.ts` :
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`frontend/vite.config.ts`** | Contient la configuration des tests et de la couverture. |
-| **`frontend/src/test/setup.ts`** | Prépare chaque test : vérifications dédiées à l'interface, nettoyage de la page. |
+| **`../../frontend/vite.config.ts`** | Contient la configuration des tests et de la couverture. |
+| **`../../frontend/src/test/setup.ts`** | Prépare chaque test : vérifications dédiées à l'interface, nettoyage de la page. |
 | **`frontend/src/**/*.test.ts(x)`** | Les tests, placés à côté des composants qu'ils vérifient. |
-| **`frontend/coverage/lcov.info`** | Rapport de couverture, lu par SonarCloud. |
+| **`../../frontend/coverage/lcov.info`** | Rapport de couverture, lu par SonarCloud. |
 | **`frontend/reports/junit.xml`** | Rapport JUnit, affiché par GitLab. |
 
 ## Commandes essentielles
@@ -114,7 +113,7 @@ Sa configuration se trouve dans le bloc `test` de `vite.config.ts` :
 | **`npm run test:cov`** | Lance les tests avec la couverture et ses seuils. |
 | **`npx vitest run`**<br>**`src/components/Header.test.tsx`** | Ne lance qu'un seul fichier de test. |
 
-Depuis la racine du projet, `make test` lance les tests des trois modules et `make coverage` leur couverture.
+Depuis la racine du projet, `make test` lance les tests des quatre modules et `make coverage` leur couverture.
 
 !!! warning "Attention"
     Les fonctions `describe`, `it`, `expect` et `vi` doivent être importées depuis `vitest` en tête de chaque fichier.
