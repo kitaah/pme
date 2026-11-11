@@ -322,6 +322,8 @@ image-tests:
     - docker buildx bake --load
     - wait "$(cat trivy-db.pid)" || { cat trivy-db.log; exit 1; }
     # 2. Structure de chaque image
+    #    Attention : pas de `exit` dans ces blocs. Tout le script tourne dans un seul shell : `exit 0` l'arreterait ici,
+    #    le job serait vert et les etapes suivantes (analyses, publication) ne tourneraient jamais.
     #    Les trois controles tournent en parallele ; le job echoue si l'un d'eux echoue.
     - |
       for svc in api moderation frontend; do
@@ -332,7 +334,7 @@ image-tests:
         wait "$(cat "cst-$svc.pid")" || status=1
         echo "== structure pme-$svc"; cat "cst-$svc.log"
       done
-      exit $status
+      test "$status" -eq 0
     # 3. Vulnerabilites : base telechargee une fois, puis les trois analyses en parallele (vulnerabilites des paquets uniquement,
     #    failles sans correctif ignorees). Un rapport JSON par image est conserve en artefact.
     - printf '%s\n' api moderation frontend | xargs -P 3 -I{} trivy image --skip-db-update --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --format json --output "trivy-{}.json" --exit-code 0 "pme-{}:$TAG"
@@ -343,7 +345,7 @@ image-tests:
         echo "== pme-$svc"
         trivy convert --format table --severity HIGH,CRITICAL --exit-code 1 "trivy-$svc.json" || status=1
       done
-      exit $status
+      test "$status" -eq 0
     # 5. Publication dans le registre GitLab (branche principale uniquement).
     #    Etiquette immuable : le commit (pas de "latest"). Les trois envois se font en parallele.
     #    CI_REGISTRY_USER et CI_REGISTRY_PASSWORD sont fournis par GitLab pour la duree du job.
