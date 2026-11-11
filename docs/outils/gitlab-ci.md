@@ -56,10 +56,12 @@ conteneur -> code -> script -> rapports
 Aucun job n'attend les autres, à une exception près : l'analyse de la qualité a besoin des rapports de couverture
 produits par les tests. La durée d'une pipeline est donc celle de son job le plus long, et non la somme de tous.
 
-**Un job ne tourne que s'il est concerné.**
-Chaque job déclare les fichiers qu'il surveille. Modifier une page de documentation ne déclenche aucun test ; modifier
-le code de l'API déclenche ses tests et l'analyse de qualité. Cette règle protège le quota de 400 minutes mensuelles,
-et évite surtout d'attendre des contrôles sans rapport avec la modification.
+**Tous les contrôles tournent à chaque pipeline.**
+Aucun job n'est manuel et aucun ne dépend des fichiers modifiés : chaque commit sur la branche principale passe par la
+chaîne complète. Cela donne un résultat lisible d'un coup d'œil et ne laisse aucune image publiée sans avoir été contrôlée.
+La durée reste courte (environ 2 à 3 minutes avec le cache de construction rempli) parce que les jobs sont indépendants et
+que les couches des images sont mises en cache dans le registre. Le quota de 400 minutes mensuelles se protège en groupant
+les modifications en peu de commits.
 
 **Les outils sont épinglés et vérifiés.**
 Les programmes téléchargés par les jobs le sont dans une version précise, et leur empreinte est vérifiée avant usage.
@@ -81,10 +83,10 @@ serveur d'origine serait détectée.
 
 ## Rôle dans le projet
 
-- Il exécute les dix jobs de la pipeline : tests unitaires, analyse SonarCloud, contrôle des Dockerfile, tests
+- Il exécute les onze jobs de la pipeline : tests unitaires, analyse SonarCloud, contrôle des Dockerfile, tests
   d'intégration, analyse des dépendances, analyse des images d'Istio, contrôle et publication des images, tests de
   performance.
-- Il ne se déclenche que sur la branche principale, et seulement pour les jobs dont les fichiers ont changé.
+- Il ne se déclenche que sur la branche principale, et lance tous les jobs à chaque pipeline, sans lancement manuel.
 - Il publie les images vérifiées dans le registre de conteneurs du projet.
 - Il publie les rapports de tests et de couverture dans l'interface de GitLab.
 - Il conserve le résultat de chaque pipeline, ce qui prouve que chaque modification a été contrôlée.

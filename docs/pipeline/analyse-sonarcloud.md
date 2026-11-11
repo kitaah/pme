@@ -43,24 +43,26 @@ Le projet utilise la Quality Gate par défaut de SonarCloud, « Sonar way ». El
 
 ## Résultat de la dernière analyse
 
-Mesures relevées le 7 novembre 2026, sur la branche principale (1,8 millier de lignes de code).
+Mesures relevées le 11 novembre 2026, sur la branche principale (1,7 millier de lignes de code).
 
 | Mesure | Résultat | Seuil |
 |---|---|---|
-| **Quality Gate** | Échouée, 2 conditions sur le nouveau code. | Réussie |
-| **Couverture du nouveau code** | 58,97 % sur 167 lignes. | 80 % au moins |
-| **Duplications du nouveau code** | 11,32 % sur 1,1 millier de lignes. | 3 % au plus |
-| **Couverture de l'ensemble du code** | 49,3 % | Aucun seuil |
-| **Anomalies** | 6 au total, dont 2 sur le nouveau code. | Aucun seuil |
-| **Points sensibles de sécurité** | 0 sur le nouveau code. | Aucun seuil |
+| **Quality Gate** | Réussie, toutes les conditions sont respectées. | Réussie |
+| **Couverture de l'ensemble du code** | 100 % | 80 % au moins sur le nouveau code |
+| **Duplications** | 0,0 % | 3 % au plus sur le nouveau code |
+| **Anomalies** | 0 (fiabilité, sécurité et maintenabilité). | Aucun seuil |
+| **Points sensibles de sécurité** | 0 | Aucun seuil |
+| **Notes** | A en sécurité, en fiabilité et en maintenabilité. | A |
 
 !!! note "À savoir"
-    L'échec de la Quality Gate est connu et assumé. Il montre ce qui reste à améliorer : plus de tests, moins de
-    code dupliqué. Le job est toléré en échec le temps de relever ces mesures. Ensuite, il deviendra bloquant.
+    Le 7 novembre, la Quality Gate était échouée : 58,97 % de couverture sur le nouveau code et 11,32 % de duplications.
+    Les corrections faites depuis (code commun mutualisé dans `libs/common`, tests complétés jusqu'à 100 % de couverture,
+    anomalies corrigées) l'ont fait passer au vert. Le job `sonar` reste toléré en échec dans la pipeline : cette tolérance
+    n'est plus nécessaire et pourra être retirée.
 
 ## Quand il se lance
 
-- Sur la branche principale uniquement, quand le code d'un module, `.gitlab-ci.yml` ou `sonar-project.properties` change.
+- Sur la branche principale uniquement, à chaque pipeline.
 - Après les quatre jobs de tests unitaires, dont il lit les rapports de couverture.
 
 !!! warning "Attention"
@@ -72,7 +74,7 @@ Mesures relevées le 7 novembre 2026, sur la branche principale (1,8 millier de 
 
 - **Logs du job** : le verdict de la Quality Gate et le lien vers le détail.
 - **Tableau de bord SonarCloud** : l'onglet « Summary » donne les conditions, l'onglet « Issues » les anomalies, et la mention « Last analysis » l'heure de la dernière analyse.
-- **Statut de la pipeline** : le job `sonar` passe en échec si la Quality Gate est échouée. La pipeline reste en avertissement, car ce job est toléré.
+- **Statut de la pipeline** : le job `sonar` passe en échec si la Quality Gate est échouée. Tant qu'il est toléré, la pipeline reste en avertissement au lieu d'échouer.
 
 ## Fichiers et dossiers principaux
 

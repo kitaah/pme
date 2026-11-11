@@ -7,7 +7,7 @@
 | **Rôle** | Réduit ce qu'un attaquant pourrait faire s'il parvenait à exécuter du code dans un conteneur |
 | **Portée** | Les onze déploiements du namespace `pme` |
 | **Mesures clés** | Aucun droit d'administrateur, capacités retirées, disque en lecture seule, aucun jeton de cluster |
-| **Contrôles automatiques** | Hadolint, container-structure-test (22 contrôles), Trivy |
+| **Contrôles automatiques** | Hadolint, container-structure-test (24 contrôles), Trivy |
 | **Limite connue** | Aucune politique réseau : les pods peuvent tous se joindre, même si leurs échanges sont chiffrés par le maillage |
 
 ## Description
@@ -115,16 +115,18 @@ retirées, sauf celles qui sont indispensables. Le projet ajoute trois protectio
 | **Images analysées** | `make istio-scan` et le job `istio-scan` de la pipeline recherchent les failles corrigeables dans les trois images d'Istio. Une faille CRITICAL fait échouer le contrôle. Les failles HIGH sont comptées et conservées dans un rapport, car ces images sont publiées par Istio : le correctif vient d'une nouvelle version d'Istio. |
 
 **Des images qui n'embarquent que le nécessaire**
-Les trois images sont construites en deux étapes : la première compile, la seconde ne reçoit que le résultat. Les
+Les trois images sont construites en plusieurs étapes : les premières installent et compilent, la dernière ne reçoit que le résultat. Les
 sources, les outils de développement et les dépendances de compilation restent dans l'étape de construction et ne sont
 jamais livrés. L'interface est servie par une variante de nginx prévue pour s'exécuter sans privilège.
+
+Les images de l'API et de la modération ne contiennent pas non plus `npm`, `corepack` ni `yarn` : ces outils de l'image Node ne servent pas à lancer l'application, et leurs paquets embarqués portaient des failles signalées par Trivy. L'image de l'interface met à jour ses paquets système à la construction, pour la même raison.
 
 Cela n'est pas seulement déclaré, c'est vérifié à chaque passage de la pipeline :
 
 | Contrôle | Ce qu'il vérifie |
 |---|---|
 | **[Hadolint](../pipeline/controle-dockerfile.md)** | Les recettes de construction, avant même de bâtir l'image. |
-| **[container-structure-test](../pipeline/tests-images.md)** | 22 contrôles sur les images : compte non administrateur, absence de sources, absence de fichier `.env`, port et commande de démarrage attendus. |
+| **[container-structure-test](../pipeline/tests-images.md)** | 24 contrôles sur les images : compte non administrateur, absence de sources, absence de fichier `.env`, port et commande de démarrage attendus. |
 | **[Trivy](../pipeline/analyse-dependances.md)** | Les failles connues des paquets livrés et des dépendances de développement. |
 
 !!! note "À savoir"
@@ -167,7 +169,7 @@ Cela n'est pas seulement déclaré, c'est vérifié à chaque passage de la pipe
 
 | Commande | Description |
 |---|---|
-| **`make image-test`** | Rejoue les 22 contrôles de structure et l'analyse Trivy sur les trois images. |
+| **`make image-test`** | Rejoue les 24 contrôles de structure et l'analyse Trivy sur les trois images. |
 | **`make lint-docker`** | Contrôle les quatre Dockerfile avec Hadolint. |
 | **`make lint-k8s`** | Valide les manifestes Kubernetes. |
 | **`make istio-scan`** | Analyse Trivy des trois images d'Istio : affiche les failles HIGH, et échoue s'il reste une faille CRITICAL corrigeable. |
@@ -193,8 +195,8 @@ sauf dans l'espace temporaire monté à cet effet.
 | **`k8s/04-api.yaml`**<br>**`k8s/05-moderation.yaml`** | Réglages les plus complets : compte sans privilège, disque en lecture seule, capacités retirées. |
 | **`k8s/06-frontend.yaml`** | Mêmes réglages pour l'interface, avec le compte de nginx non privilégié. |
 | **`k8s/13-alloy.yaml`** | La seule exception : jeton de cluster et droits de lecture sur les pods. |
-| **`api/Dockerfile`**<br>**`moderation-service/Dockerfile`**<br>**`frontend/Dockerfile`** | Construction en deux étapes, image finale sans outils. |
-| **`tests/image/`** | Les 22 contrôles de structure appliqués aux images. |
+| **`api/Dockerfile`**<br>**`moderation-service/Dockerfile`**<br>**`frontend/Dockerfile`** | Construction en plusieurs étapes, image finale sans outils de développement ni `npm`. |
+| **`tests/image/`** | Les 24 contrôles de structure appliqués aux images. |
 | **`k8s/istio/namespace.yaml`**<br>**`k8s/istio/cni-values.yaml`** | Namespace dédié aux composants privilégiés du maillage, et profil seccomp de l'agent istio-cni. |
 | **`.hadolint.yaml`** | Niveau à partir duquel un écart de Dockerfile fait échouer la pipeline. |
 

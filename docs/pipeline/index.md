@@ -8,7 +8,7 @@
 | **Plateforme** | GitLab CI/CD, offre gratuite (400 minutes de calcul par mois) |
 | **Configuration** | Le fichier `.gitlab-ci.yml`, à la racine du dépôt |
 | **Déclencheur** | Chaque commit ou fusion sur la branche principale (`main`) |
-| **Durée visée** | Moins de 5 minutes par pipeline |
+| **Durée visée** | Moins de 5 minutes par pipeline (environ 2 à 3 minutes une fois le cache de construction rempli) |
 | **Nombre de jobs** | 11 jobs, répartis en 8 familles de contrôles |
 
 ## Description
@@ -95,29 +95,31 @@ jobs.unitaires -> sonar: "rapports de\ncouverture"
 
 ## Les jobs
 
-| Job | Ce qu'il contrôle | Se lance si |
-|---|---|---|
-| **`unit-tests:common`** | Les 58 tests unitaires du module commun et leur couverture. | Le code d'un module change. |
-| **`unit-tests:api`** | Les 42 tests unitaires de l'API. | Le code d'un module change. |
-| **`unit-tests:moderation-service`** | Les 37 tests unitaires du service de modération. | Le code d'un module change. |
-| **`unit-tests:frontend`** | Les 62 tests unitaires de l'interface. | Le code d'un module change. |
-| **`sonar`** | La qualité du code, la couverture et les doublons. | Le code change, sur la branche principale. |
-| **`hadolint`** | Les bonnes pratiques des 4 Dockerfile du projet. | Un Dockerfile ou `.hadolint.yaml` change. |
-| **`integration-tests`** | Les 27 tests avec une vraie base et un vrai broker (dont un désactivé temporairement). | L'API, la modération ou le module commun change. |
-| **`dependency-scan`** | Les failles connues dans les dépendances, devDependencies comprises. | Une dépendance change. |
-| **`istio-scan`** | Les failles connues dans les 3 images d'Istio. Le job échoue sur une faille CRITICAL corrigeable. | Les réglages Istio changent. |
-| **`image-tests`** | La structure et les vulnérabilités des 3 images, puis leur publication dans le registre. | Une image ou ses tests changent. |
-| **`performance-tests`** | La rapidité de l'API sous charge. | L'API ou les scénarios k6 changent. |
+Tous ces jobs tournent à **chaque** pipeline, quels que soient les fichiers modifiés par le commit : aucun n'est lancé à la main.
+
+| Job | Ce qu'il contrôle |
+|---|---|
+| **`unit-tests:common`** | Les 60 tests unitaires du module commun et leur couverture. |
+| **`unit-tests:api`** | Les 42 tests unitaires de l'API. |
+| **`unit-tests:moderation-service`** | Les 37 tests unitaires du service de modération. |
+| **`unit-tests:frontend`** | Les 62 tests unitaires de l'interface. |
+| **`sonar`** | La qualité du code, la couverture et les doublons. |
+| **`hadolint`** | Les bonnes pratiques des 4 Dockerfile du projet. |
+| **`integration-tests`** | Les 27 tests avec une vraie base et un vrai broker. |
+| **`dependency-scan`** | Les failles connues dans les dépendances, devDependencies comprises. |
+| **`istio-scan`** | Les failles connues dans les 3 images d'Istio. Le job échoue sur une faille CRITICAL corrigeable. |
+| **`image-tests`** | La structure et les vulnérabilités des 3 images, puis leur publication dans le registre. |
+| **`performance-tests`** | La rapidité de l'API sous charge. |
 
 ## Principes de conception
 
 | Principe | Application |
 |---|---|
 | **Indépendance** | Les jobs n'ont pas de dépendance entre eux, sauf Sonar. |
-| **Économie** | Un job ne tourne que si les fichiers qu'il contrôle ont changé. |
+| **Économie** | Les couches des images sont mises en cache dans le registre, et les téléchargements d'outils se font en parallèle. |
 | **Reproductibilité** | Chaque outil a une version précise. Les programmes téléchargés sont vérifiés par leur somme de contrôle. |
 | **Traçabilité** | Les rapports sont conservés une semaine dans GitLab. |
-| **Sobriété** | Un nouveau commit annule la pipeline devenue inutile. Un job s'arrête après 5 minutes. |
+| **Sobriété** | Un nouveau commit annule la pipeline devenue inutile. Un job s'arrête après 5 minutes, 6 pour `image-tests`. |
 | **Fiabilité** | Un job n'est relancé qu'en cas de panne du runner, jamais après un échec de test. |
 
 Le détail de ces règles se trouve dans la page [Fonctionnement](fonctionnement.md).
@@ -128,11 +130,11 @@ Le détail de ces règles se trouve dans la page [Fonctionnement](fonctionnement
 |---|---|
 | **[Exigences qualité](exigences-qualite.md)** | Les exigences du projet et le test qui prouve chacune. |
 | **[Fonctionnement](fonctionnement.md)** | Déclenchement, optimisations, quota et lecture des résultats. |
-| **[Tests unitaires](tests-unitaires.md)** | La liste des 199 tests unitaires. |
+| **[Tests unitaires](tests-unitaires.md)** | La liste des 201 tests unitaires. |
 | **[Tests d'intégration](tests-integration.md)** | La liste des 27 tests d'intégration. |
 | **[Contrôle des Dockerfile](controle-dockerfile.md)** | Les règles Hadolint appliquées aux 4 Dockerfile. |
 | **[Analyse des dépendances](analyse-dependances.md)** | La recherche de failles dans les `package-lock.json` et dans les images d'Istio. |
-| **[Tests des images Docker](tests-images.md)** | Les 22 contrôles de structure et l'analyse Trivy. |
+| **[Tests des images Docker](tests-images.md)** | Les 24 contrôles de structure et l'analyse Trivy. |
 | **[Publication des images](publication-images.md)** | Le dépôt des images vérifiées dans le registre GitLab. |
 | **[Tests de performance](tests-performance.md)** | Les scénarios k6 et leurs seuils. |
 | **[Analyse SonarCloud](analyse-sonarcloud.md)** | La Quality Gate et ses résultats. |

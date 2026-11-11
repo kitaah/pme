@@ -102,11 +102,11 @@ Les deux analyses se répartissent ainsi :
 | Fichier ou dossier | Description |
 |---|---|
 | **`.trivyignore`** | Liste les exceptions : identifiant de la faille, justification et date d'expiration. |
-| **`../../.gitlab-ci.yml`** | Définit les deux analyses, dans les jobs des images et des dépendances. |
+| **`.gitlab-ci.yml`** | Définit les deux analyses, dans les jobs des images et des dépendances. |
 | **`docker-bake.hcl`** | Décrit la construction des images analysées. |
-| **`../../api/Dockerfile`** | Décrit la fabrication de l'image de l'API, dont son image de base. |
-| **`../../moderation-service/Dockerfile`** | Même rôle pour le service de modération. |
-| **`../../frontend/Dockerfile`** | Même rôle pour l'interface. |
+| **`api/Dockerfile`** | Décrit la fabrication de l'image de l'API, dont son image de base. |
+| **`moderation-service/Dockerfile`** | Même rôle pour le service de modération. |
+| **`frontend/Dockerfile`** | Même rôle pour l'interface. |
 
 ## Commandes essentielles
 

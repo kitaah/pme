@@ -18,7 +18,7 @@ tous les contrôles. Une image publiée est donc une image vérifiée.
 | Bénéfice | Explication |
 |---|---|
 | **Traçabilité** | Chaque image est liée à un commit précis. On sait quel code tourne dans quelle image. |
-| **Image vérifiée** | L'image déployée est celle qui a passé les 22 contrôles et l'analyse Trivy, pas une reconstruction qui pourrait différer. |
+| **Image vérifiée** | L'image déployée est celle qui a passé les 24 contrôles et l'analyse Trivy, pas une reconstruction qui pourrait différer. |
 | **Retour arrière** | En cas de problème, on redéploie l'étiquette précédente sans rien reconstruire. |
 | **Livraison continue** | La pipeline ne s'arrête plus à « tester » : elle fournit un résultat prêt à déployer. |
 | **Preuve** | Les exigences de déployabilité et de sécurité des images sont démontrées sur des images qui existent encore après la pipeline. |
@@ -36,12 +36,12 @@ tous les contrôles. Une image publiée est donc une image vérifiée.
 
 ## Comment ça marche
 
-La publication est la **dernière étape** du job `image-tests`, après la construction, les 22 contrôles de structure
+La publication est la **dernière étape** du job `image-tests`, après la construction, les 24 contrôles de structure
 et l'analyse Trivy.
 
-1. Si un contrôle échoue, le job s'arrête : rien n'est publié.
-2. Sinon, et seulement sur la branche principale, le job se connecte au registre.
-3. Il étiquette les trois images avec le SHA court du commit.
+1. Le job se connecte au registre dès le début : il y lit et y écrit aussi le cache de construction.
+2. Si un contrôle échoue, le job s'arrête : rien n'est publié.
+3. Sinon, et seulement sur la branche principale, il étiquette les trois images avec le SHA court du commit.
 4. Il envoie les trois images en parallèle.
 
 Les images publiées sont exactement celles qui ont été contrôlées : elles ne sont pas reconstruites.
@@ -62,17 +62,14 @@ Les images publiées sont exactement celles qui ont été contrôlées : elles n
 
 ## Quand elle a lieu
 
-La publication suit le déclenchement du job `image-tests` :
+La publication suit le déclenchement du job `image-tests`, qui tourne à chaque pipeline sur la branche principale.
 
-- **Automatiquement** quand une image ou son contrôle change.
-- **À la demande** dans les autres cas, avec le bouton de lancement manuel.
-
-Un commit qui ne touche ni image ni test d'image ne publie donc rien. La dernière version publiée reste valable.
+Chaque commit sur cette branche, y compris un commit de documentation, produit donc trois images portant son SHA, à condition que tous les contrôles réussissent. Si un contrôle échoue, rien n'est publié et la dernière version publiée reste valable.
 
 ## Où voir le résultat
 
 - **Journal du job** : les lignes `docker push` des trois images.
-- **Interface GitLab** : *Déployer* puis *Registre de conteneurs*, avec les étiquettes et leur date.
+- **Interface GitLab** : *Déployer* puis *Registre de conteneurs*, avec les étiquettes et leur date. Le registre contient six dépôts : `api`, `moderation` et `frontend` (les images publiées, avec le même SHA), et `cache/api`, `cache/moderation` et `cache/frontend` (le cache de construction, à conserver).
 
 ## Récupérer une image
 
@@ -88,7 +85,7 @@ docker pull registry.gitlab.com/kitaah/pme/api:<sha>
 - Les images s'accumulent : une règle de nettoyage du registre doit être activée dans GitLab
   (*Paramètres* > *Paquets et registres* > *Règles de nettoyage*).
 - Le déploiement dans Minikube construit encore ses images en local. Il ne télécharge pas celles du registre.
-- Le job `image-tests` doit rester sous sa limite de 5 minutes, envoi compris.
+- Le job `image-tests` doit rester sous sa limite de 6 minutes, envoi compris.
 
 ## Pour aller plus loin
 

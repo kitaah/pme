@@ -67,8 +67,7 @@ Le job démarre l'API réelle avec les vrais services dont elle dépend, sans Do
 
 ## Quand il se lance
 
-- Sur la branche principale, quand `.gitlab-ci.yml`, l'API, les scénarios k6 ou `scripts/perf-ci.sh` changent.
-- Un changement de l'interface seule ne le lance pas.
+- Sur la branche principale, à chaque pipeline.
 
 ## Où voir le résultat
 

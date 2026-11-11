@@ -14,11 +14,11 @@ pipeline. Ils donnent le premier signal d'une régression, et leur couverture al
 
 ## Ce qui est vérifié
 
-La pipeline lance **199 tests unitaires** répartis en 4 jobs, un par module. Les quatre jobs tournent en parallèle.
+La pipeline lance **201 tests unitaires** répartis en 4 jobs, un par module. Les quatre jobs tournent en parallèle.
 
 | Module | Outil | Tests |
 |---|---|---|
-| **Module commun** (`libs/common`) | Jest 30 et ts-jest | 58 |
+| **Module commun** (`libs/common`) | Jest 30 et ts-jest | 60 |
 | **API** | Jest 30 et ts-jest | 42 |
 | **Service de modération** | Jest 30 et ts-jest | 37 |
 | **Interface** | Vitest 5, Testing Library et jsdom | 62 |
@@ -27,7 +27,7 @@ Le module commun regroupe le code partagé par l'API et le service de modératio
 RFC 9457, mesures Prometheus, client NATS et lecture de la configuration. Il est testé une seule fois, ici, et non dans
 chaque service.
 
-### Module commun (58 tests)
+### Module commun (60 tests)
 
 | Fichier (dans `libs/common/src/`) | Tests | Ce qui est vérifié |
 |---|---|---|
@@ -38,7 +38,7 @@ chaque service.
 | **`auth/authenticated-user.spec.ts`** | 1 | Les noms des rôles du realm Keycloak. |
 | **`common/problem-details.filter.spec.ts`** | 7 | Erreurs au format RFC 9457, liste des erreurs de validation, détails masqués pour une erreur inattendue. |
 | **`metrics/metrics.spec.ts`** | 4 | Mesures au format Prometheus, routes de santé et de mesures ignorées. |
-| **`nats/nats.client.spec.ts`** | 9 | Connexion ouverte une seule fois, TLS, nouvelle tentative après un échec, arrêt propre. |
+| **`nats/nats.client.spec.ts`** | 11 | Connexion ouverte une seule fois, TLS, nouvelle tentative après un échec, arrêt propre ou fermeture forcée si le broker est injoignable. |
 | **`config/env.spec.ts`** | 23 | Lecture des variables d'environnement (base, NATS, Keycloak) et refus de démarrer si l'une manque. |
 | **`index.spec.ts`** | 1 | L'interface publique de `@pme/common` expose tout ce dont les services ont besoin. |
 
@@ -101,8 +101,7 @@ chaque service.
 
 ## Quand il se lance
 
-- Sur la branche principale, quand le code d'un des quatre modules change.
-- Aussi quand `.gitlab-ci.yml` ou `sonar-project.properties` change.
+- Sur la branche principale, à chaque pipeline.
 - Les quatre modules sont toujours testés ensemble : SonarCloud a besoin des quatre couvertures.
 
 ## Où voir le résultat

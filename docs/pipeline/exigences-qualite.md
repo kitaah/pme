@@ -20,7 +20,7 @@ suivent la norme ISO/IEC 25010.
 
 | Attribut | Exigence | Preuve | Job |
 |---|---|---|---|
-| **Fiabilité** | Une annonce déposée n'est jamais perdue, même si un service tombe. | 37 tests unitaires (consommateur, publication, topologie et client NATS) : reprises, doublons, messages en échec, panne du broker. | `unit-tests:*`, `integration-tests` |
+| **Fiabilité** | Une annonce déposée n'est jamais perdue, même si un service tombe. | 39 tests unitaires (consommateur, publication, topologie et client NATS) : reprises, doublons, messages en échec, panne du broker. | `unit-tests:*`, `integration-tests` |
 | **Sécurité applicative** | Seul un membre connecté dépose une annonce, seul un modérateur lit la file. | 14 tests du module commun (jeton, rôles, décorateurs), complétés en intégration par les erreurs 401 et 403. | `unit-tests:*`, `integration-tests` |
 | **Robustesse des entrées** | Une annonce invalide est refusée avec une erreur claire. | 7 tests du DTO, et 5 cas refusés avec une erreur 400 en intégration. | `integration-tests` |
 | **Sécurité des images** | Les images n'ont ni compte root, ni secret, ni outil de développement. | Compte non root, aucun secret, aucune source ni outil de développement dans les 3 images, et Dockerfile conformes aux règles Hadolint. | `image-tests`, `hadolint` |
@@ -41,9 +41,9 @@ Du contrôle le plus rapide au plus coûteux :
 
 | Type de test | Outil | Ce qu'il prouve | Nombre |
 |---|---|---|---|
-| **Unitaire** | Jest, Vitest | Chaque brique fonctionne seule, avec des doublures. | 199 tests |
-| **Intégration** | Jest, Testcontainers | Les briques fonctionnent avec une vraie base et un vrai broker. | 27 tests (1 désactivé) |
-| **Image Docker** | container-structure-test, Trivy | L'image livrée est conforme et sans faille grave. | 22 contrôles |
+| **Unitaire** | Jest, Vitest | Chaque brique fonctionne seule, avec des doublures. | 201 tests |
+| **Intégration** | Jest, Testcontainers | Les briques fonctionnent avec une vraie base et un vrai broker. | 27 tests |
+| **Image Docker** | container-structure-test, Trivy | L'image livrée est conforme et sans faille grave. | 24 contrôles |
 | **Performance** | k6 | L'API tient la charge et respecte ses temps de réponse. | 1 scénario en CI |
 | **Qualité du code** | SonarCloud | Le code est lisible, sûr et couvert par les tests. | 1 analyse |
 
