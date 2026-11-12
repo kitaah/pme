@@ -23,6 +23,7 @@ spec:
         app.kubernetes.io/name: adminer
         app.kubernetes.io/component: tooling
     spec:
+      serviceAccountName: adminer
       automountServiceAccountToken: false
       securityContext:
         seccompProfile: { type: RuntimeDefault }

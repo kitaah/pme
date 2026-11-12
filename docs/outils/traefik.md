@@ -119,6 +119,7 @@ bord, n'est pas exposée non plus.
 - Il dirige chaque nom d'hôte vers son service, et les trois chemins du site vers leurs destinations respectives.
 - Il chiffre les échanges avec le navigateur et redirige automatiquement le HTTP vers le HTTPS.
 - Il appartient au maillage Istio : sans cela, le mode strict du namespace `pme` refuserait ses connexions vers les services.
+- Son identité dans le maillage (compte de service `traefik`) est la seule source autorisée vers les interfaces web : un autre pod ne peut pas les appeler directement.
 - Il ajoute l'en-tête HSTS à ses réponses : pendant sept jours, le navigateur n'utilise plus que HTTPS pour ces noms.
 - Il compresse les réponses de plus de 1 Ko.
 - Il répartit les requêtes entre les exemplaires de l'API, de la modération et du site.

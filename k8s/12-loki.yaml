@@ -42,6 +42,7 @@ spec:
         app.kubernetes.io/component: monitoring
     spec:
       enableServiceLinks: false
+      serviceAccountName: loki
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true

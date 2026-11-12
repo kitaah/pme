@@ -8,7 +8,7 @@
 | **Portée** | Les onze déploiements du namespace `pme` |
 | **Mesures clés** | Aucun droit d'administrateur, capacités retirées, disque en lecture seule, aucun jeton de cluster |
 | **Contrôles automatiques** | Hadolint, container-structure-test (24 contrôles), Trivy |
-| **Limite connue** | Aucune politique réseau : les pods peuvent tous se joindre, même si leurs échanges sont chiffrés par le maillage |
+| **Limite connue** | Aucune politique réseau : le filtrage des échanges entre pods repose sur le seul maillage |
 
 ## Description
 
@@ -91,6 +91,7 @@ comparaison: "" {
 | **Profil seccomp** | Celui par défaut du moteur | Les appels système dangereux sont refusés par le noyau. |
 | **Système de fichiers** | En lecture seule pour l'API, la modération et l'interface | Un attaquant ne peut déposer ni programme ni script. Un espace temporaire en mémoire couvre les besoins réels. |
 | **Jeton du cluster** | Non monté, sauf pour Alloy | Un code étranger ne peut pas s'adresser à l'API de Kubernetes. |
+| **Compte de service** | Un par composant, sans droit sur l'API de Kubernetes | Les composants ne partagent plus d'identité : le maillage peut limiter chacun à ce qu'il doit joindre (voir [Istio](../outils/istio.md)). |
 | **Variables de liaison** | Désactivées | Kubernetes n'injecte pas d'adresses de services sous forme de variables, qui entraient en collision avec celles des applications. |
 | **Ressources plafonnées** | Processeur et mémoire, sur chaque conteneur | Un composant emballé ne peut pas priver les autres de ressources. |
 
@@ -136,12 +137,11 @@ Cela n'est pas seulement déclaré, c'est vérifié à chaque passage de la pipe
 
 ## Ce qui n'est pas couvert
 
-- **Aucune politique réseau.** C'est la limite la plus importante de cette page. Rien n'empêche aujourd'hui un pod du
-  namespace d'ouvrir une connexion vers PostgreSQL, NATS ou n'importe quel autre service. L'interface, qui ne sert que
-  des fichiers, pourrait techniquement joindre la base. Des règles de type NetworkPolicy, déclarant qui a le droit de
-  parler à qui, fermeraient cette porte. Minikube le permet, à condition d'activer un greffon réseau qui les applique.
-  Le maillage [Istio](../outils/istio.md) chiffre ces échanges, mais il ne les filtre pas : une règle d'autorisation par
-  composant demanderait en plus un compte de service par composant, car tous les pods partagent aujourd'hui le même.
+- **Aucune politique réseau.** Le filtrage des échanges entre pods repose sur le seul maillage
+  [Istio](../outils/istio.md) : ses politiques d'autorisation, appliquées par identité, n'autorisent chaque composant
+  qu'à ses appelants prévus. Elles agissent au niveau de la connexion. Des règles de type NetworkPolicy ajouteraient un
+  second filtre, indépendant du maillage, au niveau du réseau du cluster. Minikube le permet, à condition d'activer un
+  greffon réseau qui les applique.
 - **Un seul compte PostgreSQL pour quatre bases.** L'API, le service de modération, Keycloak et Grafana se connectent
   avec le même compte, créé à l'initialisation du serveur. Chacun peut donc lire et modifier les données des autres, y
   compris les comptes de Keycloak. Un compte par base, avec les seuls droits nécessaires, est le premier correctif à
