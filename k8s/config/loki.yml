@@ -1,6 +1,6 @@
 # Configuration de Loki (ConfigMap `loki-config`, generee par kustomize :
 # modifier ce fichier redemarre Loki automatiquement).
-# Mode "un seul processus" : tout Loki dans un conteneur, stockage sur le disque du conteneur.
+# Mode "un seul processus" : tout Loki dans un conteneur, stockage sur le volume persistant `loki-data` (monte sur /loki).
 auth_enabled: false
 server:
   http_listen_port: 3100
