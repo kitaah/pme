@@ -4,7 +4,11 @@
 # --- Etape 1 : dependances de production seules ---
 # Etape separee de la compilation : elle ne depend que des package.json et du package-lock.json, donc le cache de construction
 # la reutilise tant que les dependances ne changent pas (sinon `npm prune` refaisait ce travail a chaque modification de code).
-FROM node:24-alpine AS prod-deps
+# Images de base epinglees par leur empreinte (@sha256) : le cache de construction du registre GitLab reste valide tant que l'empreinte
+# ne change pas. Avec la seule etiquette, chaque mise a jour de l'image sur Docker Hub invalidait tout le cache : les `npm ci` etaient
+# refaits et le job `image-tests` depassait sa limite de 6 minutes. Mise a jour VOLONTAIRE : `docker buildx imagetools inspect <image>`
+# (ligne Digest), puis remplacer l'empreinte dans les Dockerfile de api, moderation-service et frontend.
+FROM node:24-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5 AS prod-deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY libs/common/package.json libs/common/
@@ -13,7 +17,7 @@ COPY moderation-service/package.json moderation-service/
 RUN npm ci --omit=dev --workspace=moderation-service --workspace=libs/common
 
 # --- Etape 2 : compilation TypeScript ---
-FROM node:24-alpine AS build
+FROM node:24-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5 AS build
 WORKDIR /app
 # Workspaces npm : un seul package-lock.json, a la racine. Les package.json des trois workspaces doivent etre presents
 # pour que npm ci verifie ce fichier ; seules les dependances de ce service et du module commun sont installees.
@@ -31,7 +35,7 @@ RUN npm run build --workspace=libs/common \
  && npm run build --workspace=moderation-service
 
 # --- Etape 3 : image finale legere, sans privileges root ---
-FROM node:24-alpine
+FROM node:24-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5
 ENV NODE_ENV=production
 WORKDIR /app
 # node_modules/@pme/common est un lien vers libs/common : le module commun compile doit donc etre present a ce chemin.
