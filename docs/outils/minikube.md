@@ -165,7 +165,7 @@ plusieurs étapes et exécution sans droits `root`. Ce contrôle se lance sur l'
     - **Contrôle de santé** : chaque composant déclare ses limites de mémoire et de processeur, ainsi que des sondes de santé qui indiquent à Kubernetes quand le relancer ou lui envoyer du trafic.
     - **Sécurité** : les trois applications s'exécutent sans droits `root`, avec un système de fichiers en lecture seule et sans aucune capacité Linux supplémentaire. Le namespace applique la règle `baseline` et vérifie en plus la règle plus stricte `restricted` en mode audit : elle signale les écarts sans les bloquer.
     - **Chiffrement** : les connexions à PostgreSQL et à NATS sont chiffrées par des certificats que [cert-manager](cert-manager.md) émet pour le cluster. Le maillage [Istio](istio.md) chiffre en plus tous les échanges entre pods.
-    - **Données** : PostgreSQL stocke ses données sur un volume persistant de 1 Go. Elles survivent au redémarrage du pod, mais disparaissent avec le namespace (`make undeploy`) ou avec le cluster (`minikube delete`).
+    - **Données** : PostgreSQL, NATS (les messages en attente de modération), Prometheus (les mesures) et Loki (les logs) stockent leurs données chacun sur un volume persistant de 1 Go. Elles survivent au redémarrage du pod, mais disparaissent avec le namespace (`make undeploy`) ou avec le cluster (`minikube delete`).
 - Il exécute des images construites localement : `make image` les fabrique dans le cluster avec l'étiquette `:dev`, sans passer par un registre. Les manifestes demandent à Kubernetes d'utiliser l'image déjà présente (`imagePullPolicy: IfNotPresent`).
 - Le passage à un cluster de production n'exige donc pas de réécrire les manifestes : il suffit de les adapter, notamment l'émetteur des certificats et l'origine des images.
 - Sans lui, aucun composant ne s'exécute : le projet n'a plus d'environnement ni d'orchestrateur.
@@ -254,7 +254,7 @@ Lors du premier démarrage, l'enchaînement est le suivant :
     cluster avec `minikube image load`. L'interface est construite par `minikube image build`.
 
 !!! warning "Attention"
-    `make undeploy` supprime aussi les données (annonces, comptes). À réserver au cas où l'on souhaite repartir de zéro.
+    `make undeploy` supprime aussi les données (annonces, comptes, messages en attente dans NATS, mesures et logs). À réserver au cas où l'on souhaite repartir de zéro.
 
 !!! tip "Astuce"
     L'option `--ports` n'est prise en compte qu'à la création du cluster. Pour l'appliquer à un cluster existant, il

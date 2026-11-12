@@ -8,12 +8,28 @@
 # Pour le consulter depuis l'ordinateur : `make port-forward`, qui vise le Deployment et non le Service.
 # NATS n'a pas d'interface web : l'etat des flux se lit sur /jsz (voir `make queues` et `make nats`).
 #
-# Stockage non persistant (emptyDir) : suffisant pour le POC. Les messages survivent a l'arret du
-# SERVICE DE MODERATION (ils restent dans le flux), pas a la perte du pod NATS.
+# Stockage persistant (PersistentVolumeClaim ci-dessous, 1Gi, comme PostgreSQL dans k8s/01-postgres.yaml) :
+# les messages survivent desormais a l'arret du SERVICE DE MODERATION (ils restent dans le flux) et a la
+# perte du pod NATS (redemarrage, mise a jour de l'image). La limite de stockage de JetStream (768 Mo, sous les 1Gi
+# du volume) est dans k8s/config/nats.conf : cette option n'existe qu'en fichier. NATS refuse alors les nouveaux
+# messages avant de remplir le disque, plutot que de planter dessus.
 #
 # Connexions des clients chiffrees en TLS 1.3 exclusivement (k8s/config/nats.conf), avec un certificat
 # signe par l'autorite locale (k8s/00-internal-tls.yaml). Le port de supervision 8222 reste en HTTP simple :
 # il n'expose aucun message, et les sondes de Kubernetes comme `make queues` continuent de le lire.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nats-data
+  labels:
+    app.kubernetes.io/name: nats
+    app.kubernetes.io/component: messaging
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -93,7 +109,8 @@ spec:
             periodSeconds: 20
       volumes:
         - name: jetstream
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: nats-data
         # 0440 : lisible par le proprietaire (root, qui execute nats-server dans cette image) et son groupe.
         - name: tls
           secret:

@@ -116,6 +116,12 @@ ce soit, et ne voit rien des autres namespaces.
     La configuration d'Alloy est fournie par le cluster. La modifier et redéployer suffit : Alloy redémarre
     automatiquement pour prendre en compte le nouveau fichier.
 
+!!! note "À savoir"
+    Alloy n'a pas de volume persistant : son état (la position de lecture des logs) est volontairement éphémère, comme
+    dans le chart Helm officiel. S'il redémarre, il peut manquer quelques lignes de logs pendant l'arrêt, sans aucune
+    perte de données métier. Un volume ne s'impose que si Alloy tourne en DaemonSet et lit les fichiers de chaque
+    nœud : on utilise alors un `hostPath`.
+
 !!! warning "Attention"
     L'interface d'Alloy ne demande aucune authentification, comme celles de Prometheus et d'Adminer. C'est acceptable
     sur un cluster local, mais une mise en production imposerait de la protéger ou de ne pas l'exposer.

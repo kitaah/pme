@@ -131,8 +131,9 @@ Les mesures principales sont les suivantes :
 | **`make pods`** | Indique si Prometheus est prêt. |
 
 !!! warning "Attention"
-    Les mesures ne sont pas écrites sur un volume persistant : elles disparaissent au redémarrage du conteneur. Pour
-    conserver un résultat de test de charge, exporter le graphique ou relever les valeurs avant de redéployer.
+    Les mesures sont écrites sur un volume persistant de 1 Go (`prometheus-data`) : elles survivent au redémarrage du
+    pod, mais disparaissent avec le namespace (`make undeploy`) et après 6 heures. Pour conserver un résultat de test
+    de charge, exporter le graphique ou relever les valeurs avant.
 
 !!! tip "Astuce"
     La page des cibles est le premier endroit à consulter en cas de graphique vide : elle indique, pour chaque

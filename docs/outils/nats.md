@@ -129,23 +129,26 @@ Le serveur est configuré ainsi :
 | **Accusé de réception** | Manuel, attendu sous 30 secondes | Sans confirmation, le message est automatiquement représenté. |
 | **Messages remis d'avance** | 10 au maximum | Limite le nombre de messages en cours de traitement par exemplaire. |
 | **Déduplication** | 2 minutes | Une même annonce publiée deux fois n'est conservée qu'une fois. |
+| **Stockage** | Volume persistant `nats-data` de 1 Go, limite de 768 Mo pour les flux | Les messages survivent au redémarrage du pod. NATS refuse les nouveaux messages avant de remplir le volume. |
 
 !!! note "À savoir"
     NATS garantit qu'un message est remis *au moins une fois* : si l'accusé de réception se perd, le même message
     peut arriver deux fois. Le service de modération le supporte, car rejouer une annonce n'ajoute pas de doublon à sa
     file.
 
-!!! warning "Attention"
-    Le stockage des flux n'est pas persistant dans ce POC : il vit avec le pod NATS. Les messages survivent donc à
-    l'arrêt du service de modération, mais pas à la suppression du pod NATS lui-même. Un déploiement de production
-    utiliserait un volume persistant, comme PostgreSQL.
+!!! note "À savoir"
+    Le stockage des flux est persistant (`PersistentVolumeClaim` `nats-data`, 1 Go), comme pour PostgreSQL. Les
+    messages survivent à l'arrêt du service de modération et à la suppression ou au redémarrage du pod NATS.
+    Seule la suppression du volume les ferait disparaître, ce que fait `make undeploy` (il supprime le namespace).
+    Le serveur est en un seul exemplaire : en production, on déploierait un cluster de trois serveurs, avec réplication
+    des flux.
 
 ## Fichiers et dossiers principaux
 
 | Fichier ou dossier | Description |
 |---|---|
 | **`k8s/02-nats.yaml`** | Déploie le serveur NATS dans le cluster, avec JetStream activé. |
-| **`k8s/config/nats.conf`** | Configure le chiffrement et les comptes du serveur. |
+| **`k8s/config/nats.conf`** | Configure le chiffrement du serveur et la limite de stockage des flux. |
 | **`libs/common/src/nats/`**<br>**`nats.client.ts`** | Gère la connexion au broker, pour l'API comme pour la modération. |
 | **`api/src/listings/`**<br>**`listing-events.publisher.ts`** | Publie l'événement « annonce déposée ». |
 | **`api/src/listings/listing-events.ts`** | Décrit le contenu de l'événement côté API. La modération en garde sa propre description (`listing-submitted.event.ts`). |
@@ -171,6 +174,15 @@ Pour observer le découplage, l'enchaînement est le suivant :
 3. `make queues` montre le message en attente dans le flux.
 4. `make demo-start-moderation` relance le service, qui traite aussitôt le message.
 5. `make queues` montre un flux de nouveau vide.
+
+Pour observer la persistance, l'enchaînement est le suivant :
+
+1. `make demo-stop-moderation` arrête le service de modération.
+2. Déposer une annonce depuis l'interface.
+3. `make queues` montre le message en attente.
+4. `kubectl -n pme delete pod -l app=nats` supprime le pod NATS, que Kubernetes recrée aussitôt.
+5. Une fois le pod de nouveau `Running`, `make queues` montre toujours le message.
+6. `make demo-start-moderation` relance le service, qui traite le message.
 
 !!! tip "Astuce"
     Le nombre de messages en attente est l'indicateur à surveiller. Il augmente lorsque la modération est arrêtée ou

@@ -123,8 +123,9 @@ Pour rechercher les journaux d'un service :
 4. Ajouter `|= "erreur"` à la suite pour ne garder que les lignes contenant ce mot.
 
 !!! warning "Attention"
-    Les journaux ne sont pas écrits sur un volume persistant : ils disparaissent au redémarrage du conteneur. Pour
-    conserver la trace d'un incident, copier les lignes utiles avant de redéployer.
+    Les journaux sont écrits sur un volume persistant de 1 Go (`loki-data`) : ils survivent au redémarrage du pod, mais
+    disparaissent avec le namespace (`make undeploy`) et après 24 heures. Pour conserver la trace d'un incident,
+    copier les lignes utiles avant. En production, Loki écrit dans un stockage objet (S3, GCS).
 
 !!! tip "Astuce"
     Le tableau de bord « Logs » évite ces requêtes : il propose un menu déroulant par service et un champ de recherche.
