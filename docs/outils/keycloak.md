@@ -91,6 +91,7 @@ sans rien demander à Keycloak.
   vérifiée.
 - Il remplace, au déploiement, son compte administrateur temporaire par un compte permanent, puis supprime le premier.
 - Il impose une politique de mots de passe : 12 caractères au moins, avec majuscule, minuscule et chiffre.
+- Il n'est joignable, à l'intérieur du cluster, que par l'ingress, l'API, le service de modération et la tâche qui crée son administrateur permanent.
 - Sans lui, personne ne peut se connecter : ni dépôt d'annonce, ni modération, ni accès aux tableaux de bord.
 
 Le realm `pme` ne contient aucun compte d'utilisateur. Pour se connecter au site, il faut en créer un dans la console

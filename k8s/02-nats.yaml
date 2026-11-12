@@ -53,6 +53,7 @@ spec:
         app.kubernetes.io/name: nats
         app.kubernetes.io/component: messaging
     spec:
+      serviceAccountName: nats
       automountServiceAccountToken: false
       securityContext:
         seccompProfile: { type: RuntimeDefault }

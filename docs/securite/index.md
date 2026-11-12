@@ -80,9 +80,9 @@ Chaque mesure est détaillée dans la page de sa couche.
 | Couche | Mesures principales | Page |
 |---|---|---|
 | **Identité et accès** | Connexion par Keycloak (flux avec PKCE, jeton gardé en mémoire par le navigateur), jeton signé vérifié par l'API, deux rôles, refus par défaut, données cloisonnées par membre, protection contre les essais répétés, aucun compte d'amorçage conservé. | [Authentification](authentification.md) |
-| **Échanges** | HTTPS sur tous les noms d'hôte, mTLS strict entre les pods par Istio, TLS jusqu'à PostgreSQL et NATS, mots de passe jamais transmis en clair, certificats renouvelés seuls. | [Chiffrement](chiffrement.md) |
+| **Échanges** | HTTPS sur tous les noms d'hôte, mTLS strict entre les pods par Istio, chaque composant n'acceptant que ses appelants prévus (refus par défaut, autorisation par identité), TLS jusqu'à PostgreSQL et NATS, mots de passe jamais transmis en clair, certificats renouvelés seuls. | [Chiffrement](chiffrement.md) |
 | **Secrets** | Mots de passe chiffrés avant d'entrer dans Git, déchiffrables par le seul cluster, recherche de secrets oubliés, aucun secret en clair dans la pipeline. | [Secrets](secrets.md) |
-| **Conteneurs et cluster** | Aucun droit d'administrateur, disque en lecture seule, capacités retirées, jeton du cluster non monté, ressources plafonnées, standards de sécurité des pods imposés, composants du maillage isolés, images sans outils de développement. | [Durcissement](durcissement.md) |
+| **Conteneurs et cluster** | Aucun droit d'administrateur, disque en lecture seule, capacités retirées, jeton du cluster non monté, un compte de service par composant, ressources plafonnées, standards de sécurité des pods imposés, composants du maillage isolés, images sans outils de développement. | [Durcissement](durcissement.md) |
 | **Application** | Validation stricte des entrées et des messages NATS, requêtes SQL paramétrées, limitation de débit, en-têtes de sécurité et politique de contenu, seule l'API exposée, erreurs qui ne révèlent rien, données personnelles réduites au minimum. | [Défenses applicatives](application.md) |
 
 Quatre contrôles de la [pipeline](../pipeline/index.md) vérifient automatiquement une partie de ces mesures : Hadolint
@@ -104,11 +104,11 @@ connus sont les suivants. Chacun est repris, avec son contexte, dans la page con
 
 | Priorité | Limite | Conséquence | Page |
 |---|---|---|---|
-| **Haute** | **Aucune politique réseau** | Tout pod du namespace peut joindre n'importe quel autre, y compris la base. Le maillage chiffre ces échanges mais ne les filtre pas. | [Durcissement](durcissement.md) |
 | **Haute** | **Un seul compte PostgreSQL** | Les quatre bases partagent le même compte : aucune séparation des droits. | [Durcissement](durcissement.md) |
 | **Haute** | **Outils d'exploitation sans authentification** | Adminer, Prometheus et Alloy sont joignables sans mot de passe propre. | [Authentification](authentification.md) |
 | **Haute** | **Pas de second facteur** | La connexion repose sur le seul mot de passe, dont la politique impose 12 caractères mais n'écarte pas les mots de passe courants. | [Authentification](authentification.md) |
 | **Haute** | **Console d'administration de Keycloak exposée** | Elle est joignable par l'ingress comme la page de connexion, et le realm `master` n'a pas de protection contre les essais répétés dans le dépôt. | [Authentification](authentification.md) |
+| **Moyenne** | **Aucune politique réseau** | Le filtrage entre pods repose sur le seul maillage (autorisation par identité) : aucun second filtre au niveau du réseau du cluster. | [Durcissement](durcissement.md) |
 | **Moyenne** | **Keycloak en mode développement** | Contrôles assouplis, code reconstruit à chaque démarrage : déconseillé en production. | [Authentification](authentification.md) |
 | **Moyenne** | **Un seul compte NATS** | L'API et le service de modération partagent le même compte : aucune permission distincte par sujet. | [Durcissement](durcissement.md) |
 | **Moyenne** | **Aucun log des accès** | Les logs applicatifs ne constituent pas une piste d'audit. | [Application](application.md) |
@@ -118,7 +118,6 @@ connus sont les suivants. Chacun est repris, avec son contexte, dans la page con
 | **Moyenne** | **Pas de rotation ni d'audit des secrets** | Rien n'impose de changer un mot de passe ni ne trace qui l'a lu. | [Secrets](secrets.md) |
 | **Moyenne** | **Disque modifiable sur la plupart des composants** | Un code étranger pourrait déposer un programme dans PostgreSQL, Keycloak, Grafana, etc. | [Durcissement](durcissement.md) |
 | **Moyenne** | **Pas de contrôle à l'admission, ni de signature des images** | Rien n'empêche de déployer un pod non conforme ou une image qui ne vient pas de la pipeline. | [Durcissement](durcissement.md) |
-| **Moyenne** | **Une seule identité de maillage pour tout le namespace** | Les pods partagent le compte de service `default` : le maillage chiffre leurs échanges mais ne peut pas distinguer l'API de Prometheus ou d'Adminer. | [Chiffrement](chiffrement.md) |
 | **Basse** | **Composants du maillage en root** | ztunnel et istio-cni gardent des droits élevés sur le nœud, inhérents au mode ambient. Ils sont isolés dans leur namespace, sous profil seccomp, et leurs images sont analysées. | [Durcissement](durcissement.md) |
 | **Basse** | **Autorité de certification locale** | Les certificats ne sont reconnus qu'après import manuel dans le navigateur. | [Chiffrement](chiffrement.md) |
 | **Basse** | **HSTS court, sans préchargement** | La première visite d'un navigateur n'est protégée que par la redirection. | [Chiffrement](chiffrement.md) |

@@ -4,7 +4,7 @@
 
 .PHONY: help install test test-integration image-test \
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
-        minikube-up minikube-down helm ingress inotify istio istio-scan mesh-check cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
+        minikube-up minikube-down helm ingress inotify istio istio-scan mesh-check authz-check cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
         env kubeseal sealed-secrets sealed-prereqs seal image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         pods logs logs-api logs-moderation logs-keycloak \
         port-forward stop-forward api moderation frontend \
@@ -93,6 +93,7 @@ help:
 	@echo "    make istio                    - Installe Istio (mode ambient) : chiffre en mTLS les echanges entre pods"
 	@echo "    make istio-scan               - Analyse Trivy des trois images d'Istio (echec sur CRITICAL corrigeable, HIGH signalees)"
 	@echo "    make mesh-check               - Verifie le mTLS : un pod hors du mesh est refuse, les echanges portent des identites"
+	@echo "    make authz-check              - Verifie les autorisations par identite : seules les sources prevues joignent chaque composant"
 	@echo "    make ca-configmap             - Copie l'autorite locale dans le namespace $(NS) (verification du TLS de PostgreSQL)"
 	@echo "    make tunnel                   - Redirige les ports 80 et 443 vers l'ingress (cluster cree sans --ports ; laisser ouvert, mot de passe demande)"
 	@echo "    make hosts                    - Affiche la ligne a ajouter dans /etc/hosts pour les noms .localhost"
@@ -239,6 +240,24 @@ mesh-check:
 		curl -sS -m 5 -o /dev/null -w "HTTP %{http_code}\n" http://pme-frontend.pme.svc.cluster.local:8080 || true
 	@echo "Derniers echanges chiffres vus par ztunnel (identites spiffe) :"
 	@kubectl -n istio-system logs ds/ztunnel --tail=300 | grep spiffe | tail -5 || true
+
+# Verifie les politiques d'autorisation (k8s/17-authorization-policies.yaml) avec trois pods temporaires, qui n'ont de
+# differente que leur compte de service, donc leur identite. Chaque ligne annonce le resultat attendu. Un refus de ztunnel
+# se voit a une connexion coupee (curl echoue, sans code HTTP : "HTTP 000") ; une connexion autorisee renvoie un code HTTP.
+#   - compte `default` (aucune regle ne le cite)  -> Keycloak : refuse ;
+#   - compte `pme-api`                            -> Keycloak : autorise, puis Prometheus : refuse.
+authz-check:
+	@echo "Identite default vers Keycloak (attendu : refus, HTTP 000) :"
+	@kubectl -n $(NS) run authz-default --rm -i --quiet --restart=Never --image=curlimages/curl -- \
+		curl -sS -m 5 -o /dev/null -w "HTTP %{http_code}\n" http://keycloak:8080/realms/pme || true
+	@echo "Identite pme-api vers Keycloak (attendu : HTTP 200) :"
+	@kubectl -n $(NS) run authz-api-keycloak --rm -i --quiet --restart=Never --image=curlimages/curl \
+		--overrides='{"spec":{"serviceAccountName":"pme-api"}}' -- \
+		curl -sS -m 5 -o /dev/null -w "HTTP %{http_code}\n" http://keycloak:8080/realms/pme || true
+	@echo "Identite pme-api vers Prometheus (attendu : refus, HTTP 000) :"
+	@kubectl -n $(NS) run authz-api-prometheus --rm -i --quiet --restart=Never --image=curlimages/curl \
+		--overrides='{"spec":{"serviceAccountName":"pme-api"}}' -- \
+		curl -sS -m 5 -o /dev/null -w "HTTP %{http_code}\n" http://prometheus:9090/-/ready || true
 
 # metrics-server (addon Minikube) : fournit la charge des pods a l'autoscaler (k8s/11-autoscaling.yaml). Sans lui, la cible
 # de chaque autoscaler reste <unknown> et le nombre de pods ne change jamais. Les premieres mesures arrivent apres ~1 minute.

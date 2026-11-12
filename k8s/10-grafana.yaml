@@ -27,6 +27,7 @@ spec:
     spec:
       # Pas de variables d'environnement "liens Docker" injectees par Kubernetes (ex. GRAFANA_PORT=tcp://...).
       enableServiceLinks: false
+      serviceAccountName: grafana
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true

@@ -7,7 +7,7 @@
 | **Rôle** | Rend illisible et infalsifiable tout ce qui circule, du navigateur jusqu'à la base de données |
 | **Outils** | [cert-manager](../outils/cert-manager.md) 1.18.2, autorité de certification locale ; [Istio](../outils/istio.md) 1.30.0, maillage en mode ambient |
 | **Portée externe** | HTTPS sur les six noms d'hôte, HTTP redirigé vers HTTPS, en-tête HSTS de sept jours |
-| **Portée interne** | mTLS entre tous les pods du namespace `pme` et de l'ingress par [Istio](../outils/istio.md), puis TLS jusqu'à PostgreSQL et jusqu'à NATS, avec vérification du nom du serveur |
+| **Portée interne** | mTLS entre tous les pods du namespace `pme` et de l'ingress par [Istio](../outils/istio.md), autorisation par identité de chaque appel, puis TLS jusqu'à PostgreSQL et jusqu'à NATS, avec vérification du nom du serveur |
 | **Certificats** | Clés ECDSA P-256, valables 90 jours, renouvelées 15 jours avant l'échéance |
 
 ## Description
@@ -34,6 +34,13 @@ la transmet ensuite en HTTP simple au service concerné, à l'intérieur du clus
 interne reste protégé : [Istio](../outils/istio.md), en mode ambient, chiffre en mTLS chaque connexion entre l'ingress
 et les services, et refuse toute connexion qui ne vient pas du maillage. Les applications n'en savent rien : elles
 parlent toujours en HTTP, et c'est un proxy installé sur le nœud (ztunnel) qui chiffre le trajet.
+
+**Qui peut appeler quoi.**
+Le mTLS donne à chaque pod une identité vérifiée : celle de son compte de service. Le projet s'en sert pour filtrer. Un
+premier réglage refuse tout appel entre pods, puis une règle par composant nomme ses seuls appelants. Exemple : seuls
+l'API, le service de modération, Keycloak, Grafana et Adminer peuvent joindre PostgreSQL. Un pod qui connaîtrait le mot
+de passe de la base mais n'aurait pas la bonne identité est coupé avant même d'ouvrir la connexion. `make authz-check`
+le vérifie.
 
 **Pourquoi les bases de données font exception.**
 Les échanges avec PostgreSQL et NATS, eux, sont chiffrés de bout en bout par les applications elles-mêmes, même à
@@ -107,7 +114,7 @@ chaine: "" {
 
 | Échange | Protection |
 |---|---|
-| **Entre pods** | mTLS par le maillage Istio : chaque connexion est chiffrée et chaque pod porte une identité. Le mode strict refuse toute connexion qui n'arrive pas en mTLS, par exemple celle d'un pod placé hors du maillage. |
+| **Entre pods** | mTLS par le maillage Istio : chaque connexion est chiffrée et chaque pod porte une identité. Le mode strict refuse toute connexion qui n'arrive pas en mTLS, par exemple celle d'un pod placé hors du maillage. Les politiques d'autorisation refusent ensuite tout appel dont l'identité n'est pas listée pour le composant visé. |
 | **Vers PostgreSQL** | TLS obligatoire côté serveur : les règles d'accès n'acceptent que des connexions chiffrées, et le mot de passe est contrôlé par SCRAM-SHA-256, qui ne le fait jamais circuler. |
 | **Vers NATS** | TLS, avec une version minimale fixée à **1.3**. Sans ce réglage, le serveur accepterait encore TLS 1.2. |
 | **Vérification du nom** | L'API, le service de modération, Keycloak et Grafana vérifient que le certificat présenté a bien été émis pour le serveur qu'ils appellent, et non seulement qu'il est signé par l'autorité. |
@@ -135,23 +142,16 @@ n'est joignable que depuis le pod lui-même.
 - **L'autorité du maillage est créée par istiod lui-même** : sa clé privée est stockée dans le cluster, dans le
   namespace `istio-system`. C'est acceptable pour un POC ; en production, on brancherait l'autorité interne de
   l'organisation.
-- **Le maillage chiffre les échanges, mais n'en filtre pas l'accès** : un pod du namespace peut toujours appeler un
-  autre pod du maillage. Des politiques d'autorisation d'Istio, ou des politiques réseau, restreindraient qui parle à qui.
-- **Une seule identité pour tout le namespace** : tous les pods du namespace `pme` utilisent le compte de service
-  `default`, donc la même identité (`spiffe://cluster.local/ns/pme/sa/default`). Le chiffrement n'en est pas affecté,
-  mais une règle du type « seule l'API peut joindre PostgreSQL » ne pourrait pas encore s'écrire : il faudrait d'abord
-  créer un compte de service par composant.
+- **Le filtrage repose sur le seul maillage** : les politiques d'autorisation d'Istio sont appliquées par ztunnel, au
+  niveau de la connexion (source, destination, port), et non de la requête HTTP. Aucune politique réseau Kubernetes ne
+  double ce filtrage : un composant du maillage compromis, ou un pod qui échapperait au maillage, ne serait pas arrêté
+  par le réseau.
 - **Le maillage dépend d'un réglage de l'ordinateur** : ztunnel plante si la limite `inotify` du système est trop
   basse. `make inotify` la relève, avec le mot de passe `sudo`. Sans ztunnel prêt, un namespace déjà enrôlé en mode
   strict devient inaccessible (voir la fiche [Istio](../outils/istio.md)).
 - **Le port de supervision de NATS reste en HTTP simple côté application** : il n'expose que des compteurs, pas de
-  données. Le service du cluster ne le publie plus, mais, faute de politique réseau, rien n'empêche un pod du maillage de
-  l'appeler par l'adresse du pod ; l'échange est alors chiffré par le maillage. Le mode strict refuse en revanche les
-  pods extérieurs au maillage. Seuls le pod lui-même et les sondes de Kubernetes lisent ce port en clair.
-- **Aucune autorisation par identité** : un client qui connaît le mot de passe de PostgreSQL peut s'y connecter, d'où
-  qu'il vienne. Faute de politique réseau ou de politique d'autorisation, cela signifie : depuis n'importe quel pod du
-  namespace. Le maillage authentifie les pods, mais aucune règle n'utilise encore cette identité pour restreindre
-  l'accès à PostgreSQL ou à NATS.
+  données. Le service du cluster ne le publie pas, et aucune politique d'autorisation ne l'ouvre : seuls le pod
+  lui-même et les sondes de Kubernetes le lisent, en clair.
 - **HSTS de courte durée, sans prechargement** : la durée est de sept jours, et non d'un an. Un HSTS actif interdit de
   passer outre l'alerte du certificat : après un changement d'autorité locale, le navigateur bloque le site tant qu'il
   retient la règle. La toute première visite d'un navigateur reste servie par la redirection, faute de liste de
@@ -167,11 +167,12 @@ n'est joignable que depuis le pod lui-même.
 | **`kubectl -n pme get certificate`** | Affiche les certificats du cluster, leur état et leur validité. |
 | **`make ca-configmap`** | Copie l'autorité dans le namespace, pour que les applications vérifient les certificats. |
 | **`make mesh-check`** | Vérifie le maillage : un pod hors du maillage est refusé, et les échanges portent des identités. |
+| **`make authz-check`** | Vérifie les autorisations par identité : un appel autorisé aboutit, un appel non prévu est coupé. |
 | **`kubectl -n istio-system logs ds/ztunnel`**<br>**`--tail=500 \| grep src.identity`** | Affiche les connexions chiffrées vues par ztunnel, avec l'identité de la source et de la destination. |
 
 Dans les journaux de ztunnel, une connexion chiffrée par le maillage se reconnaît à deux indices : l'adresse de
 destination utilise le port **15008**, celui du tunnel entre nœuds, et les champs `src.identity` et `dst.identity`
-contiennent une identité de la forme `spiffe://cluster.local/ns/pme/sa/default`. La connexion de l'ingress vers l'API
+contiennent une identité de la forme `spiffe://cluster.local/ns/pme/sa/pme-api`. La connexion de l'ingress vers l'API
 et celle de Prometheus vers l'API ont été vérifiées de cette façon.
 
 Pour vérifier que PostgreSQL refuse réellement une connexion en clair, il suffit d'essayer : une connexion ouverte
@@ -195,7 +196,9 @@ depuis un autre pod avec `sslmode=disable` est rejetée par le serveur, avant m�
 | **`k8s/00-internal-tls.yaml`** | Certificats de PostgreSQL et de NATS. |
 | **`k8s/istio/`** | Réglages des quatre charts Helm d'Istio, avec des ressources réduites pour Minikube. |
 | **`k8s/namespace.yaml`** | Porte le label qui enrôle le namespace `pme` dans le maillage. |
+| **`k8s/15-service-accounts.yaml`** | Un compte de service par composant, donc une identité par composant. |
 | **`k8s/16-mesh-mtls.yaml`** | Impose le mode strict : toute connexion hors mTLS est refusée. |
+| **`k8s/17-authorization-policies.yaml`** | Refus par défaut, puis une règle par composant qui nomme ses appelants autorisés. |
 | **`k8s/08-ingress.yaml`** | Termine le TLS avec le certificat de cert-manager. |
 | **`k8s/08-middlewares.yaml`** | Ajoute l'en-tête HSTS aux réponses de l'ingress. |
 | **`k8s/traefik/values.yaml`** | Redirige le HTTP vers le HTTPS pour tous les noms d'hôte. |

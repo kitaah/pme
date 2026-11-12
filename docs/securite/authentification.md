@@ -118,7 +118,7 @@ consommateur de messages NATS, et une garde globale s'appliquerait aussi à des 
 
 **Un détail qui compte : où sont lues les clés publiques.**
 L'API récupère les clés de signature par l'adresse interne du cluster, en HTTP simple (chiffré en mTLS par le maillage
-[Istio](../outils/istio.md)), alors que l'émetteur attendu dans le jeton reste l'adresse publique vue par le navigateur. Les deux adresses diffèrent volontairement : l'API n'a ainsi
+[Istio](../outils/istio.md), dont les politiques ne laissent joindre Keycloak que par l'ingress, l'API, le service de modération et la tâche d'administration), alors que l'émetteur attendu dans le jeton reste l'adresse publique vue par le navigateur. Les deux adresses diffèrent volontairement : l'API n'a ainsi
 pas besoin de faire confiance au certificat de l'autorité locale pour vérifier une signature. Les clés sont gardées en
 mémoire dix minutes, et le nombre d'appels est plafonné à dix par minute.
 

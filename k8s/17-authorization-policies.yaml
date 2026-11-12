@@ -1,0 +1,246 @@
+# Autorisation par identite entre les pods : refus par defaut, puis une regle par composant qui nomme ceux qui ont le
+# droit de l'appeler. L'identite d'une source est celle de son compte de service (k8s/15-service-accounts.yaml), verifiee
+# par ztunnel grace au mTLS de k8s/16-mesh-mtls.yaml : elle ne peut pas etre usurpee par un pod qui n'a pas ce compte.
+#
+# Mode ambient : ces regles sont appliquees par ztunnel, au niveau de la connexion (source, destination, port). Elles ne
+# regardent ni la methode HTTP ni le chemin (il faudrait un waypoint, un proxy supplementaire par namespace).
+# Les politiques ne couvrent que le trafic ENTRANT d'un pod : ce qu'un pod peut appeler est decide par la politique de sa
+# destination. Un pod sans regle ici (un pod place dans `pme` avec le compte `default`, par exemple) n'est donc joint par personne
+# et ne peut rien joindre : `make authz-check` le verifie.
+#
+# Ce que ces regles ne bloquent pas : les sondes de Kubernetes (ztunnel les laisse passer), `kubectl exec` et
+# `kubectl port-forward` (make queues, make db-*, make port-forward).
+# L'identite de l'ingress est celle du compte `traefik` du namespace `traefik` (installe par `make ingress`).
+#
+# Un nouveau composant doit etre declare ici, sinon il est injoignable (refus par defaut). Les connexions refusees se
+# lisent dans les logs de ztunnel : `kubectl -n istio-system logs ds/ztunnel --tail=300 | grep "policy rejection"`.
+#
+# Refus par defaut : une politique d'autorisation sans aucune regle n'autorise rien.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all
+spec: {}
+---
+# PostgreSQL : l'API, la moderation, Keycloak, Grafana et Adminer, chacun pour sa base.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-postgres
+spec:
+  selector:
+    matchLabels:
+      app: postgres
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/pme/sa/pme-api
+              - cluster.local/ns/pme/sa/pme-moderation
+              - cluster.local/ns/pme/sa/keycloak
+              - cluster.local/ns/pme/sa/grafana
+              - cluster.local/ns/pme/sa/adminer
+      to:
+        - operation:
+            ports: ["5432"]
+---
+# NATS : l'API (publie) et la moderation (lit). Le port de supervision 8222 n'est ouvert a personne : seules les sondes de
+# Kubernetes (que ztunnel laisse passer) et `make queues` (kubectl exec, dans le pod) le lisent.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-nats
+spec:
+  selector:
+    matchLabels:
+      app: nats
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/pme/sa/pme-api
+              - cluster.local/ns/pme/sa/pme-moderation
+      to:
+        - operation:
+            ports: ["4222"]
+---
+# Keycloak : l'ingress (page de connexion, console), l'API et la moderation (cles de verification des jetons), et le Job
+# keycloak-admin (creation de l'administrateur permanent).
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-keycloak
+spec:
+  selector:
+    matchLabels:
+      app: keycloak
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/traefik/sa/traefik
+              - cluster.local/ns/pme/sa/pme-api
+              - cluster.local/ns/pme/sa/pme-moderation
+              - cluster.local/ns/pme/sa/keycloak-admin
+      to:
+        - operation:
+            ports: ["8080"]
+---
+# API : l'ingress, et Prometheus qui lit ses metriques.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-pme-api
+spec:
+  selector:
+    matchLabels:
+      app: pme-api
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/traefik/sa/traefik
+              - cluster.local/ns/pme/sa/prometheus
+      to:
+        - operation:
+            ports: ["3000"]
+---
+# Moderation : l'ingress, et Prometheus qui lit ses metriques.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-pme-moderation
+spec:
+  selector:
+    matchLabels:
+      app: pme-moderation
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/traefik/sa/traefik
+              - cluster.local/ns/pme/sa/prometheus
+      to:
+        - operation:
+            ports: ["3001"]
+---
+# Interface : l'ingress seulement.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-pme-frontend
+spec:
+  selector:
+    matchLabels:
+      app: pme-frontend
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/traefik/sa/traefik
+      to:
+        - operation:
+            ports: ["8080"]
+---
+# Adminer : l'ingress seulement.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-adminer
+spec:
+  selector:
+    matchLabels:
+      app: adminer
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/traefik/sa/traefik
+      to:
+        - operation:
+            ports: ["8080"]
+---
+# Grafana : l'ingress seulement.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-grafana
+spec:
+  selector:
+    matchLabels:
+      app: grafana
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/traefik/sa/traefik
+      to:
+        - operation:
+            ports: ["3000"]
+---
+# Prometheus : l'ingress (interface) et Grafana (source de donnees).
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: prometheus
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/traefik/sa/traefik
+              - cluster.local/ns/pme/sa/grafana
+      to:
+        - operation:
+            ports: ["9090"]
+---
+# Loki : Grafana (lecture) et Alloy (envoi des logs). Aucune interface exposee.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-loki
+spec:
+  selector:
+    matchLabels:
+      app: loki
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/pme/sa/grafana
+              - cluster.local/ns/pme/sa/alloy
+      to:
+        - operation:
+            ports: ["3100"]
+---
+# Alloy : l'ingress seulement (son interface).
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-alloy
+spec:
+  selector:
+    matchLabels:
+      app: alloy
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/traefik/sa/traefik
+      to:
+        - operation:
+            ports: ["12345"]

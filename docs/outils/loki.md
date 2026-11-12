@@ -76,7 +76,7 @@ les lignes écrites à cet instant précis indiquent que la base ne répondait p
 - Il conserve les journaux de tous les composants de la plateforme pendant 24 heures.
 - Il permet de suivre un incident à travers plusieurs services, sans ouvrir chaque exemplaire un par un.
 - Il alimente le tableau de bord « Logs » de Grafana, qui filtre par service et par mot recherché.
-- Il reçoit ses lignes d'[Alloy](alloy.md), seul composant à lire les journaux des pods.
+- Il reçoit ses lignes d'[Alloy](alloy.md), seul composant à lire les journaux des pods. Seuls Alloy (écriture) et Grafana (lecture) peuvent l'appeler.
 - Sans lui, les journaux restent lisibles avec `make logs-api`, mais pour un seul service à la fois, et ils
   disparaissent dès qu'un pod est remplacé.
 

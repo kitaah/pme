@@ -4,9 +4,10 @@
 
 | Information | Détail |
 |---|---|
-| **Rôle** | Chiffre les échanges entre les pods du cluster et donne une identité à chacun |
+| **Rôle** | Chiffre les échanges entre les pods du cluster, donne une identité à chacun et décide qui peut joindre quoi |
 | **Version** | Istio 1.30.0, en mode ambient |
 | **Installation** | Quatre charts Helm, lancés par `make istio` |
+| **Autorisations** | Refus par défaut, puis une politique par composant (`k8s/17-authorization-policies.yaml`) |
 | **Prérequis** | Limite `inotify` de l'ordinateur d'au moins 1024 instances, relevée par `make inotify` |
 | **Adresse en local** | Aucune interface : il travaille à l'intérieur du cluster |
 
@@ -64,12 +65,17 @@ Le projet enrôle le namespace `pme` avec le label `istio.io/dataplane-mode: amb
 même label, sans quoi l'ingress ne pourrait plus joindre les services. Le mode **strict** (`PeerAuthentication`) refuse
 ensuite toute connexion qui n'arrive pas en mTLS. Un pod extérieur au maillage ne peut plus appeler les services.
 
-**Une identité par compte de service, donc ici une seule.**
-L'identité d'un pod dépend de son compte de service Kubernetes. Les pods du projet utilisent tous le compte `default` :
-ils partagent donc la même identité, `spiffe://cluster.local/ns/pme/sa/default`. Le chiffrement n'en souffre pas, mais
-le maillage ne distingue pas encore l'API de Prometheus ou d'Adminer. Pour écrire des règles du type « seule l'API peut
-joindre PostgreSQL », il faudrait créer un compte de service par composant, puis ajouter des politiques
-d'autorisation.
+**Une identité par compte de service.**
+L'identité d'un pod dépend de son compte de service Kubernetes. Chaque composant du projet a le sien (`pme-api`,
+`postgres`, `prometheus`...), donc sa propre identité, par exemple `spiffe://cluster.local/ns/pme/sa/pme-api`. Le
+maillage distingue ainsi l'API de Prometheus ou d'Adminer. Ces comptes n'ont aucun droit sur l'API de Kubernetes.
+
+**Une politique d'autorisation par composant.**
+Une **politique d'autorisation** (`AuthorizationPolicy`) est une règle qui nomme les identités autorisées à appeler un
+composant, sur un port donné. Le projet applique le **refus par défaut** : une première politique n'autorise rien, puis
+une politique par composant autorise uniquement ses appelants prévus. Exemple : seuls l'API, le service de modération,
+Keycloak, Grafana et Adminer peuvent joindre PostgreSQL. ztunnel applique ces règles à chaque connexion. Une source
+non autorisée voit sa connexion coupée, même si elle connaît le mot de passe de la base.
 
 **Ce que le maillage ne change pas.**
 Les connexions vers PostgreSQL et NATS étaient déjà chiffrées en TLS par les applications. Elles le restent, et le
@@ -85,7 +91,9 @@ de cert-manager : istiod les émet et les renouvelle seul, avec une durée de vi
 | **istiod** | Plan de contrôle d'Istio. Il émet les certificats d'identité et distribue la configuration. |
 | **Maillage de services** | Couche qui chiffre et contrôle les échanges entre les applications d'un cluster. |
 | **mTLS** | TLS mutuel : le client et le serveur présentent chacun un certificat. |
-| **SPIFFE** | Standard d'identité des programmes. L'identité d'un pod prend la forme `spiffe://cluster.local/ns/pme/sa/default`. |
+| **SPIFFE** | Standard d'identité des programmes. L'identité d'un pod prend la forme `spiffe://cluster.local/ns/pme/sa/pme-api`. |
+| **Politique d'autorisation** | Règle qui liste les identités autorisées à appeler un composant. Tout appel hors de la liste est refusé. |
+| **Compte de service** | Identité Kubernetes d'un pod. Le maillage s'en sert pour fabriquer l'identité du pod. |
 | **ztunnel** | Proxy installé sur chaque nœud, qui chiffre en mTLS les échanges des pods du maillage. |
 
 ## Rôle dans le projet
@@ -95,8 +103,13 @@ et ceux de l'ingress vers ces pods. Les journaux de ztunnel montrent par exemple
 de Prometheus vers l'API, chacune avec l'identité de sa source et de sa destination. Le mode strict refuse les
 connexions de tout pod extérieur au maillage.
 
-Sans lui, ces échanges repassent en HTTP simple. L'application continue de fonctionner, mais la limite « trafic
-interne du site en HTTP » du [chiffrement](../securite/chiffrement.md) réapparaît.
+Il filtre aussi qui peut appeler quoi. Chaque composant a sa propre identité, et une politique d'autorisation par
+composant nomme ses seuls appelants : l'ingress pour les interfaces web, l'API et la modération pour NATS, cinq
+composants pour PostgreSQL. Un pod du namespace qui n'est pas cité est coupé, même s'il connaît un mot de passe.
+
+Sans lui, ces échanges repassent en HTTP simple et n'importe quel pod du namespace peut joindre n'importe quel autre.
+L'application continue de fonctionner, mais la limite « trafic interne du site en HTTP » du
+[chiffrement](../securite/chiffrement.md) réapparaît.
 
 ## Fichiers et dossiers principaux
 
@@ -104,8 +117,10 @@ interne du site en HTTP » du [chiffrement](../securite/chiffrement.md) réappar
 |---|---|
 | **`k8s/istio/`** | Réglages des charts Helm : plan de contrôle, agent réseau et ztunnel, avec des ressources réduites pour Minikube. Contient aussi le namespace `istio-system` et le profil seccomp de l'agent réseau. |
 | **`k8s/namespace.yaml`** | Porte le label qui enrôle le namespace `pme` dans le maillage. |
+| **`k8s/15-service-accounts.yaml`** | Déclare un compte de service par composant, donc une identité par composant. |
 | **`k8s/16-mesh-mtls.yaml`** | Impose le mode strict : toute connexion hors mTLS est refusée. |
-| **`Makefile`**<br>(cibles **`inotify`**, **`istio`**,<br>**`istio-scan`** et **`mesh-check`**) | Relève la limite `inotify`, installe le maillage et enrôle Traefik, analyse ses images, puis vérifie le chiffrement. |
+| **`k8s/17-authorization-policies.yaml`** | Refuse tout par défaut, puis autorise chaque composant à n'être appelé que par ses clients prévus. |
+| **`Makefile`**<br>(cibles **`inotify`**, **`istio`**,<br>**`istio-scan`**, **`mesh-check`** et **`authz-check`**) | Relève la limite `inotify`, installe le maillage et enrôle Traefik, analyse ses images, puis vérifie le chiffrement et les autorisations. |
 
 ## Commandes essentielles
 
@@ -117,18 +132,25 @@ interne du site en HTTP » du [chiffrement](../securite/chiffrement.md) réappar
 | **`make istio`** | Installe Istio en mode ambient et enrôle le namespace de Traefik. |
 | **`make istio-scan`** | Analyse les trois images d'Istio avec Trivy : affiche les failles HIGH, échoue sur une faille CRITICAL corrigeable. |
 | **`make mesh-check`** | Vérifie qu'un pod hors du maillage est refusé et montre des échanges portant des identités. |
+| **`make authz-check`** | Vérifie les autorisations : trois pods temporaires, qui n'ont de différent que leur identité, tentent des appels autorisés ou refusés. |
 | **`kubectl -n istio-system get pods`** | Affiche le plan de contrôle, l'agent réseau et ztunnel. |
 | **`kubectl -n istio-system logs ds/ztunnel`**<br>**`--tail=500 \| grep src.identity`** | Affiche les connexions vues par ztunnel, avec l'identité de la source et de la destination. |
 
 1. `make minikube-up` crée le cluster et installe Istio après Traefik.
 2. `kubectl -n istio-system get pods` : attendre que `ztunnel` soit en `1/1 Running`.
 3. `make deploy` déploie la plateforme. Le mode strict suppose Istio installé : la commande échoue sinon.
-4. `make mesh-check` confirme que le pod extérieur est refusé. Utiliser ensuite la plateforme (connexion, création
-   d'une annonce), puis chercher les identités dans les journaux de ztunnel.
+4. `make mesh-check` confirme que le pod extérieur est refusé. `make authz-check` confirme que chaque identité n'atteint
+   que ce qui lui est autorisé. Utiliser ensuite la plateforme (connexion, création d'une annonce), puis chercher les
+   identités dans les journaux de ztunnel.
 
 Une connexion chiffrée par le maillage se reconnaît dans ces journaux à l'adresse de destination, qui utilise le port
-**15008** (le tunnel entre nœuds), et à des identités de la forme `spiffe://cluster.local/ns/pme/sa/default`. La dernière
+**15008** (le tunnel entre nœuds), et à des identités de la forme `spiffe://cluster.local/ns/pme/sa/pme-api`. La dernière
 ligne affichée par `make mesh-check` ne suffit pas : elle peut ne montrer que l'identité de ztunnel lui-même.
+
+!!! note "À savoir"
+    Un nouveau composant doit être déclaré dans `k8s/15-service-accounts.yaml` et dans
+    `k8s/17-authorization-policies.yaml`. Sans cela, le refus par défaut le rend injoignable. Les connexions refusées se
+    lisent dans les journaux de ztunnel : `kubectl -n istio-system logs ds/ztunnel --tail=300 | grep "policy rejection"`.
 
 !!! note "À savoir"
     Sur un cluster existant, `make istio` suffit, sans le recréer. La commande doit passer avant `make deploy`,
@@ -141,12 +163,19 @@ ligne affichée par `make mesh-check` ne suffit pas : elle peut ne montrer que l
     `/etc/sysctl.d/99-inotify.conf`. Le réglage concerne Linux ; sous un autre système, il faut ajuster la limite
     équivalente à la main.
 
+!!! note "À savoir"
+    Les politiques d'autorisation sont appliquées par ztunnel, au niveau de la connexion : source, destination et port.
+    Elles ne regardent ni la méthode HTTP ni le chemin de la requête, ce qui demanderait un proxy supplémentaire
+    (*waypoint*). L'ingress est identifié par le compte de service `traefik` du namespace `traefik`. Il est cité dans
+    les politiques de chaque interface web.
+
 !!! warning "Attention"
     **Ne déployer qu'une fois ztunnel prêt.** `make deploy` enrôle `pme` et applique le mode strict. Si ztunnel n'est pas prêt, les pods de `pme` perdent leur
     réseau (le journal d'istio-cni indique `no ztunnel connection`) et l'application cesse de répondre. Pour revenir en
     arrière : `kubectl -n pme delete peerauthentication default`, puis
     `kubectl label namespace pme istio.io/dataplane-mode-`. Corriger ensuite la cause (voir la limite `inotify`
-    ci-dessus), et relancer `make deploy`.
+    ci-dessus), et relancer `make deploy`. Si seules les autorisations bloquent un échange légitime, les retirer
+    suffit : `kubectl -n pme delete authorizationpolicy --all`. Elles se recréent avec `make deploy`.
 
 !!! warning "Attention"
     Istio ajoute trois composants, d'un poids modeste (istiod occupe environ 45 Mo). Si le cluster manque de place, augmenter `MINIKUBE_MEMORY`

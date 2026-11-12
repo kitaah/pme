@@ -59,7 +59,7 @@ ordinateur: Ordinateur {
       label.near: bottom-left
       class: boite
       ingress: "Ingress\nports 80 et 443" {class: boite}
-      istio: "Maillage Istio\nchiffre les échanges" {class: boite}
+      istio: "Maillage Istio\nchiffre et filtre les échanges" {class: boite}
       pme: "Namespace pme" {
         label.near: bottom-left
         class: boite
@@ -164,7 +164,7 @@ plusieurs étapes et exécution sans droits `root`. Ce contrôle se lance sur l'
     - **Autoscaling** : l'interface, l'API et le service de modération passent automatiquement de 2 à 4 réplicas lorsque l'usage moyen du processeur dépasse 70 %. Lors d'une maintenance, au moins un réplica de chaque reste disponible.
     - **Contrôle de santé** : chaque composant déclare ses limites de mémoire et de processeur, ainsi que des sondes de santé qui indiquent à Kubernetes quand le relancer ou lui envoyer du trafic.
     - **Sécurité** : les trois applications s'exécutent sans droits `root`, avec un système de fichiers en lecture seule et sans aucune capacité Linux supplémentaire. Le namespace applique la règle `baseline` et vérifie en plus la règle plus stricte `restricted` en mode audit : elle signale les écarts sans les bloquer.
-    - **Chiffrement** : les connexions à PostgreSQL et à NATS sont chiffrées par des certificats que [cert-manager](cert-manager.md) émet pour le cluster. Le maillage [Istio](istio.md) chiffre en plus tous les échanges entre pods.
+    - **Chiffrement** : les connexions à PostgreSQL et à NATS sont chiffrées par des certificats que [cert-manager](cert-manager.md) émet pour le cluster. Le maillage [Istio](istio.md) chiffre en plus tous les échanges entre pods et n'autorise chaque composant qu'à être appelé par ses clients prévus.
     - **Données** : PostgreSQL, NATS (les messages en attente de modération), Prometheus (les mesures) et Loki (les logs) stockent leurs données chacun sur un volume persistant de 1 Go. Elles survivent au redémarrage du pod, mais disparaissent avec le namespace (`make undeploy`) ou avec le cluster (`minikube delete`).
 - Il exécute des images construites localement : `make image` les fabrique dans le cluster avec l'étiquette `:dev`, sans passer par un registre. Les manifestes demandent à Kubernetes d'utiliser l'image déjà présente (`imagePullPolicy: IfNotPresent`).
 - Le passage à un cluster de production n'exige donc pas de réécrire les manifestes : il suffit de les adapter, notamment l'émetteur des certificats et l'origine des images.
@@ -179,7 +179,7 @@ Le cluster exécute les composants suivants. Tous sont dans le namespace `pme`, 
 | **Authentification** | [Keycloak](keycloak.md) | Gère les comptes, la connexion et les rôles. |
 | **Observabilité** | [Prometheus](prometheus.md), [Loki](loki.md), [Alloy](alloy.md), [Grafana](grafana.md) | Collectent, conservent et affichent les mesures et les journaux. |
 | **Administration** | [Adminer](adminer.md) | Permet de consulter les bases depuis un navigateur. |
-| **Maillage** | [Istio](istio.md) | Chiffre en mTLS les échanges entre pods, sans modifier les applications. |
+| **Maillage** | [Istio](istio.md) | Chiffre en mTLS les échanges entre pods et filtre qui peut joindre quoi, sans modifier les applications. |
 
 Le cluster est créé avec les paramètres suivants :
 
@@ -205,7 +205,9 @@ Le cluster est créé avec les paramètres suivants :
 | **`k8s/kustomization.yaml`** | Liste les manifestes déployés ensemble et génère les ConfigMaps à partir de `k8s/config/`. |
 | **`k8s/namespace.yaml`** | Crée le namespace `pme`, lui applique la règle de sécurité `baseline` et l'enrôle dans le maillage Istio. |
 | **`k8s/istio/`** | Contient les réglages des charts Helm d'Istio (voir [Istio](istio.md)). |
+| **`k8s/15-service-accounts.yaml`** | Déclare un compte de service par composant : chacun a ainsi sa propre identité dans le maillage. |
 | **`k8s/16-mesh-mtls.yaml`** | Impose le mode strict du maillage : toute connexion hors mTLS est refusée. |
+| **`k8s/17-authorization-policies.yaml`** | Refuse tout appel entre pods par défaut, puis autorise chaque composant à n'être appelé que par ses clients prévus. |
 | **`k8s/config/`** | Contient les fichiers de configuration fournis aux composants : PostgreSQL, NATS, Grafana, Alloy et interface. |
 | **`k8s/14-pme-secrets-sealed.yaml`** | Contient les mots de passe chiffrés, sous une forme qui peut être versionnée dans Git sans risque (voir [Sealed Secrets](sealed-secrets.md)). |
 | **`k8s/11-autoscaling.yaml`** | Définit, pour l'interface, l'API et la modération, l'autoscaling et le nombre minimal de réplicas disponibles. |
@@ -226,6 +228,7 @@ Le cluster est créé avec les paramètres suivants :
 | **`make inotify`** | Relève la limite `inotify` de l'ordinateur si elle est trop basse (mot de passe `sudo` demandé). Elle est nécessaire à Istio. |
 | **`make istio`** | Installe ou met à jour le maillage Istio sur un cluster existant, sans le recréer. |
 | **`make mesh-check`** | Vérifie le chiffrement entre pods (voir [Istio](istio.md)). |
+| **`make authz-check`** | Vérifie les autorisations entre pods : un appel prévu aboutit, un appel non prévu est coupé (voir [Istio](istio.md)). |
 | **`make image`** | Construit les trois images (API, modération, interface) puis les rend disponibles dans le cluster. |
 | **`make lint-docker`** | Lance Hadolint sur les quatre Dockerfile du projet. La commande échoue dès qu'une règle de gravité `warning` ou `error` est enfreinte. |
 | **`make deploy`** | Applique les manifestes et déploie toute la plateforme. |
