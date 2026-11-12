@@ -111,7 +111,7 @@ de gravité `info` et `style` s'affichent, mais ne bloquent pas. Voici quelques 
 
 | Règle | Ce qu'elle vérifie | Pourquoi c'est important |
 |---|---|---|
-| **`DL3006`** | L'image de base porte une version explicite (`node:24-alpine`, et non `node`). | Sans version, la même construction peut donner un résultat différent d'un jour à l'autre. |
+| **`DL3006`** | L'image de base porte une version explicite (`node:24-alpine`, et non `node`), ici complétée par son empreinte `@sha256`. | Sans version, la même construction peut donner un résultat différent d'un jour à l'autre. |
 | **`DL3002`** | Le dernier utilisateur du Dockerfile n'est pas `root`. | Un conteneur qui s'exécute en `root` donne à un attaquant des droits étendus s'il en prend le contrôle. |
 | **`DL3020`** | Les fichiers sont copiés avec `COPY` plutôt qu'avec `ADD`. | `ADD` a des effets cachés (téléchargement, décompression) qui surprennent. |
 | **`DL3025`** | `CMD` est écrit sous forme de liste JSON : `["node", "main.js"]`. | Sans cette forme, le programme passe par un shell et ne reçoit pas toujours le signal d'arrêt de Kubernetes. |

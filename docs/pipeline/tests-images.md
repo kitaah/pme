@@ -68,8 +68,8 @@ Détail des 6 contrôles de l'image de l'interface :
 - Sur la branche principale, à chaque pipeline, sans lancement manuel.
 
 Ainsi, chaque commit sur la branche principale produit trois images contrôlées et étiquetées avec le même SHA : le registre
-ne garde jamais des images plus anciennes que le code. Ce job est le plus long de la pipeline : environ 1 à 2 minutes avec le
-cache de construction rempli, et près de 6 minutes lorsqu'il est vide (voir ci-dessous). Sa limite est fixée à 6 minutes.
+ne garde jamais des images plus anciennes que le code. Ce job est le plus long de la pipeline : environ 2 à 3 minutes avec le
+cache de construction rempli, et plus de 6 minutes lorsqu'il est vide (voir ci-dessous). Sa limite est fixée à 6 minutes.
 
 ## Construction et cache
 
@@ -80,11 +80,12 @@ Les trois images sont construites en parallèle par `docker buildx bake`, avec u
 |---|---|
 | **`docker-bake.hcl`** | Déclare les trois images et, pour chacune, l'emplacement du cache (`cache/api`, `cache/moderation`, `cache/frontend`). |
 | **Dépôts `cache/`** | Conservent les couches déjà construites. Ils ne sont pas des images à déployer : ne pas les supprimer. |
+| **Images de base épinglées** | Les Dockerfile désignent `node` et `nginx` par leur empreinte (`@sha256:…`). Sans cela, une mise à jour de l'image sur Docker Hub invaliderait tout le cache. |
 | **Étape `prod-deps`** | Dans les Dockerfile de l'API et de la modération, installe uniquement les dépendances de production. Elle ne change que si `package-lock.json` change. |
 
 Une couche n'est reconstruite que si les fichiers qu'elle utilise changent. Tant que `package-lock.json` est identique,
 `npm ci` n'est donc pas refait : c'est ce qui fait passer la construction de plusieurs minutes à quelques secondes. Le
-premier passage, ou le premier après un changement de dépendances, remplit le cache et reste plus lent. Le cache est
+premier passage, ou le premier après un changement de dépendances ou d'empreinte d'image de base, remplit le cache : il dépasse alors la limite de 6 minutes et se relance avec `Retry` sur ce seul job. Le cache est
 facultatif : s'il est indisponible, la construction se fait quand même, sans lui.
 
 ## Publication

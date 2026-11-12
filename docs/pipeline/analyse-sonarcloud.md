@@ -25,6 +25,12 @@ L'analyse lit le code des quatre modules et les rapports de couverture des tests
 | **Maintenabilité** | Mauvaises pratiques, complexité, code dupliqué. |
 | **Couverture** | Part du code exécutée par les tests unitaires, pour les quatre modules. |
 
+**Complément : le lint du code**
+
+Sonar mesure la complexité et les mauvaises pratiques sur l'ensemble du code, mais son verdict est global. Le job
+[`lint:code`](lint-code.md) s'y ajoute avec des seuils écrits dans le dépôt : une fonction dont la complexité
+cyclomatique dépasse 10, ou la complexité cognitive 15, fait échouer le job, avec la ligne en cause.
+
 **Périmètre**
 
 - Les sources analysées sont `libs/common/src`, `api/src`, `moderation-service/src` et `frontend/src`.

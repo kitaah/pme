@@ -42,6 +42,7 @@ Ce choix a un coût : chaque pipeline consomme le temps de tous les jobs. Il est
 | **Miroir d'images** | PostgreSQL et NATS sont téléchargés depuis le miroir de Google. |
 | **Construction parallèle** | Les trois images sont construites en même temps avec BuildKit. |
 | **Cache de construction** | Les couches des images (notamment `npm ci`) sont conservées dans le registre GitLab, dans les dépôts `cache/`. Une couche n'est reconstruite que si ses fichiers changent. |
+| **Images de base épinglées** | Les Dockerfile désignent `node` et `nginx` par leur empreinte (`@sha256:…`) et non par leur seule étiquette. Une mise à jour de l'image sur Docker Hub ne vide donc pas le cache de construction. |
 | **Dépendances de production à part** | Dans les Dockerfile de l'API et de la modération, les dépendances de production sont installées dans une étape dédiée, mise en cache tant que `package-lock.json` ne change pas. |
 | **Outils installés en parallèle** | container-structure-test et Trivy sont téléchargés en même temps, et la base de Trivy pendant la construction des images. |
 | **Cache de construction** | Les couches des images, dont l'installation des dépendances, sont conservées dans le registre GitLab. Une modification du code ne les refait pas. |
@@ -63,9 +64,14 @@ grouper les modifications en peu de commits plutôt que d'en pousser de nombreux
 chacun un `npm ci` : ils ajoutent quelques minutes de calcul par pipeline, sans allonger sa durée.
 
 !!! warning "Attention"
-    Le job `image-tests` est le plus long. Au premier passage, ou quand `package-lock.json` change, le cache de construction
-    est vide ou périmé et le job approche sa limite de 6 minutes. Avant une démonstration, lancer deux pipelines de suite :
-    le premier remplit le cache, le second donne la durée réelle.
+    Le job `image-tests` est le plus long. Cache de construction vide ou périmé (premier passage, `package-lock.json`
+    modifié, empreinte d'image de base changée), il dépasse sa limite de 6 minutes. Cache rempli, il dure 2 à 3 minutes.
+    Si le job échoue sur le délai, relancer **ce seul job** (`Retry`) : le cache est alors rempli. Avant une démonstration,
+    vérifier qu'un pipeline complet est passé en moins de 6 minutes.
+
+    Pour mettre à jour une image de base : `docker buildx imagetools inspect node:24-alpine` (ligne `Digest`), puis
+    remplacer l'empreinte dans les Dockerfile de l'API, de la modération et de l'interface. Le premier pipeline suivant
+    reconstruit tout (cache vide), le second est rapide.
 
 ## Lire un résultat
 
