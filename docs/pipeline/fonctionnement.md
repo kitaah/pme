@@ -34,6 +34,7 @@ Ce choix a un coût : chaque pipeline consomme le temps de tous les jobs. Il est
 |---|---|
 | **Jobs indépendants** | Les jobs démarrent ensemble. La durée est celle du job le plus long. |
 | **Cache des paquets npm** | Un cache partagé par le module commun, l'API et la modération (un seul `npm ci` à la racine), un autre pour l'interface. Ils sont renouvelés quand `package-lock.json` change. |
+| **Lint en parallèle** | Le lint du code tourne en 4 jobs (un par module) et le lint YAML en 1 job, tous indépendants. Les 4 jobs du lint du code partagent un cache npm. |
 | **Clonage minimal** | Seul le dernier commit est récupéré. Sonar récupère tout l'historique. |
 | **Artefacts légers** | Seul le fichier de couverture utile est conservé, pas le rapport HTML. |
 | **Compression rapide** | Les archives de cache et d'artefacts se compressent vite plutôt que petit. |
@@ -58,7 +59,8 @@ Ce choix a un coût : chaque pipeline consomme le temps de tous les jobs. Il est
 
 La durée d'une pipeline est celle de son job le plus long. Le quota, lui, compte la **somme** des durées de tous les
 jobs, car chaque job est facturé pour son temps d'exécution. Comme tous les jobs tournent à chaque pipeline, il vaut mieux
-grouper les modifications en peu de commits plutôt que d'en pousser de nombreux petits.
+grouper les modifications en peu de commits plutôt que d'en pousser de nombreux petits. Les 4 jobs `lint:code` font
+chacun un `npm ci` : ils ajoutent quelques minutes de calcul par pipeline, sans allonger sa durée.
 
 !!! warning "Attention"
     Le job `image-tests` est le plus long. Au premier passage, ou quand `package-lock.json` change, le cache de construction
@@ -89,6 +91,8 @@ grouper les modifications en peu de commits plutôt que d'en pousser de nombreux
 | **`sonar` refuse la branche** | L'offre gratuite n'analyse que la branche principale. |
 | **`image-tests` vert, mais rien dans le registre** | Le journal s'arrête après les tests de structure : un bloc du script se terminait par `exit`, ce qui arrête tout le script avec succès. Ne jamais utiliser `exit` dans le script d'un job, mais `test "$status" -eq 0`. |
 | **`image-tests` échoue sur Trivy** | Une faille grave est corrigeable : mettre à jour la dépendance, sinon l'excuser dans `.trivyignore`. |
+| **`lint:code` échoue sur une complexité** | Une fonction dépasse 10 (cyclomatique) ou 15 (cognitive) : la découper. Voir [Lint du code](lint-code.md). |
+| **`lint:yaml` échoue sur `new-line-at-end-of-file`** | Un fichier YAML ne se termine pas par un retour à la ligne : en ajouter un. Voir [Lint YAML](lint-yaml.md). |
 | **`integration-tests` dépasse le délai** | Le téléchargement des images est lent : relancer le job. |
 | **`performance-tests` sort avec le code 99** | Un seuil k6 est dépassé : lire le résumé et `api.log`. |
 | **Un test passe en local mais échoue en pipeline** | Vérifier la version de Node (24) et que `npm ci` reproduit les dépendances. |

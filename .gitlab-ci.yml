@@ -1,5 +1,7 @@
-# Chaine CI/CD (GitLab CI) - tests unitaires (api, moderation-service, libs/common, frontend), analyse SonarCloud, controle des Dockerfile (Hadolint), tests d'integration, analyse des dependances, tests des images Docker (puis leur publication), tests de performance.
-# Les autres etapes (qualite statique) seront ajoutees une a une.
+# Chaine CI/CD (GitLab CI) - tests unitaires (api, moderation-service, libs/common, frontend), analyse SonarCloud,
+# lint du code (ESLint, complexite cyclomatique et cognitive, typage tsc, formatage Prettier), lint YAML (yamllint),
+# controle des Dockerfile (Hadolint), tests d'integration, analyse des dependances, tests des images Docker
+# (puis leur publication), tests de performance.
 # Tous les jobs sont independants (needs: []) : la duree du pipeline est celle du job le plus long.
 # Quota GitLab gratuit : 400 minutes de pipeline par mois. Tous les jobs tournent a chaque pipeline (demonstration complete).
 # Objectif : pipeline sous 5 minutes. GitLab ne plafonne pas un pipeline entier : chaque job est donc limite a 5 minutes
@@ -121,6 +123,44 @@ sonar:
       done
   script: [sonar-scanner]
   # Bloquant : la porte qualite de SonarCloud (« Sonar way ») doit etre reussie, sinon la pipeline echoue.
+
+# ---------- Lint du code : ESLint (dont complexite cyclomatique <= 10 et cognitive <= 15), typage strict (tsc), formatage (Prettier) ----------
+# Memes controles que `make lint` et `make format-check`. Un job par module, en parallele (matrice).
+# Regles dans <module>/eslint.config.mjs : complexity max 10 (McCabe), sonarjs/cognitive-complexity max 15.
+lint:code:
+  stage: quality
+  needs: []
+  parallel:
+    matrix:
+      - MODULE: [libs/common, api, moderation-service, frontend]
+  cache:
+    key: lint-npm
+    paths: [.npm]
+  before_script:
+    - |
+      if [ "$MODULE" = "frontend" ]; then
+        (cd frontend && npm ci --prefer-offline)
+      else
+        npm ci --prefer-offline --workspace="$MODULE" --workspace=libs/common
+      fi
+    - cd "$MODULE"
+  script:
+    - npm run lint # ESLint + complexite + tsc --noEmit
+    - npm run format:check # Prettier
+
+# ---------- Lint YAML : manifestes Kubernetes, tests d'image, pipeline (la documentation MkDocs n'est pas analysee) ----------
+# Regles dans .yamllint.yml, partage avec `make lint-yaml`. Version epinglee.
+lint:yaml:
+  stage: quality
+  needs: []
+  image: python:3.13-alpine
+  variables:
+    YAMLLINT_VERSION: 1.38.0
+  before_script:
+    - pip install --no-cache-dir "yamllint==${YAMLLINT_VERSION}"
+  script:
+    - yamllint --version
+    - yamllint -c .yamllint.yml k8s tests .gitlab-ci.yml .yamllint.yml
 
 # ---------- Controle des Dockerfile : Hadolint (linter, sans Docker ni construction d'image) ----------
 # Regles et seuil d'echec (warning) definis dans .hadolint.yaml, partage avec `make lint-docker`.

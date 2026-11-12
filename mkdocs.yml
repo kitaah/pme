@@ -65,6 +65,8 @@ nav:
       - Contrôles:
           - Tests unitaires: pipeline/tests-unitaires.md
           - Tests d'intégration: pipeline/tests-integration.md
+          - Lint du code: pipeline/lint-code.md
+          - Lint YAML: pipeline/lint-yaml.md
           - Contrôle des Dockerfile: pipeline/controle-dockerfile.md
           - Analyse des dépendances: pipeline/analyse-dependances.md
           - Tests des images Docker: pipeline/tests-images.md

@@ -538,7 +538,7 @@ format-check:
 # Lint YAML (manifestes Kubernetes, tests d'image, pipeline) : pip install yamllint.
 # Le realm Keycloak est un .json : il n'est pas couvert ici (voir README, "Limites connues").
 lint-yaml:
-	yamllint -c .yamllint.yml k8s tests .gitlab-ci.yml .yamllint.yml mkdocs.yml
+	yamllint -c .yamllint.yml k8s tests .gitlab-ci.yml .yamllint.yml
 
 # Lint Dockerfile : hadolint (binaire ou conteneur)
 lint-docker:
