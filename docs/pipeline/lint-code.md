@@ -23,7 +23,7 @@ code TypeScript. Le contrôle porte sur les quatre modules du projet : `libs/com
 | **ESLint** | Règles TypeScript, règles de qualité de Sonar, variables inutilisées. | Toute erreur fait échouer le job. |
 | **Complexité cyclomatique** | Nombre de chemins d'exécution par fonction. | **10 au maximum** (`complexity`). |
 | **Complexité cognitive** | Lisibilité de chaque fonction. | **15 au maximum** (`sonarjs/cognitive-complexity`). |
-| **Taille des fonctions et paramètres** | Fonctions de plus de 60 lignes, plus de 5 paramètres. | Avertissement seulement, il ne bloque pas. |
+| **Taille des fonctions et paramètres** | Plus de 5 paramètres (tous les modules) ; fonctions de plus de 60 lignes (API, modération et module commun, pas l'interface). | Avertissement seulement, il ne bloque pas. |
 | **Typage (`tsc --noEmit`)** | Cohérence des types, en mode `strict`. | Toute erreur de type fait échouer le job. |
 | **Prettier (`format:check`)** | Mise en forme identique dans tout le code. | Tout fichier mal formaté fait échouer le job. |
 
