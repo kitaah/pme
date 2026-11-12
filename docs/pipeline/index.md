@@ -9,7 +9,7 @@
 | **Configuration** | Le fichier `.gitlab-ci.yml`, à la racine du dépôt |
 | **Déclencheur** | Chaque commit ou fusion sur la branche principale (`main`) |
 | **Durée visée** | Moins de 5 minutes par pipeline (environ 2 à 3 minutes une fois le cache de construction rempli) |
-| **Nombre de jobs** | 11 jobs, répartis en 8 familles de contrôles |
+| **Nombre de jobs** | 16 jobs, répartis en 10 familles de contrôles |
 
 ## Description
 
@@ -24,9 +24,10 @@ Une régression passe alors inaperçue jusqu'à ce qu'un membre la rencontre. La
 procédure : les mêmes contrôles, dans les mêmes conditions, à chaque modification.
 
 **Ce qu'elle vérifie.**
-Sept choses : le code se comporte comme prévu, les services fonctionnent ensemble, les Dockerfile respectent les bonnes
-pratiques, les dépendances sont sûres, les images Docker du projet sont sûres, celles d'Istio aussi, et l'API reste
-rapide. Une huitième analyse note la qualité générale du code. Une fois les images contrôlées, elles sont publiées dans le registre de GitLab.
+Neuf choses : le code est bien écrit et sa complexité reste sous les seuils, les fichiers YAML sont valides, le code se
+comporte comme prévu, les services fonctionnent ensemble, les Dockerfile respectent les bonnes pratiques, les
+dépendances sont sûres, les images Docker du projet sont sûres, celles d'Istio aussi, et l'API reste rapide. Une
+dixième analyse note la qualité générale du code. Une fois les images contrôlées, elles sont publiées dans le registre de GitLab.
 
 **Pourquoi publier les images.**
 Cette publication apporte quatre bénéfices. Chaque image est liée à un commit précis, donc traçable. L'image déployée est
@@ -79,6 +80,8 @@ commit: "Commit\nsur main" {class: boite}
 jobs: "Jobs lancés ensemble" {
   grid-columns: 2
   unitaires: "Tests unitaires\n4 jobs" {class: boite}
+  lintcode: "Lint du code\n4 jobs" {class: boite}
+  lintyaml: "Lint YAML" {class: boite}
   hadolint: "Contrôle des\nDockerfile" {class: boite}
   dependances: "Analyse des\ndépendances" {class: boite}
   istio: "Analyse des\nimages d'Istio" {class: boite}
@@ -104,6 +107,8 @@ Tous ces jobs tournent à **chaque** pipeline, quels que soient les fichiers mod
 | **`unit-tests:moderation-service`** | Les 37 tests unitaires du service de modération. |
 | **`unit-tests:frontend`** | Les 62 tests unitaires de l'interface. |
 | **`sonar`** | La qualité du code, la couverture et les doublons. |
+| **`lint:code`** | 4 jobs, un par module : ESLint (complexité cyclomatique de 10 au plus, cognitive de 15 au plus), typage `tsc` et mise en forme Prettier. |
+| **`lint:yaml`** | Les fichiers YAML : manifestes Kubernetes, tests d'images et pipeline. |
 | **`hadolint`** | Les bonnes pratiques des 4 Dockerfile du projet. |
 | **`integration-tests`** | Les 27 tests avec une vraie base et un vrai broker. |
 | **`dependency-scan`** | Les failles connues dans les dépendances, devDependencies comprises. |
@@ -132,6 +137,8 @@ Le détail de ces règles se trouve dans la page [Fonctionnement](fonctionnement
 | **[Fonctionnement](fonctionnement.md)** | Déclenchement, optimisations, quota et lecture des résultats. |
 | **[Tests unitaires](tests-unitaires.md)** | La liste des 201 tests unitaires. |
 | **[Tests d'intégration](tests-integration.md)** | La liste des 27 tests d'intégration. |
+| **[Lint du code](lint-code.md)** | ESLint, complexité, typage et mise en forme des 4 modules. |
+| **[Lint YAML](lint-yaml.md)** | Les règles yamllint appliquées aux fichiers YAML. |
 | **[Contrôle des Dockerfile](controle-dockerfile.md)** | Les règles Hadolint appliquées aux 4 Dockerfile. |
 | **[Analyse des dépendances](analyse-dependances.md)** | La recherche de failles dans les `package-lock.json` et dans les images d'Istio. |
 | **[Tests des images Docker](tests-images.md)** | Les 24 contrôles de structure et l'analyse Trivy. |
@@ -142,16 +149,14 @@ Le détail de ces règles se trouve dans la page [Fonctionnement](fonctionnement
 ## Contrôles prévus
 
 D'autres contrôles existent déjà sur l'ordinateur de chaque développeur. Ils seront ajoutés à la pipeline, un par un.
+Le lint du code, la complexité, la mise en forme et le lint YAML y sont déjà.
 
 | Contrôle | Commande locale |
 |---|---|
-| **Règles du code et complexité (ESLint)** | `make lint` |
-| **Mise en forme du code (Prettier)** | `make format-check` |
-| **Fichiers YAML (yamllint)** | `make lint-yaml` |
 | **Manifestes Kubernetes (kubeconform)** | `make lint-k8s` |
 | **Secrets oubliés dans le code (gitleaks)** | `make secrets-scan` |
 | **Dépendances vulnérables (npm audit)** | `make audit` |
-| **Tous les contrôles ci-dessus** | `make quality` |
+| **Tous les contrôles, y compris ceux déjà dans la pipeline** | `make quality` |
 
 !!! note "À savoir"
     Un commit qui ne touche que la documentation ne lance aucun job. Il ne consomme donc aucune minute du quota.

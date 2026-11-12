@@ -29,7 +29,7 @@ suivent la norme ISO/IEC 25010.
 | **Accessibilité (RGAA)** | Les textes et les composants restent lisibles. | 26 contrôles de contraste. | `unit-tests:frontend` |
 | **Observabilité** | Les services publient leurs mesures et la supervision trouve le consommateur. | 12 tests unitaires (mesures et sondes de santé), et le test du consommateur durable en intégration. | `unit-tests:*`, `integration-tests` |
 | **Déployabilité** | Chaque image démarre comme le déploiement l'attend. | Port, dossier, commande, Node 24, nginx valide. | `image-tests` |
-| **Maintenabilité** | Le code est testé, peu dupliqué et sans défaut majeur. | Seuils de couverture à 100 %, code commun mutualisé dans `libs/common`, Quality Gate Sonar. | `unit-tests:*`, `sonar` |
+| **Maintenabilité** | Le code est testé, peu dupliqué, sans défaut majeur et sans fonction trop complexe. | Seuils de couverture à 100 %, code commun mutualisé dans `libs/common`, Quality Gate Sonar, complexité cyclomatique de 10 au plus et cognitive de 15 au plus (ESLint), typage strict, mise en forme unique (Prettier), fichiers YAML valides (yamllint). | `unit-tests:*`, `sonar`, `lint:code`, `lint:yaml` |
 
 !!! note "À savoir"
     Les nombres de tests sont ceux du dépôt à la date de rédaction. La liste complète de chaque famille se trouve dans
@@ -45,6 +45,8 @@ Du contrôle le plus rapide au plus coûteux :
 | **Intégration** | Jest, Testcontainers | Les briques fonctionnent avec une vraie base et un vrai broker. | 27 tests |
 | **Image Docker** | container-structure-test, Trivy | L'image livrée est conforme et sans faille grave. | 24 contrôles |
 | **Performance** | k6 | L'API tient la charge et respecte ses temps de réponse. | 1 scénario en CI |
+| **Lint YAML** | yamllint | Les fichiers de configuration sont bien écrits. | 1 job |
+| **Lint du code** | ESLint, tsc, Prettier | Le code respecte les règles, les seuils de complexité et le typage. | 4 jobs, un par module |
 | **Qualité du code** | SonarCloud | Le code est lisible, sûr et couvert par les tests. | 1 analyse |
 
 La pyramide est respectée : beaucoup de tests rapides en bas, de moins en moins de tests lents en haut. Un défaut se

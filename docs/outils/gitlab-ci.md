@@ -83,8 +83,8 @@ serveur d'origine serait détectée.
 
 ## Rôle dans le projet
 
-- Il exécute les onze jobs de la pipeline : tests unitaires, analyse SonarCloud, contrôle des Dockerfile, tests
-  d'intégration, analyse des dépendances, analyse des images d'Istio, contrôle et publication des images, tests de
+- Il exécute les seize jobs de la pipeline : tests unitaires, analyse SonarCloud, lint du code (ESLint, complexité,
+  typage, Prettier), lint YAML, contrôle des Dockerfile, tests d'intégration, analyse des dépendances, analyse des images d'Istio, contrôle et publication des images, tests de
   performance.
 - Il ne se déclenche que sur la branche principale, et lance tous les jobs à chaque pipeline, sans lancement manuel.
 - Il publie les images vérifiées dans le registre de conteneurs du projet.
@@ -106,6 +106,8 @@ Le détail de chaque contrôle est décrit dans la [vue d'ensemble de la pipelin
 | **`sonar-project.properties`** | Configure l'analyse de qualité lancée par un job. |
 | **`docker-bake.hcl`** | Décrit la construction des trois images. |
 | **`.hadolint.yaml`** | Règle le niveau d'échec du contrôle des Dockerfile. |
+| **`.yamllint.yml`** | Règle le contrôle des fichiers YAML. |
+| **`<module>/eslint.config.mjs`** | Règle ESLint de chaque module, dont les seuils de complexité. |
 | **`.trivyignore`** | Liste les failles acceptées temporairement, avec leur date d'expiration. |
 | **`scripts/perf-ci.sh`** | Enchaîne le démarrage de l'API et le test de performance. |
 | **`tests/`** | Contient les contrôles d'images et les scénarios de performance. |
@@ -119,6 +121,9 @@ Chaque contrôle de la pipeline a son équivalent sur l'ordinateur, à lancer de
 | **`make test`** | Lance les tests unitaires, comme les jobs `unit-tests`. |
 | **`make coverage`** | Lance les tests avec la couverture et ses seuils. |
 | **`make test-integration`** | Lance les tests d'intégration, Docker démarré. |
+| **`make lint`** | Lance ESLint et le contrôle des types, comme le job `lint:code`. |
+| **`make format-check`** | Vérifie la mise en forme, comme le job `lint:code`. |
+| **`make lint-yaml`** | Contrôle les fichiers YAML, comme le job `lint:yaml`. |
 | **`make lint-docker`** | Contrôle les Dockerfile, comme le job `hadolint`. |
 | **`make image-test`** | Contrôle les images, comme le job `image-tests`. |
 | **`make istio-scan`** | Analyse les images d'Istio, comme le job `istio-scan`. |
