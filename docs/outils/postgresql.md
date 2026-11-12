@@ -74,7 +74,7 @@ appelé `verify-full` : une machine qui se ferait passer pour la base serait dé
 cette règle, parce qu'elles ne passent pas par le réseau : les sondes de Kubernetes, qui interrogent le pod sur sa
 propre adresse, et les commandes lancées à l'intérieur du pod. Le maillage [Istio](istio.md) enveloppe ces connexions
 d'une seconde couche de chiffrement, sans les remplacer : le serveur continue d'imposer son propre TLS, et les
-applications de vérifier son certificat. Le maillage n'ouvre en outre le port 5432 qu'à cinq composants : l'API, le
+applications de vérifier son certificat. Le maillage et les politiques réseau n'ouvrent en outre le port 5432 qu'à cinq composants : l'API, le
 service de modération, Keycloak, Grafana et Adminer.
 
 **Les données survivent au redémarrage, pas à la suppression.**

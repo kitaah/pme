@@ -6,9 +6,9 @@
 |---|---|
 | **Rôle** | Réduit ce qu'un attaquant pourrait faire s'il parvenait à exécuter du code dans un conteneur |
 | **Portée** | Les onze déploiements du namespace `pme` |
-| **Mesures clés** | Aucun droit d'administrateur, capacités retirées, disque en lecture seule, aucun jeton de cluster |
+| **Mesures clés** | Aucun droit d'administrateur, capacités retirées, disque en lecture seule, aucun jeton de cluster, politiques réseau |
 | **Contrôles automatiques** | Hadolint, container-structure-test (24 contrôles), Trivy |
-| **Limite connue** | Aucune politique réseau : le filtrage des échanges entre pods repose sur le seul maillage |
+| **Limite connue** | Les connexions sortantes des pods ne sont pas filtrées : seules les entrées le sont |
 
 ## Description
 
@@ -74,7 +74,9 @@ comparaison: "" {
 |---|---|
 | **Capacité** | Droit système fin, comme celui d'ouvrir un port réservé ou de modifier l'horloge. Un programme ordinaire n'en a besoin d'aucun. |
 | **Élévation de privilèges** | Fait d'obtenir plus de droits que ceux accordés au départ. |
-| **Politique réseau** | Règle Kubernetes qui décide quels pods peuvent se parler. |
+| **Étiquette (label)** | Paire nom et valeur attachée à un pod. Les politiques réseau s'en servent pour désigner les pods concernés. |
+| **Politique réseau** | Règle Kubernetes qui décide quels pods peuvent se parler. Elle n'a d'effet que si le plugin réseau du cluster l'applique (ici [Calico](../outils/calico.md)). |
+| **Refus par défaut** | Principe qui consiste à tout interdire, puis à autoriser explicitement chaque échange nécessaire. |
 | **root** | Compte administrateur d'un système Linux, qui peut tout faire. |
 | **seccomp** | Mécanisme du noyau Linux qui limite les appels système qu'un programme peut utiliser. |
 | **Service account** | Identité d'un pod auprès du cluster. Son jeton permet d'appeler l'API de Kubernetes, et le maillage Istio en tire l'identité du pod. |
@@ -91,6 +93,7 @@ comparaison: "" {
 | **Profil seccomp** | Celui par défaut du moteur | Les appels système dangereux sont refusés par le noyau. |
 | **Système de fichiers** | En lecture seule pour l'API, la modération et l'interface | Un attaquant ne peut déposer ni programme ni script. Un espace temporaire en mémoire couvre les besoins réels. |
 | **Jeton du cluster** | Non monté, sauf pour Alloy | Un code étranger ne peut pas s'adresser à l'API de Kubernetes. |
+| **Politiques réseau** | Refus par défaut en entrée, puis une règle par composant (Calico) | Un pod compromis ne peut pas ouvrir de connexion vers un composant dont il n'est pas l'un des appelants prévus. |
 | **Compte de service** | Un par composant, sans droit sur l'API de Kubernetes | Les composants ne partagent plus d'identité : le maillage peut limiter chacun à ce qu'il doit joindre (voir [Istio](../outils/istio.md)). |
 | **Variables de liaison** | Désactivées | Kubernetes n'injecte pas d'adresses de services sous forme de variables, qui entraient en collision avec celles des applications. |
 | **Ressources plafonnées** | Processeur et mémoire, sur chaque conteneur | Un composant emballé ne peut pas priver les autres de ressources. |
@@ -115,6 +118,35 @@ retirées, sauf celles qui sont indispensables. Le projet ajoute trois protectio
 | **Profil seccomp par défaut** | L'agent istio-cni se voit appliquer le profil du moteur : le noyau refuse les appels système dangereux dont il n'a pas besoin. Le chart de ztunnel n'offre pas ce réglage. |
 | **Images analysées** | `make istio-scan` et le job `istio-scan` de la pipeline recherchent les failles corrigeables dans les trois images d'Istio. Une faille CRITICAL fait échouer le contrôle. Les failles HIGH sont comptées et conservées dans un rapport, car ces images sont publiées par Istio : le correctif vient d'une nouvelle version d'Istio. |
 
+**Qui peut joindre quoi : les politiques réseau**
+Dans un cluster Kubernetes, tout pod peut joindre n'importe quel autre. Une **politique réseau** supprime cette
+liberté. Le projet applique le **refus par défaut** : une première politique coupe toute connexion entrante vers les pods
+du namespace `pme`, puis une politique par composant rouvre uniquement les appelants prévus. [Calico](../outils/calico.md)
+applique ces règles au niveau du réseau du cluster, avant que la connexion n'atteigne le pod.
+
+Ce filtre s'ajoute à celui du maillage [Istio](../outils/istio.md) : les deux utilisent les mêmes listes d'appelants, mais
+le premier lit l'**étiquette** du pod appelant, le second son **identité** cryptographique. Un appel doit passer par les
+deux.
+
+| Composant appelé | Port | Appelants autorisés |
+|---|---|---|
+| **PostgreSQL** | 5432 | API, service de modération, Keycloak, Grafana, Adminer |
+| **NATS** | 4222 | API, service de modération |
+| **Keycloak** | 8080 | Ingress (Traefik), API, service de modération, tâche d'administration |
+| **API** | 3000 | Ingress (Traefik), Prometheus |
+| **Service de modération** | 3001 | Ingress (Traefik), Prometheus |
+| **Interface** | 8080 | Ingress (Traefik) |
+| **Adminer** | 8080 | Ingress (Traefik) |
+| **Grafana** | 3000 | Ingress (Traefik) |
+| **Prometheus** | 9090 | Ingress (Traefik), Grafana |
+| **Loki** | 3100 | Grafana, Alloy |
+| **Alloy** | 12345 | Ingress (Traefik) |
+| **Tout autre appelant ou port** | Tous | Personne : refus par défaut |
+
+Chaque règle ouvre aussi le port 15008 aux mêmes appelants : c'est celui du tunnel que le maillage utilise entre les
+pods. Le port de supervision de NATS (8222) n'est ouvert à personne. Les sondes de santé de Kubernetes ne sont pas
+bloquées, car le trafic d'un nœud vers ses propres pods est toujours autorisé. `make netpol-check` vérifie ce filtre.
+
 **Des images qui n'embarquent que le nécessaire**
 Les trois images sont construites en plusieurs étapes : les premières installent et compilent, la dernière ne reçoit que le résultat. Les
 sources, les outils de développement et les dépendances de compilation restent dans l'étape de construction et ne sont
@@ -137,11 +169,13 @@ Cela n'est pas seulement déclaré, c'est vérifié à chaque passage de la pipe
 
 ## Ce qui n'est pas couvert
 
-- **Aucune politique réseau.** Le filtrage des échanges entre pods repose sur le seul maillage
-  [Istio](../outils/istio.md) : ses politiques d'autorisation, appliquées par identité, n'autorisent chaque composant
-  qu'à ses appelants prévus. Elles agissent au niveau de la connexion. Des règles de type NetworkPolicy ajouteraient un
-  second filtre, indépendant du maillage, au niveau du réseau du cluster. Minikube le permet, à condition d'activer un
-  greffon réseau qui les applique.
+- **Les connexions sortantes ne sont pas filtrées.** Les politiques réseau ne contrôlent que ce qui entre dans un pod.
+  Un pod compromis pourrait donc ouvrir une connexion vers l'extérieur du cluster, par exemple pour exfiltrer des
+  données, ou vers un composant dont la politique d'entrée l'autorise. Filtrer les sorties demanderait de déclarer, pour
+  chaque composant, les destinations qu'il a le droit de joindre, y compris le service de noms (DNS) du cluster.
+- **Les politiques réseau lisent des étiquettes, pas des identités.** Elles s'appuient sur les étiquettes des pods, qu'un
+  administrateur du namespace peut modifier. L'identité cryptographique des pods, vérifiée par le maillage
+  [Istio](../outils/istio.md), complète ce filtre.
 - **Un seul compte PostgreSQL pour quatre bases.** L'API, le service de modération, Keycloak et Grafana se connectent
   avec le même compte, créé à l'initialisation du serveur. Chacun peut donc lire et modifier les données des autres, y
   compris les comptes de Keycloak. Un compte par base, avec les seuls droits nécessaires, est le premier correctif à
@@ -172,6 +206,7 @@ Cela n'est pas seulement déclaré, c'est vérifié à chaque passage de la pipe
 | **`make image-test`** | Rejoue les 24 contrôles de structure et l'analyse Trivy sur les trois images. |
 | **`make lint-docker`** | Contrôle les quatre Dockerfile avec Hadolint. |
 | **`make lint-k8s`** | Valide les manifestes Kubernetes. |
+| **`make netpol-check`** | Vérifie les politiques réseau : un pod sans l'étiquette prévue est coupé, même avec la bonne identité. |
 | **`make istio-scan`** | Analyse Trivy des trois images d'Istio : affiche les failles HIGH, et échoue s'il reste une faille CRITICAL corrigeable. |
 | **`kubectl -n istio-system get pod`**<br>**`-l k8s-app=istio-cni-node -o yaml`**<br>**`\| grep -A1 seccompProfile`** | Montre que le profil `RuntimeDefault` est bien appliqué à l'agent istio-cni. |
 | **`kubectl -n pme exec deploy/pme-api -- id`** | Montre l'identifiant du compte qui exécute l'API : il ne doit pas valoir 0. |
@@ -195,6 +230,7 @@ sauf dans l'espace temporaire monté à cet effet.
 | **`k8s/04-api.yaml`**<br>**`k8s/05-moderation.yaml`** | Réglages les plus complets : compte sans privilège, disque en lecture seule, capacités retirées. |
 | **`k8s/06-frontend.yaml`** | Mêmes réglages pour l'interface, avec le compte de nginx non privilégié. |
 | **`k8s/13-alloy.yaml`** | La seule exception : jeton de cluster et droits de lecture sur les pods. |
+| **`k8s/18-network-policies.yaml`** | Refus par défaut des connexions entrantes, puis une règle par composant qui nomme ses appelants. |
 | **`api/Dockerfile`**<br>**`moderation-service/Dockerfile`**<br>**`frontend/Dockerfile`** | Construction en plusieurs étapes, image finale sans outils de développement ni `npm`. |
 | **`tests/image/`** | Les 24 contrôles de structure appliqués aux images. |
 | **`k8s/istio/namespace.yaml`**<br>**`k8s/istio/cni-values.yaml`** | Namespace dédié aux composants privilégiés du maillage, et profil seccomp de l'agent istio-cni. |

@@ -40,7 +40,8 @@ Le mTLS donne à chaque pod une identité vérifiée : celle de son compte de se
 premier réglage refuse tout appel entre pods, puis une règle par composant nomme ses seuls appelants. Exemple : seuls
 l'API, le service de modération, Keycloak, Grafana et Adminer peuvent joindre PostgreSQL. Un pod qui connaîtrait le mot
 de passe de la base mais n'aurait pas la bonne identité est coupé avant même d'ouvrir la connexion. `make authz-check`
-le vérifie.
+le vérifie. Des politiques réseau, appliquées par [Calico](../outils/calico.md), répètent ce filtrage au niveau du réseau du cluster
+(tableau dans [Durcissement](durcissement.md)) : un appel doit passer par les deux. `make netpol-check` vérifie ce second filtre.
 
 **Pourquoi les bases de données font exception.**
 Les échanges avec PostgreSQL et NATS, eux, sont chiffrés de bout en bout par les applications elles-mêmes, même à
@@ -142,10 +143,9 @@ n'est joignable que depuis le pod lui-même.
 - **L'autorité du maillage est créée par istiod lui-même** : sa clé privée est stockée dans le cluster, dans le
   namespace `istio-system`. C'est acceptable pour un POC ; en production, on brancherait l'autorité interne de
   l'organisation.
-- **Le filtrage repose sur le seul maillage** : les politiques d'autorisation d'Istio sont appliquées par ztunnel, au
-  niveau de la connexion (source, destination, port), et non de la requête HTTP. Aucune politique réseau Kubernetes ne
-  double ce filtrage : un composant du maillage compromis, ou un pod qui échapperait au maillage, ne serait pas arrêté
-  par le réseau.
+- **Les filtres ne regardent que les connexions entrantes, au niveau de la connexion** : les politiques d'autorisation
+  d'Istio, appliquées par ztunnel, et les politiques réseau de Calico vérifient la source, la destination et le port,
+  mais pas la méthode ni le chemin d'une requête HTTP. Aucun des deux ne filtre les connexions sortantes des pods.
 - **Le maillage dépend d'un réglage de l'ordinateur** : ztunnel plante si la limite `inotify` du système est trop
   basse. `make inotify` la relève, avec le mot de passe `sudo`. Sans ztunnel prêt, un namespace déjà enrôlé en mode
   strict devient inaccessible (voir la fiche [Istio](../outils/istio.md)).
@@ -168,6 +168,7 @@ n'est joignable que depuis le pod lui-même.
 | **`make ca-configmap`** | Copie l'autorité dans le namespace, pour que les applications vérifient les certificats. |
 | **`make mesh-check`** | Vérifie le maillage : un pod hors du maillage est refusé, et les échanges portent des identités. |
 | **`make authz-check`** | Vérifie les autorisations par identité : un appel autorisé aboutit, un appel non prévu est coupé. |
+| **`make netpol-check`** | Vérifie les politiques réseau : un pod sans l'étiquette prévue est coupé, même s'il a la bonne identité. |
 | **`kubectl -n istio-system logs ds/ztunnel`**<br>**`--tail=500 \| grep src.identity`** | Affiche les connexions chiffrées vues par ztunnel, avec l'identité de la source et de la destination. |
 
 Dans les journaux de ztunnel, une connexion chiffrée par le maillage se reconnaît à deux indices : l'adresse de
@@ -199,6 +200,7 @@ depuis un autre pod avec `sslmode=disable` est rejetée par le serveur, avant m�
 | **`k8s/15-service-accounts.yaml`** | Un compte de service par composant, donc une identité par composant. |
 | **`k8s/16-mesh-mtls.yaml`** | Impose le mode strict : toute connexion hors mTLS est refusée. |
 | **`k8s/17-authorization-policies.yaml`** | Refus par défaut, puis une règle par composant qui nomme ses appelants autorisés. |
+| **`k8s/18-network-policies.yaml`** | Même filtrage au niveau du réseau du cluster, par étiquette de pod, appliqué par Calico. |
 | **`k8s/08-ingress.yaml`** | Termine le TLS avec le certificat de cert-manager. |
 | **`k8s/08-middlewares.yaml`** | Ajoute l'en-tête HSTS aux réponses de l'ingress. |
 | **`k8s/traefik/values.yaml`** | Redirige le HTTP vers le HTTPS pour tous les noms d'hôte. |

@@ -107,8 +107,8 @@ Il filtre aussi qui peut appeler quoi. Chaque composant a sa propre identité, e
 composant nomme ses seuls appelants : l'ingress pour les interfaces web, l'API et la modération pour NATS, cinq
 composants pour PostgreSQL. Un pod du namespace qui n'est pas cité est coupé, même s'il connaît un mot de passe.
 
-Sans lui, ces échanges repassent en HTTP simple et n'importe quel pod du namespace peut joindre n'importe quel autre.
-L'application continue de fonctionner, mais la limite « trafic interne du site en HTTP » du
+Sans lui, ces échanges repassent en HTTP simple, et le filtrage ne repose plus que sur les politiques réseau, qui ne
+vérifient pas l'identité des pods. L'application continue de fonctionner, mais la limite « trafic interne du site en HTTP » du
 [chiffrement](../securite/chiffrement.md) réapparaît.
 
 ## Fichiers et dossiers principaux
@@ -132,7 +132,7 @@ L'application continue de fonctionner, mais la limite « trafic interne du site 
 | **`make istio`** | Installe Istio en mode ambient et enrôle le namespace de Traefik. |
 | **`make istio-scan`** | Analyse les trois images d'Istio avec Trivy : affiche les failles HIGH, échoue sur une faille CRITICAL corrigeable. |
 | **`make mesh-check`** | Vérifie qu'un pod hors du maillage est refusé et montre des échanges portant des identités. |
-| **`make authz-check`** | Vérifie les autorisations : trois pods temporaires, qui n'ont de différent que leur identité, tentent des appels autorisés ou refusés. |
+| **`make authz-check`** | Vérifie les autorisations : trois pods temporaires, dont l'étiquette réseau est choisie pour que seule l'identité décide, tentent des appels autorisés ou refusés. |
 | **`kubectl -n istio-system get pods`** | Affiche le plan de contrôle, l'agent réseau et ztunnel. |
 | **`kubectl -n istio-system logs ds/ztunnel`**<br>**`--tail=500 \| grep src.identity`** | Affiche les connexions vues par ztunnel, avec l'identité de la source et de la destination. |
 
@@ -162,6 +162,12 @@ ligne affichée par `make mesh-check` ne suffit pas : elle peut ne montrer que l
     `Too many open files`. `make inotify` porte la limite à 1024 et la rend permanente dans
     `/etc/sysctl.d/99-inotify.conf`. Le réglage concerne Linux ; sous un autre système, il faut ajuster la limite
     équivalente à la main.
+
+!!! note "À savoir"
+    Les politiques d'autorisation d'Istio cohabitent avec les politiques réseau de Kubernetes
+    (`k8s/18-network-policies.yaml`, appliquées par [Calico](calico.md), tableau dans [Durcissement](../securite/durcissement.md)). Les deux filtres s'ajoutent : un appel doit passer par les
+    deux. En mode ambient, les connexions entre pods du maillage transitent par le port **15008** (tunnel HBONE de
+    ztunnel) : les politiques réseau l'ouvrent donc aux mêmes appelants que le port de l'application.
 
 !!! note "À savoir"
     Les politiques d'autorisation sont appliquées par ztunnel, au niveau de la connexion : source, destination et port.

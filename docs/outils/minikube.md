@@ -164,13 +164,13 @@ plusieurs étapes et exécution sans droits `root`. Ce contrôle se lance sur l'
     - **Autoscaling** : l'interface, l'API et le service de modération passent automatiquement de 2 à 4 réplicas lorsque l'usage moyen du processeur dépasse 70 %. Lors d'une maintenance, au moins un réplica de chaque reste disponible.
     - **Contrôle de santé** : chaque composant déclare ses limites de mémoire et de processeur, ainsi que des sondes de santé qui indiquent à Kubernetes quand le relancer ou lui envoyer du trafic.
     - **Sécurité** : les trois applications s'exécutent sans droits `root`, avec un système de fichiers en lecture seule et sans aucune capacité Linux supplémentaire. Le namespace applique la règle `baseline` et vérifie en plus la règle plus stricte `restricted` en mode audit : elle signale les écarts sans les bloquer.
-    - **Chiffrement** : les connexions à PostgreSQL et à NATS sont chiffrées par des certificats que [cert-manager](cert-manager.md) émet pour le cluster. Le maillage [Istio](istio.md) chiffre en plus tous les échanges entre pods et n'autorise chaque composant qu'à être appelé par ses clients prévus.
+    - **Chiffrement** : les connexions à PostgreSQL et à NATS sont chiffrées par des certificats que [cert-manager](cert-manager.md) émet pour le cluster. Le maillage [Istio](istio.md) chiffre en plus tous les échanges entre pods et n'autorise chaque composant qu'à être appelé par ses clients prévus. Des politiques réseau, appliquées par Calico, doublent ce filtrage.
     - **Données** : PostgreSQL, NATS (les messages en attente de modération), Prometheus (les mesures) et Loki (les logs) stockent leurs données chacun sur un volume persistant de 1 Go. Elles survivent au redémarrage du pod, mais disparaissent avec le namespace (`make undeploy`) ou avec le cluster (`minikube delete`).
 - Il exécute des images construites localement : `make image` les fabrique dans le cluster avec l'étiquette `:dev`, sans passer par un registre. Les manifestes demandent à Kubernetes d'utiliser l'image déjà présente (`imagePullPolicy: IfNotPresent`).
 - Le passage à un cluster de production n'exige donc pas de réécrire les manifestes : il suffit de les adapter, notamment l'émetteur des certificats et l'origine des images.
 - Sans lui, aucun composant ne s'exécute : le projet n'a plus d'environnement ni d'orchestrateur.
 
-Le cluster exécute les composants suivants. Tous sont dans le namespace `pme`, sauf l'ingress (namespace `traefik`) et le maillage (namespace `istio-system`) :
+Le cluster exécute les composants suivants. Tous sont dans le namespace `pme`, sauf l'ingress (namespace `traefik`), le maillage (namespace `istio-system`) et le plugin réseau (namespace `kube-system`) :
 
 | Groupe | Composants | Rôle |
 |---|---|---|
@@ -180,6 +180,7 @@ Le cluster exécute les composants suivants. Tous sont dans le namespace `pme`, 
 | **Observabilité** | [Prometheus](prometheus.md), [Loki](loki.md), [Alloy](alloy.md), [Grafana](grafana.md) | Collectent, conservent et affichent les mesures et les journaux. |
 | **Administration** | [Adminer](adminer.md) | Permet de consulter les bases depuis un navigateur. |
 | **Maillage** | [Istio](istio.md) | Chiffre en mTLS les échanges entre pods et filtre qui peut joindre quoi, sans modifier les applications. |
+| **Réseau** | [Calico](calico.md) | Applique les politiques réseau : second filtre, au niveau du réseau du cluster, sur qui peut joindre quoi. |
 
 Le cluster est créé avec les paramètres suivants :
 
@@ -188,6 +189,7 @@ Le cluster est créé avec les paramètres suivants :
 | **Pilote** | `docker` | Le nœud fonctionne dans un conteneur Docker, sans machine virtuelle. |
 | **Mémoire** | 5 120 Mo | Mémoire vive allouée au cluster. La variable `MINIKUBE_MEMORY` permet de la modifier. Avec Istio, la plateforme occupe environ 3,2 Go au repos : 5 120 Mo laissent de la marge aux pics (démarrage de Keycloak, montée de l'autoscaler). |
 | **Processeurs** | 2 cœurs | Puissance de calcul allouée au cluster. La variable `MINIKUBE_CPUS` permet de la modifier. |
+| **Plugin réseau** | [Calico](calico.md) (`--cni=calico`) | Applique les politiques réseau. Celui de Minikube par défaut les accepte sans les appliquer. |
 | **Ports publiés** | 80 et 443 sur `127.0.0.1` | L'adresse `127.0.0.1` désigne l'ordinateur lui-même. L'ingress est ainsi joignable depuis le navigateur, sans redirection de port. |
 | **Addons activés** | `metrics-server` | Mesure la charge des pods, ce qui permet l'ajustement automatique de leur nombre. Le point d'entrée du cluster, Traefik, n'est pas un addon : il est installé avec Helm. |
 
@@ -208,6 +210,7 @@ Le cluster est créé avec les paramètres suivants :
 | **`k8s/15-service-accounts.yaml`** | Déclare un compte de service par composant : chacun a ainsi sa propre identité dans le maillage. |
 | **`k8s/16-mesh-mtls.yaml`** | Impose le mode strict du maillage : toute connexion hors mTLS est refusée. |
 | **`k8s/17-authorization-policies.yaml`** | Refuse tout appel entre pods par défaut, puis autorise chaque composant à n'être appelé que par ses clients prévus. |
+| **`k8s/18-network-policies.yaml`** | Refuse toute connexion entrante par défaut, puis ouvre chaque composant à ses seuls appelants : second filtre, au niveau du réseau. |
 | **`k8s/config/`** | Contient les fichiers de configuration fournis aux composants : PostgreSQL, NATS, Grafana, Alloy et interface. |
 | **`k8s/14-pme-secrets-sealed.yaml`** | Contient les mots de passe chiffrés, sous une forme qui peut être versionnée dans Git sans risque (voir [Sealed Secrets](sealed-secrets.md)). |
 | **`k8s/11-autoscaling.yaml`** | Définit, pour l'interface, l'API et la modération, l'autoscaling et le nombre minimal de réplicas disponibles. |
@@ -224,11 +227,12 @@ Le cluster est créé avec les paramètres suivants :
 
 | Commande | Description |
 |---|---|
-| **`make minikube-up`** | Crée et démarre le cluster, publie les ports 80 et 443, installe l'ingress Traefik avec Helm, relève si besoin la limite `inotify` de l'ordinateur, installe le maillage Istio, active metrics-server, installe cert-manager et extrait le certificat de l'autorité de certification locale. |
+| **`make minikube-up`** | Crée et démarre le cluster avec le plugin réseau Calico, publie les ports 80 et 443, installe l'ingress Traefik avec Helm, relève si besoin la limite `inotify` de l'ordinateur, installe le maillage Istio, active metrics-server, installe cert-manager et extrait le certificat de l'autorité de certification locale. |
 | **`make inotify`** | Relève la limite `inotify` de l'ordinateur si elle est trop basse (mot de passe `sudo` demandé). Elle est nécessaire à Istio. |
 | **`make istio`** | Installe ou met à jour le maillage Istio sur un cluster existant, sans le recréer. |
 | **`make mesh-check`** | Vérifie le chiffrement entre pods (voir [Istio](istio.md)). |
 | **`make authz-check`** | Vérifie les autorisations entre pods : un appel prévu aboutit, un appel non prévu est coupé (voir [Istio](istio.md)). |
+| **`make netpol-check`** | Vérifie les politiques réseau : un pod sans l'étiquette prévue est coupé, même s'il a la bonne identité. |
 | **`make image`** | Construit les trois images (API, modération, interface) puis les rend disponibles dans le cluster. |
 | **`make lint-docker`** | Lance Hadolint sur les quatre Dockerfile du projet. La commande échoue dès qu'une règle de gravité `warning` ou `error` est enfreinte. |
 | **`make deploy`** | Applique les manifestes et déploie toute la plateforme. |
@@ -260,7 +264,7 @@ Lors du premier démarrage, l'enchaînement est le suivant :
     `make undeploy` supprime aussi les données (annonces, comptes, messages en attente dans NATS, mesures et logs). À réserver au cas où l'on souhaite repartir de zéro.
 
 !!! tip "Astuce"
-    L'option `--ports` n'est prise en compte qu'à la création du cluster. Pour l'appliquer à un cluster existant, il
+    Les options `--ports` et `--cni` ne sont prises en compte qu'à la création du cluster. Pour les appliquer à un cluster existant, il
     faut d'abord le supprimer avec `minikube delete`, puis relancer `make minikube-up`. Les déploiements sont alors
     perdus, et le fichier de mots de passe chiffrés doit être refait avec `make seal` avant `make deploy` (voir
     [Sealed Secrets](sealed-secrets.md)).

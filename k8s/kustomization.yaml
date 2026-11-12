@@ -28,6 +28,7 @@ resources:
   - 15-service-accounts.yaml
   - 16-mesh-mtls.yaml
   - 17-authorization-policies.yaml
+  - 18-network-policies.yaml
 # Label commun a toutes les ressources et aux modeles de pods. Les selecteurs ne changent pas (immuables).
 labels:
   - pairs:
