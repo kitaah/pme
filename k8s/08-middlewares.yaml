@@ -1,4 +1,4 @@
-# Traitements appliques par Traefik aux reponses, avant de les rendre au navigateur (ressources `Middleware`).
+# Traitements appliques par Traefik aux requetes et aux reponses (ressources `Middleware`).
 # Ils remplacent les reglages que le controleur ingress-nginx portait dans sa ConfigMap. Ils sont rattaches a
 # l'Ingress `pme` par l'annotation traefik.ingress.kubernetes.io/router.middlewares (k8s/08-ingress.yaml).
 #
@@ -37,3 +37,43 @@ spec:
     middlewares:
       - name: hsts
       - name: compress
+---
+# Validation des jetons a l'entree du cluster : le plugin `jwt` (declare dans k8s/traefik/values.yaml) verifie la signature,
+# l'expiration, l'emetteur et le client du jeton AVANT que la requete atteigne l'API ou la moderation. Sans jeton valide, la
+# reponse est une erreur 401 emise par Traefik. Chaque service revalide ensuite le jeton lui-meme et applique les roles
+# (garde JWT et garde de roles de NestJS) : le controle de l'ingress est une premiere barriere, pas la seule.
+#
+# - issuer : l'`iss` des jetons est l'URL PUBLIQUE de Keycloak (celle que voit le navigateur), comme pour l'API.
+# - jwks : les cles sont lues par le service INTERNE, en HTTP, dans le namespace pme (Traefik est dans un autre namespace :
+#   le nom complet est necessaire). Ce chemin est autorise par les politiques d'Istio et de Calico (le compte `traefik`
+#   joint Keycloak sur le port 8080). Cette forme dispense de la decouverte OpenID Connect, qui passerait par l'adresse
+#   publique, injoignable depuis le pod.
+# - require.azp : seul le client `pme-web` (l'interface) est accepte, comme KEYCLOAK_ALLOWED_CLIENTS dans les services.
+# - skipPrefetch : les cles ne sont pas chargees au demarrage de Traefik (Keycloak peut ne pas etre encore pret) ; elles le
+#   sont a la premiere requete, et rechargees si un jeton porte une cle inconnue.
+# Les roles (membre, moderateur) ne sont PAS verifies ici : ils restent decides par les services.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: jwt
+spec:
+  plugin:
+    jwt:
+      issuers:
+        - issuer: https://keycloak.localhost/realms/pme
+          jwks: http://keycloak.pme.svc.cluster.local:8080/realms/pme/protocol/openid-connect/certs
+      require:
+        azp: pme-web
+      skipPrefetch: true
+---
+# Chaine de l'API et de la moderation : les traitements de reponse, puis la validation du jeton.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: api-defaults
+spec:
+  chain:
+    middlewares:
+      - name: hsts
+      - name: compress
+      - name: jwt

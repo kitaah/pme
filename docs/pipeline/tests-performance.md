@@ -54,16 +54,20 @@ Le job démarre l'API réelle avec les vrais services dont elle dépend, sans Do
 5. k6 lance le scénario avec le profil « ci » et écrit son résumé.
 
 !!! note "À savoir"
-L'API vérifie toujours la signature, l'émetteur et le client du jeton. Seul le serveur qui signe est remplacé.
-Keycloak est un produit tiers : sa charge se mesure sur l'environnement de recette.
+    L'API vérifie toujours la signature, l'émetteur et le client du jeton. Seul le serveur qui signe est remplacé.
+    Keycloak est un produit tiers : sa charge se mesure sur l'environnement de recette.
 
 !!! note "À savoir"
-Le runner de la pipeline est une petite machine partagée. Le profil « ci » est donc plus léger que le profil
-complet. Ses résultats servent de garde-fou contre une régression, pas de mesure de capacité.
+    Le test s'adresse directement à l'API, sans passer par Traefik : ses mesures n'incluent donc ni le contrôle du jeton
+    de l'ingress ni le déchiffrement HTTPS.
 
 !!! note "À savoir"
-k6 envoie toutes ses demandes depuis une seule adresse IP. La limite de débit de l'API est donc relevée pour la
-durée du test.
+    Le runner de la pipeline est une petite machine partagée. Le profil « ci » est donc plus léger que le profil
+    complet. Ses résultats servent de garde-fou contre une régression, pas de mesure de capacité.
+
+!!! note "À savoir"
+    k6 envoie toutes ses demandes depuis une seule adresse IP. La limite de débit de l'API est donc relevée pour la
+    durée du test.
 
 ## Quand il se lance
 
@@ -77,7 +81,7 @@ durée du test.
 - **En cas d'échec avant ou pendant le test** (service injoignable, identifiants refusés, API qui ne démarre pas) : le log du job affiche la fin de `environment.log` (faux Keycloak et flux NATS), puis celle de `api.log`.
 
 !!! warning "Attention"
-Le jeton de test n'est jamais publié dans les artefacts.
+    Le jeton de test n'est jamais publié dans les artefacts.
 
 ## Fichiers et dossiers principaux
 

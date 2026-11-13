@@ -4,8 +4,8 @@
 
 | Information | Détail |
 |---|---|
-| **Rôle** | Point d'entrée unique du cluster : il reçoit les requêtes du navigateur, les déchiffre et les dirige vers le bon service |
-| **Version** | Chart Helm 41.3.0, qui installe Traefik Proxy 3.7 |
+| **Rôle** | Point d'entrée unique du cluster : il reçoit les requêtes du navigateur, les déchiffre, vérifie le jeton sous `/api/v1` et les dirige vers le bon service |
+| **Version** | Chart Helm 41.3.0, qui installe Traefik Proxy 3.7, et plugin `jwt-middleware` v1.6.0 pour la validation des jetons |
 | **Adresse en local** | <https://pme.localhost> et les cinq autres noms en `.localhost` |
 
 ## Description
@@ -30,7 +30,8 @@ d'après l'adresse demandée. Une seule porte, plusieurs destinations.
 Deux informations lui suffisent. Le **nom d'hôte** d'abord, c'est-à-dire l'adresse saisie dans le navigateur :
 `grafana.localhost` mène à Grafana. Le **chemin** ensuite, pour le site principal, où trois destinations cohabitent
 sous la même adresse. La règle est celle du chemin le plus long : `/api/v1/moderation` l'emporte sur `/api/v1`, qui
-l'emporte à son tour sur `/`.
+l'emporte à son tour sur `/`. Le site principal est décrit par deux ressources Ingress de même nom d'hôte, l'une pour
+`/api/v1`, l'autre pour le reste, parce que le contrôle du jeton ne doit s'appliquer qu'à la première.
 
 ```d2
 vars: {
@@ -53,7 +54,7 @@ classes: {
 }
 
 navigateur: "Navigateur\nHTTPS, ports 80 et 443" {class: boite}
-ingress: "Traefik\nle chiffrement s'arrête ici" {class: boite}
+ingress: "Traefik\nle chiffrement s'arrête ici\njeton vérifié sous /api/v1" {class: boite}
 
 site: "pme.localhost" {
   class: boite
@@ -79,9 +80,18 @@ Deux liaisons internes font exception et restent chiffrées de bout en bout, par
 sensibles : celles vers [PostgreSQL](postgresql.md) et vers [NATS](nats.md).
 
 **Il ajoute des protections aux réponses.**
-Les réglages de réponse sont décrits dans des ressources appelées **middlewares**, que l'ingress référence. Deux sont
-utilisés. L'un ajoute l'en-tête HSTS, qui demande au navigateur de n'utiliser que HTTPS pour ces noms. L'autre compresse
-les réponses volumineuses pour accélérer le chargement.
+Les réglages de réponse sont décrits dans des ressources appelées **middlewares**, que l'ingress référence. L'un ajoute
+l'en-tête HSTS, qui demande au navigateur de n'utiliser que HTTPS pour ces noms. L'autre compresse les réponses
+volumineuses pour accélérer le chargement.
+
+**Il vérifie le jeton avant que la requête n'entre.**
+Sous `/api/v1`, un troisième middleware contrôle le jeton de connexion : signature, expiration, émetteur et application
+émettrice. Sans jeton valide, c'est Traefik qui répond par une erreur 401, et la requête n'atteint jamais l'API ni la
+modération. Traefik open source n'a pas ce contrôle en natif : il est réservé à Traefik Hub, l'offre commerciale. Le
+projet utilise donc un plugin communautaire, déclaré dans la configuration de Traefik et téléchargé depuis GitHub à son
+démarrage, en version épinglée. Ce contrôle est une première barrière : chaque service revérifie ensuite le jeton et décide
+des rôles (voir [Authentification](../securite/authentification.md)). Le site, lui, se charge sans jeton : il est servi par un
+Ingress distinct, sans ce middleware.
 
 **Il répartit aussi la charge.**
 Une application fonctionne en plusieurs exemplaires, dont le nombre varie avec la charge. Traefik envoie les
@@ -106,8 +116,10 @@ bord, n'est pas exposée non plus.
 | **Helm** | Outil en ligne de commande qui installe et met à jour les charts dans Kubernetes. |
 | **HSTS** | En-tête de réponse qui demande au navigateur de n'utiliser que HTTPS pour un site pendant une durée donnée. |
 | **Ingress** | Règle Kubernetes qui associe un nom d'hôte et un chemin à un service du cluster. |
+| **JWT** | *JSON Web Token*. Jeton signé délivré par Keycloak, qui prouve l'identité de la personne et énumère ses droits. |
 | **Middleware** | Traitement que Traefik applique à une requête ou à une réponse, par exemple l'ajout d'un en-tête. |
 | **Nom d'hôte** | Adresse saisie dans le navigateur, par exemple `keycloak.localhost`. |
+| **Plugin (Traefik)** | Extension du contrôleur, écrite en Go et interprétée à son démarrage. Elle est déclarée dans la configuration de Traefik et téléchargée depuis un dépôt public. |
 | **Répartition de charge** | Distribution des requêtes entre plusieurs exemplaires d'une même application. |
 | **Terminaison TLS** | Fait de déchiffrer le HTTPS à l'entrée, puis de transmettre la requête en HTTP à l'intérieur. |
 | **TLS 1.2 et 1.3** | Versions actuelles du protocole de chiffrement. Les versions antérieures sont refusées. |
@@ -122,6 +134,9 @@ bord, n'est pas exposée non plus.
 - Son identité dans le maillage (compte de service `traefik`) est la seule source autorisée vers les interfaces web : un autre pod ne peut pas les appeler directement.
 - Il ajoute l'en-tête HSTS à ses réponses : pendant sept jours, le navigateur n'utilise plus que HTTPS pour ces noms.
 - Il compresse les réponses de plus de 1 Ko.
+- Il refuse par une erreur 401 toute requête sous `/api/v1` sans jeton valide, avant qu'elle n'atteigne l'API ou la modération. Les rôles, eux, restent décidés par les services.
+- Il lit les clés publiques de Keycloak par le service interne, et les garde pour contrôler les signatures.
+- Il dépend d'un plugin tiers, téléchargé à son démarrage : il est la seule partie du cluster qui contacte Internet de lui-même.
 - Il répartit les requêtes entre les exemplaires de l'API, de la modération et du site.
 - Il n'expose que ce qui doit l'être : les mesures et les sondes de santé restent internes.
 - Il écrit un log de chaque requête, au format JSON, consultable avec la commande de log ci-dessous.
@@ -146,9 +161,9 @@ Les six noms d'hôte sont les suivants :
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/traefik/values.yaml`** | Réglages de Traefik : ports 80 et 443, redirection vers HTTPS, log d'accès. |
-| **`k8s/08-ingress.yaml`** | Déclare les noms d'hôte, les chemins, les services visés et le certificat. |
-| **`k8s/08-middlewares.yaml`** | Décrit l'en-tête HSTS et la compression des réponses. |
+| **`k8s/traefik/values.yaml`** | Réglages de Traefik : ports 80 et 443, redirection vers HTTPS, log d'accès, plugin de validation des jetons. |
+| **`k8s/08-ingress.yaml`** | Déclare les noms d'hôte, les chemins, les services visés et le certificat, en deux Ingress : l'un pour `/api/v1` (jeton exigé), l'autre pour le reste. |
+| **`k8s/08-middlewares.yaml`** | Décrit l'en-tête HSTS, la compression des réponses et la validation des jetons. |
 | **`k8s/08-certificate.yaml`** | Demande à cert-manager le certificat des six noms d'hôte. |
 | **`k8s/03-keycloak.yaml`** | Fixe l'adresse publique de Keycloak. |
 | **`k8s/config/realm-pme.json`** | Liste les adresses de retour autorisées après la connexion. |
@@ -168,6 +183,7 @@ Les six noms d'hôte sont les suivants :
 | **`make istio`** | Installe le maillage Istio et enrôle le namespace de Traefik (voir [Istio](istio.md)). À lancer après `make ingress`. |
 | **`make hosts`** | Affiche la ligne à ajouter au fichier hosts de l'ordinateur. |
 | **`make deploy`** | Installe les règles d'ingress, les middlewares et le certificat avec le reste de la plateforme. |
+| **`make jwt-check`** | Vérifie que Traefik refuse par un 401 les requêtes sans jeton valide sous `/api/v1`, et laisse le site public. |
 | **`make app`** | Ouvre l'application dans le navigateur. |
 | **`make ca-cert`** | Écrit l'autorité locale dans `pme-ca.crt`, à importer dans le navigateur. |
 | **`make tunnel`** | Redirige les ports 80 et 443 vers Traefik, pour un cluster créé sans publication des ports. |
@@ -192,6 +208,11 @@ Windows. Sa modification demande les droits d'administrateur.
     cluster déjà créé avec cette extension, `make ingress` la désactive avant d'installer Traefik : les deux se
     disputeraient les ports 80 et 443. Les anciennes règles d'ingress doivent être supprimées, puis recréées par
     `make deploy`.
+
+    Deux autres conséquences : Traefik télécharge son plugin depuis GitHub au démarrage, et sans accès à Internet le
+    plugin ne se charge pas, ce qui écarte les routes `/api/v1` (rien ne passe sans contrôle). Et comme Traefik occupe
+    les ports 80 et 443 du nœud, une mise à jour remplace le pod au lieu d'en ajouter un : l'ingress est coupé quelques
+    secondes.
 
 !!! tip "Astuce"
     Le cluster publie les ports 80 et 443 dès sa création : l'ingress est donc joignable sans autre commande, et

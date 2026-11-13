@@ -4,9 +4,9 @@
 # Le suffixe .localhost est voulu : les navigateurs traitent ces noms comme un contexte securise.
 # keycloak-js (PKCE) en a besoin ; avec un suffixe .local, la connexion echoue.
 #   pme.localhost        -> trois chemins, le plus long l'emporte :
-#                             /api/v1/moderation -> pme-moderation
-#                             /api/v1            -> pme-api
-#                             /                  -> pme-frontend (fichiers statiques)
+#                             /api/v1/moderation -> pme-moderation   } Ingress `pme-api` : jeton JWT exige a l'ingress
+#                             /api/v1            -> pme-api          }
+#                             /                  -> pme-frontend (fichiers statiques), Ingress `pme` : public
 #                           Seul le prefixe /api/v1 est expose : /api/metrics et /api/health restent internes
 #                           (Prometheus et les sondes Kubernetes les lisent directement sur les services).
 #   keycloak.localhost   -> keycloak
@@ -21,9 +21,39 @@
 # Traefik pour tous les noms, et la taille des en-tetes de Keycloak (erreur 502 avec nginx, tampon de 16 Ko) n'est
 # plus un sujet, Traefik n'ayant pas ce tampon. HSTS et compression : k8s/08-middlewares.yaml.
 #
+# Deux Ingress pour le meme nom d'hote : l'annotation des middlewares s'applique a TOUS les chemins d'un Ingress, et le
+# jeton ne doit etre exige que sous /api/v1 (le site, lui, doit se charger sans jeton). Traefik les fusionne : le chemin le
+# plus long l'emporte, comme dans un Ingress unique. Le certificat est declare dans chacun.
+#
 # Le navigateur doit faire confiance a l'autorite locale (make ca-cert), sinon il affiche un avertissement.
 # Les noms d'hote sont aussi ecrits dans le Makefile (APP_HOST...), k8s/03-keycloak.yaml, 04-api.yaml,
 # 05-moderation.yaml, 10-grafana.yaml, config/realm-pme.json et config/frontend-config.js : a changer ensemble.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pme-api
+  annotations:
+    # <namespace>-<nom>@kubernetescrd : HSTS, compression, puis validation du jeton (k8s/08-middlewares.yaml).
+    traefik.ingress.kubernetes.io/router.middlewares: pme-api-defaults@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - secretName: pme-tls
+      hosts:
+        - pme.localhost
+  rules:
+    - host: pme.localhost
+      http:
+        paths:
+          - path: /api/v1/moderation
+            pathType: Prefix
+            backend:
+              service: { name: pme-moderation, port: { number: 3001 } }
+          - path: /api/v1
+            pathType: Prefix
+            backend:
+              service: { name: pme-api, port: { number: 3000 } }
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -46,14 +76,6 @@ spec:
     - host: pme.localhost
       http:
         paths:
-          - path: /api/v1/moderation
-            pathType: Prefix
-            backend:
-              service: { name: pme-moderation, port: { number: 3001 } }
-          - path: /api/v1
-            pathType: Prefix
-            backend:
-              service: { name: pme-api, port: { number: 3000 } }
           - path: /
             pathType: Prefix
             backend:

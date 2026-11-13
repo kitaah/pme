@@ -21,6 +21,26 @@ ports:
   websecure:
     hostPort: 443
 
+# Plugin de validation des jetons JWT (k8s/08-middlewares.yaml). Traefik open source n'a pas de middleware JWT integre
+# (il est reserve a Traefik Hub) : ce plugin communautaire, interprete par Traefik (Yaegi), le remplace. Il est declare ici,
+# dans la configuration statique, puis telecharge depuis GitHub au demarrage du controleur : Traefik doit donc pouvoir
+# joindre Internet, et la version est epinglee. Fonction "experimentale" de Traefik.
+experimental:
+  plugins:
+    jwt:
+      moduleName: github.com/agilezebra/jwt-middleware
+      version: v1.6.0
+
+# Mise a jour : l'ancien pod est arrete AVANT de demarrer le nouveau. Traefik occupe les ports 80 et 443 du noeud (hostPort) ;
+# avec la strategie par defaut (le nouveau pod demarre avant l'arret de l'ancien), le nouveau reste "Pending" ("didn't have
+# free ports") sur un noeud unique, et `make ingress` expire. Contrepartie : l'ingress est coupe quelques secondes pendant
+# une mise a jour, acceptable pour ce POC.
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 0
+
 # Service interne : l'entree se fait par les ports du noeud, pas par un equilibreur de charge externe.
 service:
   type: ClusterIP

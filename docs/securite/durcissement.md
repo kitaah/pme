@@ -132,7 +132,7 @@ deux.
 |---|---|---|
 | **PostgreSQL** | 5432 | API, service de modération, Keycloak, Grafana, Adminer |
 | **NATS** | 4222 | API, service de modération |
-| **Keycloak** | 8080 | Ingress (Traefik), API, service de modération, tâche d'administration |
+| **Keycloak** | 8080 | Ingress (Traefik : connexion et clés des jetons), API, service de modération, tâche d'administration |
 | **API** | 3000 | Ingress (Traefik), Prometheus |
 | **Service de modération** | 3001 | Ingress (Traefik), Prometheus |
 | **Interface** | 8080 | Ingress (Traefik) |
@@ -170,6 +170,8 @@ Cela n'est pas seulement déclaré, c'est vérifié à chaque passage de la pipe
 ## Ce qui n'est pas couvert
 
 - **Les connexions sortantes ne sont pas filtrées.** Les politiques réseau ne contrôlent que ce qui entre dans un pod.
+  Cela vaut aussi pour Traefik, qui télécharge son plugin de contrôle des jetons depuis GitHub à chaque démarrage : filtrer
+  les sorties imposerait de lui ouvrir cette destination.
   Un pod compromis pourrait donc ouvrir une connexion vers l'extérieur du cluster, par exemple pour exfiltrer des
   données, ou vers un composant dont la politique d'entrée l'autorise. Filtrer les sorties demanderait de déclarer, pour
   chaque composant, les destinations qu'il a le droit de joindre, y compris le service de noms (DNS) du cluster.

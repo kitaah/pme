@@ -4,7 +4,7 @@
 
 .PHONY: help install test test-integration test-perf image-test \
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
-        minikube-up minikube-down helm ingress inotify istio istio-scan mesh-check authz-check netpol-check cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
+        minikube-up minikube-down helm ingress inotify istio istio-scan mesh-check authz-check netpol-check jwt-check cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
         env kubeseal sealed-secrets sealed-prereqs seal image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         pods logs logs-api logs-moderation logs-keycloak \
         port-forward stop-forward api moderation frontend \
@@ -95,6 +95,7 @@ help:
 	@echo "    make mesh-check               - Verifie le mTLS : un pod hors du mesh est refuse, les echanges portent des identites"
 	@echo "    make authz-check              - Verifie les autorisations par identite : seules les sources prevues joignent chaque composant"
 	@echo "    make netpol-check             - Verifie les politiques reseau (Calico) : un pod sans l'etiquette prevue est coupe, meme avec la bonne identite"
+	@echo "    make jwt-check                - Verifie la validation des jetons a l'ingress : sans jeton valide, Traefik repond 401 sur /api/v1 ; le site reste public"
 	@echo "    make ca-configmap             - Copie l'autorite locale dans le namespace $(NS) (verification du TLS de PostgreSQL)"
 	@echo "    make tunnel                   - Redirige les ports 80 et 443 vers l'ingress (cluster cree sans --ports ; laisser ouvert, mot de passe demande)"
 	@echo "    make hosts                    - Affiche la ligne a ajouter dans /etc/hosts pour les noms .localhost"
@@ -283,6 +284,35 @@ netpol-check:
 	@kubectl -n $(NS) run netpol-sans-etiquette --rm -i --quiet --restart=Never --image=curlimages/curl \
 		--overrides='{"spec":{"serviceAccountName":"pme-api"}}' -- \
 		curl -sS -m 5 -o /dev/null -w "HTTP %{http_code}\n" http://keycloak:8080/realms/pme || true
+
+# Verifie la validation des jetons par Traefik (middleware `jwt`, k8s/08-middlewares.yaml). Un seul pod temporaire, hors du
+# mesh, s'adresse a l'ingress comme un navigateur (nom d'hote pme.localhost, certificat non verifie). Sa sortie est lue dans son
+# log une fois le pod termine : l'attachement direct (kubectl run -i) perd parfois des morceaux de texte. Chaque ligne annonce le resultat attendu :
+#   - sans jeton        -> /api/v1/listings/mine : 401 ;
+#   - jeton invalide    -> /api/v1/listings/mine : 401 ;
+#   - sans jeton        -> /api/v1/moderation/queue : 401 ;
+#   - sans jeton        -> / (le site) : 200.
+# Un 401 peut aussi venir de l'API elle-meme : la derniere etape lit donc le log d'acces de Traefik, depuis le lancement de la commande. Une requete refusee par le
+# middleware n'atteint aucun service (OriginStatus 0) ; une requete refusee par l'API porterait OriginStatus 401.
+# Le cas d'un jeton VALIDE n'est pas rejoue ici (il demande une connexion Keycloak) : se connecter dans l'interface le couvre.
+jwt-check:
+	@ip=$$(kubectl -n $(TRAEFIK_NS) get svc traefik -o jsonpath='{.spec.clusterIP}'); \
+	test -n "$$ip" || { echo "Service traefik introuvable : lancer make ingress"; exit 1; }; \
+	start=$$(date -u +%Y-%m-%dT%H:%M:%SZ); \
+	kubectl -n default delete pod jwt-check --ignore-not-found --now >/dev/null; \
+	kubectl -n default run jwt-check --restart=Never --image=curlimages/curl --env="IP=$$ip" --command -- sh -c '\
+		chk() { l=$$1; p=$$2; e=$$3; shift 3; printf "%s (attendu : HTTP %s) : " "$$l" "$$e"; \
+			curl -sk -m 10 -o /dev/null -w "HTTP %{http_code}\n" --resolve $(APP_HOST):443:$$IP "$$@" https://$(APP_HOST)$$p; }; \
+		chk "Sans jeton vers /api/v1/listings/mine" /api/v1/listings/mine 401; \
+		chk "Jeton invalide vers /api/v1/listings/mine" /api/v1/listings/mine 401 -H "Authorization: Bearer invalide"; \
+		chk "Sans jeton vers /api/v1/moderation/queue" /api/v1/moderation/queue 401; \
+		chk "Sans jeton vers le site (public)" / 200' >/dev/null; \
+	kubectl -n default wait --for=jsonpath='{.status.phase}'=Succeeded pod/jwt-check --timeout=90s >/dev/null || true; \
+	kubectl -n default logs jwt-check; \
+	kubectl -n default delete pod jwt-check --now >/dev/null; \
+	n=$$(kubectl -n $(TRAEFIK_NS) logs deploy/traefik --since-time=$$start | grep '"DownstreamStatus":401' | grep '"OriginStatus":0' | grep -c '"RequestPath":"/api/v1/'); \
+	if [ "$$n" -ge 3 ]; then echo "401 emis par Traefik sans atteindre un service : $$n (attendu : 3 ou plus) : OK"; \
+	else echo "Seulement $$n refus emis par Traefik (attendu : 3 ou plus) : le 401 vient peut-etre de l'API, voir le log de Traefik"; exit 1; fi
 
 # metrics-server (addon Minikube) : fournit la charge des pods a l'autoscaler (k8s/11-autoscaling.yaml). Sans lui, la cible
 # de chaque autoscaler reste <unknown> et le nombre de pods ne change jamais. Les premieres mesures arrivent apres ~1 minute.

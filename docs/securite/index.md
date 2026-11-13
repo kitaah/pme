@@ -56,7 +56,7 @@ couches: "" {
   grid-gap: 8
   style.opacity: 0
 
-  identite: "1. Identité — Keycloak, jeton signé, rôles" {class: boite}
+  identite: "1. Identité — Keycloak, jeton signé vérifié à l'entrée, rôles" {class: boite}
   echanges: "2. Échanges — HTTPS, mTLS entre pods, TLS vers les bases" {class: boite}
   application: "3. Application — validation, limitation de débit, en-têtes" {class: boite}
   conteneurs: "4. Conteneurs — sans droits d'administrateur, disque en lecture seule" {class: boite}
@@ -79,7 +79,7 @@ Chaque mesure est détaillée dans la page de sa couche.
 
 | Couche | Mesures principales | Page |
 |---|---|---|
-| **Identité et accès** | Connexion par Keycloak (flux avec PKCE, jeton gardé en mémoire par le navigateur), jeton signé vérifié par l'API, deux rôles, refus par défaut, données cloisonnées par membre, protection contre les essais répétés, aucun compte d'amorçage conservé. | [Authentification](authentification.md) |
+| **Identité et accès** | Connexion par Keycloak (flux avec PKCE, jeton gardé en mémoire par le navigateur), jeton signé vérifié par Traefik puis par l'API, deux rôles, refus par défaut, données cloisonnées par membre, protection contre les essais répétés, aucun compte d'amorçage conservé. | [Authentification](authentification.md) |
 | **Échanges** | HTTPS sur tous les noms d'hôte, mTLS strict entre les pods par Istio, chaque composant n'acceptant que ses appelants prévus (refus par défaut, double filtre : autorisation par identité d'Istio et politiques réseau de Calico), TLS jusqu'à PostgreSQL et NATS (y compris le port de supervision de NATS), mots de passe jamais transmis en clair, certificats renouvelés seuls. | [Chiffrement](chiffrement.md) |
 | **Secrets** | Mots de passe chiffrés avant d'entrer dans Git, déchiffrables par le seul cluster, recherche de secrets oubliés, aucun secret en clair dans la pipeline. | [Secrets](secrets.md) |
 | **Conteneurs et cluster** | Aucun droit d'administrateur, disque en lecture seule, capacités retirées, jeton du cluster non monté, un compte de service par composant, ressources plafonnées, standards de sécurité des pods imposés, composants du maillage isolés, images sans outils de développement. | [Durcissement](durcissement.md) |
@@ -108,6 +108,7 @@ connus sont les suivants. Chacun est repris, avec son contexte, dans la page con
 | **Haute** | **Outils d'exploitation sans authentification** | Adminer, Prometheus et Alloy sont joignables sans mot de passe propre. | [Authentification](authentification.md) |
 | **Haute** | **Pas de second facteur** | La connexion repose sur le seul mot de passe, dont la politique impose 12 caractères mais n'écarte pas les mots de passe courants. | [Authentification](authentification.md) |
 | **Haute** | **Console d'administration de Keycloak exposée** | Elle est joignable par l'ingress comme la page de connexion, et le realm `master` n'a pas de protection contre les essais répétés dans le dépôt. | [Authentification](authentification.md) |
+| **Moyenne** | **Plugin tiers dans l'ingress** | Le contrôle des jetons de Traefik repose sur un plugin communautaire, téléchargé depuis GitHub à chaque démarrage et non analysé par la chaîne du projet. | [Authentification](authentification.md) |
 | **Moyenne** | **Connexions sortantes non filtrées** | Les politiques réseau ne contrôlent que les entrées : un pod compromis pourrait ouvrir une connexion vers l'extérieur du cluster. | [Durcissement](durcissement.md) |
 | **Moyenne** | **Keycloak en mode développement** | Contrôles assouplis, code reconstruit à chaque démarrage : déconseillé en production. | [Authentification](authentification.md) |
 | **Moyenne** | **Un seul compte NATS** | L'API et le service de modération partagent le même compte : aucune permission distincte par sujet. | [Durcissement](durcissement.md) |
