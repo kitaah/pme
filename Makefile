@@ -611,10 +611,10 @@ format-check:
 	cd frontend && npm run format:check
 	$(ROOT_PRETTIER) --check
 
-# Lint YAML (manifestes Kubernetes, tests d'image, pipeline) : pip install yamllint.
+# Lint YAML (manifestes Kubernetes, tests d'image, pipelines GitLab et GitHub) : pip install yamllint.
 # Le realm Keycloak est un .json : il n'est pas couvert ici (voir la documentation, page Lint YAML).
 lint-yaml:
-	yamllint -c .yamllint.yml k8s tests .gitlab-ci.yml .yamllint.yml
+	yamllint -c .yamllint.yml k8s tests .gitlab-ci.yml .github .yamllint.yml
 
 # Lint Dockerfile : hadolint (binaire ou conteneur)
 lint-docker:
