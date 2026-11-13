@@ -124,13 +124,13 @@ sous cette limite même lorsque l'autoscaler ajoute des exemplaires :
 | Composant | Plafond par exemplaire | Exemplaires au maximum | Total |
 |---|---|---|---|
 | **API** | 10 | 4 | 40 |
-| **Service de modération** | 5 | 4 | 20 |
+| **Service de modération** | 5 | 3 | 15 |
 | **Keycloak** | 10 au total | 1 | 10 |
 | **Grafana** | 10 au total | 1 | 10 |
-| **Total** | | | **80** |
+| **Total** | | | **75** |
 
 !!! note "À savoir"
-    Les 20 connexions restantes servent aux déploiements, pendant lesquels d'anciens et de nouveaux pods coexistent, et
+    Les 25 connexions restantes servent aux déploiements, pendant lesquels d'anciens et de nouveaux pods coexistent, et
     aux consultations ponctuelles avec [Adminer](adminer.md). Toute modification d'un plafond ou du nombre maximal
     d'exemplaires impose de refaire ce calcul, détaillé dans `k8s/01-postgres.yaml`.
 

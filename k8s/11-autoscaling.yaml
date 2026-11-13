@@ -1,7 +1,11 @@
 # Montee en charge de l'API, de la moderation et du front.
-#  - HorizontalPodAutoscaler : entre 2 et 4 pods, selon l'utilisation du processeur rapportee a `resources.requests`
-#    (70 %). Il lit les mesures de metrics-server (addon Minikube, `make metrics-server`) ; sans lui, la cible reste
-#    `<unknown>` et rien ne change. Le nombre de pods n'est donc pas fixe dans les Deployments.
+#  - HorizontalPodAutoscaler : de 2 a 4 pods pour l'API, de 2 a 3 pour la moderation et le front, selon l'utilisation
+#    du processeur rapportee a `resources.requests` (70 %). Il lit les mesures de metrics-server (addon Minikube,
+#    `make metrics-server`) ; sans lui, la cible reste `<unknown>` et rien ne change. Le nombre de pods n'est donc pas
+#    fixe dans les Deployments.
+#    Le minimum de 2 assure la disponibilite. Les maximums suivent le goulot de chaque composant : les connexions a
+#    PostgreSQL pour l'API (budget dans k8s/01-postgres.yaml), le debit de la file NATS pour la moderation, la legerete
+#    des fichiers statiques pour le front.
 #  - PodDisruptionBudget : au moins un pod reste disponible pendant une maintenance ou un vidage de noeud.
 # PostgreSQL, NATS, Keycloak, Adminer, Prometheus et Grafana restent a un seul pod : ils ne sont pas repliques ici.
 ---
@@ -53,7 +57,7 @@ spec:
     kind: Deployment
     name: pme-moderation
   minReplicas: 2
-  maxReplicas: 4
+  maxReplicas: 3
   metrics:
     - type: Resource
       resource:
@@ -88,7 +92,7 @@ spec:
     kind: Deployment
     name: pme-frontend
   minReplicas: 2
-  maxReplicas: 4
+  maxReplicas: 3
   metrics:
     - type: Resource
       resource:
