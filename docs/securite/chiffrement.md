@@ -132,7 +132,7 @@ n'est joignable que depuis le pod lui-même.
 !!! note "À savoir"
     Les certificats de PostgreSQL et de NATS ne servent qu'à authentifier le **serveur**. Les clients, eux, ne
     présentent pas de certificat à ces serveurs : ils s'identifient par leur mot de passe. L'authentification mutuelle
-    existe en revanche entre les pods, au niveau du maillage. Elle est vérifiée dans les journaux de ztunnel, où chaque
+    existe en revanche entre les pods, au niveau du maillage. Elle est vérifiée dans les logs de ztunnel, où chaque
     connexion porte l'identité de sa source et de sa destination (voir les commandes de vérification).
 
 ## Ce qui n'est pas couvert
@@ -173,7 +173,7 @@ n'est joignable que depuis le pod lui-même.
 | **`curl --cacert pme-ca.crt`**<br>**`https://localhost:8222/healthz`** | Vérifie le certificat du port de supervision de NATS, après `make port-forward`. Le fichier `pme-ca.crt` est écrit par `make ca-cert`. |
 | **`kubectl -n istio-system logs ds/ztunnel`**<br>**`--tail=500 \| grep src.identity`** | Affiche les connexions chiffrées vues par ztunnel, avec l'identité de la source et de la destination. |
 
-Dans les journaux de ztunnel, une connexion chiffrée par le maillage se reconnaît à deux indices : l'adresse de
+Dans les logs de ztunnel, une connexion chiffrée par le maillage se reconnaît à deux indices : l'adresse de
 destination utilise le port **15008**, celui du tunnel entre nœuds, et les champs `src.identity` et `dst.identity`
 contiennent une identité de la forme `spiffe://cluster.local/ns/pme/sa/pme-api`. La connexion de l'ingress vers l'API
 et celle de Prometheus vers l'API ont été vérifiées de cette façon.

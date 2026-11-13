@@ -124,7 +124,7 @@ bord, n'est pas exposée non plus.
 - Il compresse les réponses de plus de 1 Ko.
 - Il répartit les requêtes entre les exemplaires de l'API, de la modération et du site.
 - Il n'expose que ce qui doit l'être : les mesures et les sondes de santé restent internes.
-- Il écrit un journal de chaque requête, au format JSON, consultable avec la commande de journal ci-dessous.
+- Il écrit un log de chaque requête, au format JSON, consultable avec la commande de log ci-dessous.
 - Sans lui, chaque interface exigerait une redirection de port distincte, à relancer à chaque session de travail.
 
 Les six noms d'hôte sont les suivants :
@@ -136,7 +136,7 @@ Les six noms d'hôte sont les suivants :
 | **<https://adminer.localhost>** | `adminer` | 8080 | Consultation des bases de données. |
 | **<https://grafana.localhost>** | `grafana` | 3000 | Tableaux de bord. |
 | **<https://prometheus.localhost>** | `prometheus` | 9090 | Mesures brutes et état de la collecte. |
-| **<https://alloy.localhost>** | `alloy` | 12345 | Suivi de la collecte des journaux. |
+| **<https://alloy.localhost>** | `alloy` | 12345 | Suivi de la collecte des logs. |
 
 !!! note "À savoir"
     Ces noms d'hôte figurent aussi dans le `Makefile`, dans la configuration de Keycloak, de l'API, de la modération,
@@ -146,7 +146,7 @@ Les six noms d'hôte sont les suivants :
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/traefik/values.yaml`** | Réglages de Traefik : ports 80 et 443, redirection vers HTTPS, journal d'accès. |
+| **`k8s/traefik/values.yaml`** | Réglages de Traefik : ports 80 et 443, redirection vers HTTPS, log d'accès. |
 | **`k8s/08-ingress.yaml`** | Déclare les noms d'hôte, les chemins, les services visés et le certificat. |
 | **`k8s/08-middlewares.yaml`** | Décrit l'en-tête HSTS et la compression des réponses. |
 | **`k8s/08-certificate.yaml`** | Demande à cert-manager le certificat des six noms d'hôte. |
@@ -171,7 +171,7 @@ Les six noms d'hôte sont les suivants :
 | **`make app`** | Ouvre l'application dans le navigateur. |
 | **`make ca-cert`** | Écrit l'autorité locale dans `pme-ca.crt`, à importer dans le navigateur. |
 | **`make tunnel`** | Redirige les ports 80 et 443 vers Traefik, pour un cluster créé sans publication des ports. |
-| **`kubectl -n traefik logs deploy/traefik`** | Affiche le journal de Traefik, dont les requêtes reçues. |
+| **`kubectl -n traefik logs deploy/traefik`** | Affiche le log de Traefik, dont les requêtes reçues. |
 
 La ligne à ajouter une seule fois au fichier hosts est la suivante :
 

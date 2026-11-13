@@ -32,7 +32,7 @@ la pipeline elle-même. Les deux analyses se complètent.
 | **Gravités bloquantes** | HIGH et CRITICAL. |
 | **Failles sans correctif** | Ignorées : l'équipe ne peut rien y faire. |
 | **Exceptions** | Listées dans `.trivyignore`, avec une date d'expiration obligatoire. Le fichier est partagé avec l'analyse des images. |
-| **Résultat** | Un tableau dans le journal et le rapport `trivy-dependencies.json`. |
+| **Résultat** | Un tableau dans le log et le rapport `trivy-dependencies.json`. |
 
 Le job ne démarre pas Docker : Trivy lit directement les fichiers du dépôt. Il est donc court et peu coûteux.
 
@@ -44,7 +44,7 @@ Le job ne démarre pas Docker : Trivy lit directement les fichiers du dépôt. I
 **Images du maillage Istio.** Le job `istio-scan` analyse les images d'Istio (plan de contrôle, agent réseau et ztunnel),
 dont deux s'exécutent avec des droits élevés sur le nœud. Ces images sont publiées par Istio et le projet ne les
 reconstruit pas : seule une nouvelle version d'Istio corrige une faille. La règle est donc différente de celle des
-dépendances. Une faille CRITICAL corrigeable fait échouer le job. Les failles HIGH sont comptées dans le journal et
+dépendances. Une faille CRITICAL corrigeable fait échouer le job. Les failles HIGH sont comptées dans le log et
 conservées dans un rapport JSON par image, pour décider d'une montée de version. Le job lit la version d'Istio dans le
 `Makefile`, se lance, lui aussi, à chaque pipeline. En
 local : `make istio-scan`.
@@ -55,7 +55,7 @@ local : `make istio-scan`.
 
 ## Où voir le résultat
 
-- **Journal du job** `dependency-scan` : un tableau des failles par fichier, avec la version qui les corrige.
+- **Log du job** `dependency-scan` : un tableau des failles par fichier, avec la version qui les corrige.
 - **Artefact du job** : `trivy-dependencies.json`, conservé une semaine.
 - **Statut de la pipeline** : le job échoue s'il reste une faille grave et corrigeable non justifiée.
 

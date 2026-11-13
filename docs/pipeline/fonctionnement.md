@@ -45,7 +45,6 @@ Ce choix a un coût : chaque pipeline consomme le temps de tous les jobs. Il est
 | **Images de base épinglées** | Les Dockerfile désignent `node` et `nginx` par leur empreinte (`@sha256:…`) et non par leur seule étiquette. Une mise à jour de l'image sur Docker Hub ne vide donc pas le cache de construction. |
 | **Dépendances de production à part** | Dans les Dockerfile de l'API et de la modération, les dépendances de production sont installées dans une étape dédiée, mise en cache tant que `package-lock.json` ne change pas. |
 | **Outils installés en parallèle** | container-structure-test et Trivy sont téléchargés en même temps, et la base de Trivy pendant la construction des images. |
-| **Cache de construction** | Les couches des images, dont l'installation des dépendances, sont conservées dans le registre GitLab. Une modification du code ne les refait pas. |
 | **Analyses parallèles** | Les trois images sont contrôlées ensemble : structure puis vulnérabilités. |
 | **Annulation automatique** | Un nouveau commit annule la pipeline devenue inutile. |
 
@@ -95,7 +94,7 @@ chacun un `npm ci` : ils ajoutent quelques minutes de calcul par pipeline, sans 
 |---|---|
 | **Aucune pipeline après un push** | Branche autre que la principale, ou `[skip ci]` dans le message. |
 | **`sonar` refuse la branche** | L'offre gratuite n'analyse que la branche principale. |
-| **`image-tests` vert, mais rien dans le registre** | Le journal s'arrête après les tests de structure : un bloc du script se terminait par `exit`, ce qui arrête tout le script avec succès. Ne jamais utiliser `exit` dans le script d'un job, mais `test "$status" -eq 0`. |
+| **`image-tests` vert, mais rien dans le registre** | Le log s'arrête après les tests de structure : un bloc du script se terminait par `exit`, ce qui arrête tout le script avec succès. Ne jamais utiliser `exit` dans le script d'un job, mais `test "$status" -eq 0`. |
 | **`image-tests` échoue sur Trivy** | Une faille grave est corrigeable : mettre à jour la dépendance, sinon l'excuser dans `.trivyignore`. |
 | **`lint:code` échoue sur une complexité** | Une fonction dépasse 10 (cyclomatique) ou 15 (cognitive) : la découper. Voir [Lint du code](lint-code.md). |
 | **`lint:yaml` échoue sur `new-line-at-end-of-file`** | Un fichier YAML ne se termine pas par un retour à la ligne : en ajouter un. Voir [Lint YAML](lint-yaml.md). |

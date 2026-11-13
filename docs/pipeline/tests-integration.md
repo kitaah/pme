@@ -66,7 +66,7 @@ Ce que ces tests prouvent d'important :
 ## Où voir le résultat
 
 - **Onglet « Tests » de la pipeline** : les rapports JUnit des deux modules y sont réunis.
-- **Journal du job** : il montre chaque module à la suite. Les deux sont testés même si le premier échoue.
+- **Log du job** : il montre chaque module à la suite. Les deux sont testés même si le premier échoue.
 - **Artefacts du job** : les fichiers `junit-integration.xml` sont conservés une semaine.
 
 ## Fichiers et dossiers principaux

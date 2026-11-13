@@ -40,12 +40,12 @@ les tests des images n'interviennent qu'après une construction complète.
 
 ## Où voir le résultat
 
-- **Journal du job** `hadolint` : une ligne par écart, avec le fichier, la ligne, le code de la règle, sa gravité et une explication.
+- **Log du job** `hadolint` : une ligne par écart, avec le fichier, la ligne, le code de la règle, sa gravité et une explication.
 - **Statut de la pipeline** : le job échoue dès qu'un écart de gravité `warning` ou `error` subsiste.
 
 ## Corriger un écart
 
-1. Lire dans le journal le fichier, la ligne et le code de la règle.
+1. Lire dans le log le fichier, la ligne et le code de la règle.
 2. Corriger le Dockerfile, ou consulter l'explication de la règle (voir la liste officielle ci-dessous).
 3. Vérifier sur son ordinateur avec `make lint-docker`, puis pousser la correction.
 

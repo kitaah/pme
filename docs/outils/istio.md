@@ -99,7 +99,7 @@ de cert-manager : istiod les émet et les renouvelle seul, avec une durée de vi
 ## Rôle dans le projet
 
 Istio chiffre le trafic interne qui circulait jusque-là en clair : tous les échanges entre les pods du namespace `pme`,
-et ceux de l'ingress vers ces pods. Les journaux de ztunnel montrent par exemple des connexions de Traefik vers l'API et
+et ceux de l'ingress vers ces pods. Les logs de ztunnel montrent par exemple des connexions de Traefik vers l'API et
 de Prometheus vers l'API, chacune avec l'identité de sa source et de sa destination. Le mode strict refuse les
 connexions de tout pod extérieur au maillage.
 
@@ -141,16 +141,16 @@ vérifient pas l'identité des pods. L'application continue de fonctionner, mais
 3. `make deploy` déploie la plateforme. Le mode strict suppose Istio installé : la commande échoue sinon.
 4. `make mesh-check` confirme que le pod extérieur est refusé. `make authz-check` confirme que chaque identité n'atteint
    que ce qui lui est autorisé. Utiliser ensuite la plateforme (connexion, création d'une annonce), puis chercher les
-   identités dans les journaux de ztunnel.
+   identités dans les logs de ztunnel.
 
-Une connexion chiffrée par le maillage se reconnaît dans ces journaux à l'adresse de destination, qui utilise le port
+Une connexion chiffrée par le maillage se reconnaît dans ces logs à l'adresse de destination, qui utilise le port
 **15008** (le tunnel entre nœuds), et à des identités de la forme `spiffe://cluster.local/ns/pme/sa/pme-api`. La dernière
 ligne affichée par `make mesh-check` ne suffit pas : elle peut ne montrer que l'identité de ztunnel lui-même.
 
 !!! note "À savoir"
     Un nouveau composant doit être déclaré dans `k8s/15-service-accounts.yaml` et dans
     `k8s/17-authorization-policies.yaml`. Sans cela, le refus par défaut le rend injoignable. Les connexions refusées se
-    lisent dans les journaux de ztunnel : `kubectl -n istio-system logs ds/ztunnel --tail=300 | grep "policy rejection"`.
+    lisent dans les logs de ztunnel : `kubectl -n istio-system logs ds/ztunnel --tail=300 | grep "policy rejection"`.
 
 !!! note "À savoir"
     Sur un cluster existant, `make istio` suffit, sans le recréer. La commande doit passer avant `make deploy`,
@@ -177,7 +177,7 @@ ligne affichée par `make mesh-check` ne suffit pas : elle peut ne montrer que l
 
 !!! warning "Attention"
     **Ne déployer qu'une fois ztunnel prêt.** `make deploy` enrôle `pme` et applique le mode strict. Si ztunnel n'est pas prêt, les pods de `pme` perdent leur
-    réseau (le journal d'istio-cni indique `no ztunnel connection`) et l'application cesse de répondre. Pour revenir en
+    réseau (le log d'istio-cni indique `no ztunnel connection`) et l'application cesse de répondre. Pour revenir en
     arrière : `kubectl -n pme delete peerauthentication default`, puis
     `kubectl label namespace pme istio.io/dataplane-mode-`. Corriger ensuite la cause (voir la limite `inotify`
     ci-dessus), et relancer `make deploy`. Si seules les autorisations bloquent un échange légitime, les retirer
@@ -187,6 +187,12 @@ ligne affichée par `make mesh-check` ne suffit pas : elle peut ne montrer que l
     Istio ajoute trois composants, d'un poids modeste (istiod occupe environ 45 Mo). Si le cluster manque de place, augmenter `MINIKUBE_MEMORY`
     dans le `Makefile` avant de recréer le cluster. Un namespace enrôlé en mode strict dont le trafic ne passe pas par
     le maillage devient inaccessible : c'est le cas de Traefik s'il n'est pas enrôlé.
+
+!!! tip "Astuce"
+    Devant un échange refusé, commencer par `make authz-check` plutôt que par la lecture des manifestes : la commande
+    distingue en quelques secondes un refus d'identité d'un refus d'étiquette, c'est-à-dire une politique d'Istio
+    d'une politique de [Calico](calico.md). Les deux filtres portent les mêmes listes d'appelants, et sans ce tri on
+    corrige volontiers le mauvais fichier.
 
 ## Pour aller plus loin
 

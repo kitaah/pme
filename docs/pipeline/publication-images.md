@@ -68,7 +68,7 @@ Chaque commit sur cette branche, y compris un commit de documentation, produit d
 
 ## Où voir le résultat
 
-- **Journal du job** : les lignes `docker push` des trois images.
+- **Log du job** : les lignes `docker push` des trois images.
 - **Interface GitLab** : *Déployer* puis *Registre de conteneurs*, avec les étiquettes et leur date. Le registre contient six dépôts : `api`, `moderation` et `frontend` (les images publiées, avec le même SHA), et `cache/api`, `cache/moderation` et `cache/frontend` (le cache de construction, à conserver).
 
 ## Récupérer une image

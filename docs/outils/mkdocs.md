@@ -87,13 +87,15 @@ lieu de produire un site muet sur le problème. La même vérification est dispo
 - Il produit une image Docker autonome, qui permet de servir la documentation comme n'importe quel autre composant.
 - Sans lui, les fiches resteraient des fichiers texte, sans menu, sans recherche ni schémas.
 
-La documentation est organisée en trois ensembles :
+La documentation est organisée en cinq ensembles :
 
 | Ensemble | Contenu |
 |---|---|
-| **Accueil** | Présentation du projet et de son architecture. |
+| **Accueil** | Ce que fait la plateforme et comment entrer dans la documentation. |
+| **Architecture** | La vue d'ensemble : les composants, qui parle à qui, et le trajet d'une annonce de bout en bout. |
 | **Outils** | Une fiche par outil, toutes construites sur le même modèle. |
 | **Pipeline CI/CD** | Les contrôles automatiques : exigences, fonctionnement et une page par famille de contrôles. |
+| **Sécurité** | Les mesures de sécurité couche par couche, et ce qu'elles ne couvrent pas. |
 
 !!! note "À savoir"
     Une version 2.0 de MkDocs est annoncée, qui supprimerait le système d'extensions sur lequel repose le thème

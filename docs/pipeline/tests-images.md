@@ -57,7 +57,7 @@ Détail des 6 contrôles de l'image de l'interface :
 | **Failles sans correctif** | Ignorées : l'équipe ne peut rien y faire. |
 | **Ce qui est analysé** | Les paquets de l'image, pas les secrets ni la configuration. |
 | **Exceptions** | Listées dans `.trivyignore`, avec une date d'expiration obligatoire. |
-| **Résultat** | Un tableau dans le journal et un rapport JSON par image. |
+| **Résultat** | Un tableau dans le log et un rapport JSON par image. |
 
 !!! warning "Attention"
     Une exception du fichier `.trivyignore` cesse de s'appliquer à sa date d'expiration. La pipeline échoue alors de
@@ -95,7 +95,7 @@ Voir [Publication des images](publication-images.md).
 
 ## Où voir le résultat
 
-- **Journal du job** : la construction, les contrôles de structure, puis un tableau des failles par image.
+- **Log du job** : la construction, les contrôles de structure, puis un tableau des failles par image.
 - **Artefacts du job** : les rapports `trivy-api.json`, `trivy-moderation.json` et `trivy-frontend.json`, conservés une semaine.
 - **Statut de la pipeline** : le job échoue si un contrôle échoue ou s'il reste une faille grave non justifiée.
 

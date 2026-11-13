@@ -77,7 +77,7 @@ sans fin :
 La distinction est essentielle. Représenter un message invalide donnerait toujours le même résultat et bloquerait la
 file. À l'inverse, jeter un message à la première panne ferait perdre une annonce déposée par un membre.
 
-**Une file de travail, et non un journal.**
+**Une file de travail, et non un log.**
 Le flux principal est configuré en **file de travail** : un message en disparaît dès qu'il est traité. Ce qu'il reste
 dans le flux correspond donc, à tout instant, à ce qu'il reste à faire, ce que la commande `make queues` affiche
 directement. Une fenêtre de déduplication de deux minutes ignore par ailleurs la republication d'une même annonce.
@@ -167,7 +167,7 @@ Le serveur est configuré ainsi :
 | **`make queues`** | Affiche les flux, le nombre de messages en attente et l'état du consommateur. La lecture se fait depuis le pod, sans vérifier le certificat. |
 | **`curl --cacert pme-ca.crt`**<br>**`https://localhost:8222/healthz`** | Vérifie le certificat du port de supervision, après `make port-forward`. Répond `{"status":"ok"}`. |
 | **`make nats`** | Ouvre la page de supervision dans le navigateur. L'autorité locale doit y être importée, comme pour le site. |
-| **`make logs-moderation`** | Affiche le journal du service de modération, mis à jour en direct. |
+| **`make logs-moderation`** | Affiche le log du service de modération, mis à jour en direct. |
 | **`make demo-stop-moderation`** | Arrête le service qui lit les messages : ils s'accumulent dans le flux. |
 | **`make demo-start-moderation`** | Relance ce service : les messages en attente sont traités. |
 
@@ -187,6 +187,12 @@ Pour observer la persistance, l'enchaînement est le suivant :
 4. `kubectl -n pme delete pod -l app=nats` supprime le pod NATS, que Kubernetes recrée aussitôt.
 5. Une fois le pod de nouveau `Running`, `make queues` montre toujours le message.
 6. `make demo-start-moderation` relance le service, qui traite le message.
+
+!!! warning "Attention"
+    Le flux est plafonné à 768 Mo. Au-delà, NATS **refuse** les nouvelles publications au lieu d'écraser les anciens
+    messages : l'API ne parvient plus à publier et répond `503` aux dépôts d'annonce. Un service de modération arrêté
+    pendant longtemps, ou un test de charge répété, remplit donc le flux jusqu'à bloquer la plateforme. Surveiller le
+    nombre de messages en attente, et relancer la modération avant d'approcher du plafond.
 
 !!! tip "Astuce"
     Le nombre de messages en attente est l'indicateur à surveiller. Il augmente lorsque la modération est arrêtée ou

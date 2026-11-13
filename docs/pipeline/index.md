@@ -159,7 +159,9 @@ Le lint du code, la complexité, la mise en forme et le lint YAML y sont déjà.
 | **Tous les contrôles, y compris ceux déjà dans la pipeline** | `make quality` |
 
 !!! note "À savoir"
-    Un commit qui ne touche que la documentation ne lance aucun job. Il ne consomme donc aucune minute du quota.
+    La pipeline ne trie pas les commits selon les fichiers modifiés : un commit qui ne touche que la documentation
+    lance les seize jobs et consomme du quota comme n'importe quel autre. Grouper les retouches de documentation en
+    un seul commit reste donc la façon la plus simple d'économiser des minutes.
 
 !!! warning "Attention"
     La pipeline ne se lance que sur la branche principale. Un commit poussé sur une autre branche n'est contrôlé par

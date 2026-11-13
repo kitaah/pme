@@ -13,3 +13,8 @@ coverage/
 pme-ca.crt
 # Cache du plugin D2 de MkDocs (schemas deja generes)
 .cache/
+# Site MkDocs genere (make docs-serve / mkdocs build)
+site/
+# Rapports JUnit des tests d'integration (make test-integration)
+junit.xml
+reports/

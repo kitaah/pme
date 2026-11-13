@@ -23,6 +23,41 @@ la syntaxe.
 Adminer ne gère pas d'utilisateurs : il se connecte à PostgreSQL avec l'identifiant et le mot de passe saisis sur sa
 page d'accueil. Il n'a donc aucun droit propre, et ce qu'il peut voir dépend entièrement du compte utilisé.
 
+```d2
+vars: {
+  d2-config: {
+    layout-engine: elk
+    theme-id: 5
+    pad: 8
+  }
+}
+direction: right
+
+# Mise en forme commune : texte lisible à la largeur de la page, angles arrondis
+classes: {
+  boite: {
+    style: {
+      font-size: 24
+      border-radius: 12
+    }
+  }
+}
+
+navigateur: "Navigateur\nadminer.localhost" {class: boite}
+adminer: "Adminer\naucun compte propre" {class: boite}
+
+postgres: "PostgreSQL" {
+  style.font-size: 22
+  pme: "pme\nannonces" {class: boite}
+  moderation: "moderation\nfile d'attente" {class: boite}
+  keycloak: "keycloak\nidentités" {class: boite}
+  grafana: "grafana\ntableaux de bord" {class: boite}
+}
+
+navigateur -> adminer: HTTPS
+adminer -> postgres: identifiants saisis\npar l'utilisateur
+```
+
 **Définitions**
 
 | Terme | Définition |

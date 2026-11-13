@@ -4,17 +4,17 @@
 
 | Information | Détail |
 |---|---|
-| **Rôle** | Rassemble les journaux de tous les services et permet de les rechercher au même endroit |
+| **Rôle** | Rassemble les logs de tous les services et permet de les rechercher au même endroit |
 | **Version** | Loki 3.7.8 |
 | **Adresse en local** | Aucune : Loki se consulte depuis [Grafana](grafana.md) |
 
 ## Description
 
-Loki est un outil open source de gestion des **journaux**. Un journal est la suite de lignes qu'un service écrit pour
+Loki est un outil open source de gestion des **logs**. Un log est la suite de lignes qu'un service écrit pour
 raconter ce qu'il fait : une requête reçue, une erreur rencontrée, un message traité.
 
 **Pourquoi les rassembler ?**
-Lire les journaux d'un service à la fois convient lorsqu'on sait déjà où chercher. Ce n'est plus le cas dès que la
+Lire les logs d'un service à la fois convient lorsqu'on sait déjà où chercher. Ce n'est plus le cas dès que la
 plateforme compte une dizaine de composants, dont certains fonctionnent en plusieurs exemplaires : il faudrait ouvrir
 chaque exemplaire pour reconstituer ce qui s'est passé. Loki rassemble toutes les lignes en un seul endroit,
 consultable par une recherche unique.
@@ -39,7 +39,7 @@ classes: {
   }
 }
 
-pods: "Pods\nécrivent\nleurs journaux" {class: boite}
+pods: "Pods\nécrivent\nleurs logs" {class: boite}
 alloy: "Alloy\nlit et étiquette" {class: boite}
 loki: "Loki\nconserve 24 heures" {class: boite}
 grafana: "Grafana\nrecherche et affiche" {class: boite}
@@ -65,19 +65,19 @@ les lignes écrites à cet instant précis indiquent que la base ne répondait p
 
 | Terme | Définition |
 |---|---|
-| **Compactor** | Composant de Loki qui supprime les journaux plus anciens que la durée de conservation. |
-| **Étiquette** | Mot-clé attaché à un journal pour le retrouver, par exemple le nom du service. |
-| **Journal** | Suite de lignes de texte écrites par un service pour décrire son activité. |
+| **Compactor** | Composant de Loki qui supprime les logs plus anciens que la durée de conservation. |
+| **Étiquette** | Mot-clé attaché à un log pour le retrouver, par exemple le nom du service. |
+| **Log** | Suite de lignes de texte écrites par un service pour décrire son activité. |
 | **LogQL** | Langage de requête de Loki, proche de PromQL dans sa syntaxe. |
-| **Rétention** | Durée pendant laquelle les journaux sont conservés, ici 24 heures. |
+| **Rétention** | Durée pendant laquelle les logs sont conservés, ici 24 heures. |
 
 ## Rôle dans le projet
 
-- Il conserve les journaux de tous les composants de la plateforme pendant 24 heures.
+- Il conserve les logs de tous les composants de la plateforme pendant 24 heures.
 - Il permet de suivre un incident à travers plusieurs services, sans ouvrir chaque exemplaire un par un.
 - Il alimente le tableau de bord « Logs » de Grafana, qui filtre par service et par mot recherché.
-- Il reçoit ses lignes d'[Alloy](alloy.md), seul composant à lire les journaux des pods. Seuls Alloy (écriture) et Grafana (lecture) peuvent l'appeler.
-- Sans lui, les journaux restent lisibles avec `make logs-api`, mais pour un seul service à la fois, et ils
+- Il reçoit ses lignes d'[Alloy](alloy.md), seul composant à lire les logs des pods. Seuls Alloy (écriture) et Grafana (lecture) peuvent l'appeler.
+- Sans lui, les logs restent lisibles avec `make logs-api`, mais pour un seul service à la fois, et ils
   disparaissent dès qu'un pod est remplacé.
 
 Les étiquettes attachées à chaque ligne sont volontairement peu nombreuses :
@@ -101,7 +101,7 @@ Les étiquettes attachées à chaque ligne sont volontairement peu nombreuses :
 | **`k8s/12-loki.yaml`** | Déploie Loki dans le cluster. |
 | **`k8s/config/loki.yml`** | Règle le stockage et la durée de conservation. |
 | **`k8s/config/grafana-datasource-loki.yml`** | Déclare Loki comme source de données de Grafana. |
-| **`k8s/config/grafana-dashboard-logs.json`** | Décrit le tableau de bord des journaux. |
+| **`k8s/config/grafana-dashboard-logs.json`** | Décrit le tableau de bord des logs. |
 | **`k8s/config/alloy.alloy`** | Décrit la chaîne qui alimente Loki. |
 
 ## Commandes essentielles
@@ -111,19 +111,19 @@ Les étiquettes attachées à chaque ligne sont volontairement peu nombreuses :
 | Commande | Description |
 |---|---|
 | **`make deploy`** | Installe Loki avec le reste de la plateforme. |
-| **`make grafana`** | Ouvre Grafana, seul moyen de consulter les journaux. |
-| **`make alloy`** | Ouvre l'interface d'Alloy, pour vérifier que les journaux sont bien envoyés. |
+| **`make grafana`** | Ouvre Grafana, seul moyen de consulter les logs. |
+| **`make alloy`** | Ouvre l'interface d'Alloy, pour vérifier que les logs sont bien envoyés. |
 | **`make pods`** | Indique si Loki est prêt. |
 
-Pour rechercher les journaux d'un service :
+Pour rechercher les logs d'un service :
 
 1. Ouvrir Grafana avec `make grafana`.
 2. Choisir « Explore » dans le menu, puis la source de données « Loki ».
-3. Saisir `{app="pme-api"}` pour afficher les journaux de l'API.
+3. Saisir `{app="pme-api"}` pour afficher les logs de l'API.
 4. Ajouter `|= "erreur"` à la suite pour ne garder que les lignes contenant ce mot.
 
 !!! warning "Attention"
-    Les journaux sont écrits sur un volume persistant de 1 Go (`loki-data`) : ils survivent au redémarrage du pod, mais
+    Les logs sont écrits sur un volume persistant de 1 Go (`loki-data`) : ils survivent au redémarrage du pod, mais
     disparaissent avec le namespace (`make undeploy`) et après 24 heures. Pour conserver la trace d'un incident,
     copier les lignes utiles avant. En production, Loki écrit dans un stockage objet (S3, GCS).
 

@@ -177,7 +177,7 @@ Le cluster exécute les composants suivants. Tous sont dans le namespace `pme`, 
 | **Applications** | Interface ([React](react.md)), API et service de modération ([NestJS](nestjs.md)) | Affichent le site, appliquent les règles métier et modèrent les contenus. |
 | **Données et messagerie** | [PostgreSQL](postgresql.md), [NATS](nats.md) | Stockent les données et transmettent les messages entre l'API et la modération. |
 | **Authentification** | [Keycloak](keycloak.md) | Gère les comptes, la connexion et les rôles. |
-| **Observabilité** | [Prometheus](prometheus.md), [Loki](loki.md), [Alloy](alloy.md), [Grafana](grafana.md) | Collectent, conservent et affichent les mesures et les journaux. |
+| **Observabilité** | [Prometheus](prometheus.md), [Loki](loki.md), [Alloy](alloy.md), [Grafana](grafana.md) | Collectent, conservent et affichent les mesures et les logs. |
 | **Administration** | [Adminer](adminer.md) | Permet de consulter les bases depuis un navigateur. |
 | **Maillage** | [Istio](istio.md) | Chiffre en mTLS les échanges entre pods et filtre qui peut joindre quoi, sans modifier les applications. |
 | **Réseau** | [Calico](calico.md) | Applique les politiques réseau : second filtre, au niveau du réseau du cluster, sur qui peut joindre quoi. |
@@ -255,10 +255,11 @@ Lors du premier démarrage, l'enchaînement est le suivant :
     porte la limite à 1024 de façon permanente. Ce réglage concerne Linux ; sous un autre système, il faut ajuster la
     limite équivalente à la main.
 
-!!! note "Pourquoi pas `minikube docker-env` ?"
-    Le cluster utilise le runtime containerd. Avec lui, `minikube docker-env` n'est qu'une émulation qui fait échouer
-    `docker build`. L'API et la modération sont donc construites par le Docker de l'ordinateur, puis chargées dans le
-    cluster avec `minikube image load`. L'interface est construite par `minikube image build`.
+!!! note "À savoir"
+    **Pourquoi pas `minikube docker-env` ?** Le cluster utilise le runtime containerd. Avec lui, `minikube docker-env`
+    n'est qu'une émulation qui fait échouer `docker build`. L'API et la modération sont donc construites par le Docker
+    de l'ordinateur, puis chargées dans le cluster avec `minikube image load`. L'interface est construite par
+    `minikube image build`.
 
 !!! warning "Attention"
     `make undeploy` supprime aussi les données (annonces, comptes, messages en attente dans NATS, mesures et logs). À réserver au cas où l'on souhaite repartir de zéro.
