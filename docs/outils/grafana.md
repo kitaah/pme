@@ -4,7 +4,7 @@
 
 | Information | Détail |
 |---|---|
-| **Rôle** | Rassemble mesures et journaux dans des tableaux de bord, pour voir d'un coup d'œil l'état de la plateforme |
+| **Rôle** | Rassemble mesures et logs dans des tableaux de bord, pour voir d'un coup d'œil l'état de la plateforme |
 | **Version** | Grafana 12.4.13 |
 | **Adresse en local** | <https://grafana.localhost> |
 
@@ -14,7 +14,7 @@ Grafana est un outil open source de **visualisation**. Il ne stocke aucune mesur
 données** et transforme leurs réponses en graphiques, regroupés dans des **tableaux de bord**.
 
 **Pourquoi un outil d'affichage séparé ?**
-[Prometheus](prometheus.md) sait déjà tracer une courbe, et [Loki](loki.md) renvoyer des lignes de journal. Mais
+[Prometheus](prometheus.md) sait déjà tracer une courbe, et [Loki](loki.md) renvoyer des lignes de log. Mais
 diagnostiquer un incident suppose de croiser les deux, au même instant : une hausse des erreurs, puis les lignes
 écrites à ce moment-là. Grafana réunit ces sources dans une même page, avec la même période affichée, ce qui évite de
 passer d'un outil à l'autre en recopiant des horaires.
@@ -42,7 +42,54 @@ recherché.
 
 **Les deux écrans partagent la même période.**
 Changer l'intervalle affiché sur l'un le change sur l'autre. C'est ce qui permet de passer d'une courbe anormale aux
-journaux correspondants sans rien ressaisir.
+logs correspondants sans rien ressaisir.
+
+```d2
+vars: {
+  d2-config: {
+    layout-engine: elk
+    theme-id: 5
+    pad: 8
+  }
+}
+direction: down
+
+# Mise en forme commune : texte lisible à la largeur de la page, angles arrondis
+classes: {
+  boite: {
+    style: {
+      font-size: 24
+      border-radius: 12
+    }
+  }
+}
+
+services: "API et modération\n/metrics et logs" {class: boite}
+
+collecte: "Collecte" {
+  style.font-size: 22
+  prometheus: "Prometheus\nmesures chiffrées" {class: boite}
+  alloy: "Alloy\nramasse les logs" {class: boite}
+  loki: "Loki\nstocke les logs" {class: boite}
+  alloy -> loki
+}
+
+grafana: "Grafana\nn'écrit rien, interroge" {class: boite}
+
+ecrans: "Tableaux de bord" {
+  style.font-size: 22
+  pme: "Services\nest-ce que tout va bien ?" {class: boite}
+  logs: "Logs\nque s'est-il passé ?" {class: boite}
+}
+
+services -> collecte.prometheus
+services -> collecte.alloy
+collecte.prometheus -> grafana: source de données
+collecte.loki -> grafana: source de données
+grafana -> ecrans.pme
+grafana -> ecrans.logs
+ecrans.pme <-> ecrans.logs: même période affichée
+```
 
 **Définitions**
 
@@ -51,25 +98,25 @@ journaux correspondants sans rien ressaisir.
 | **Centile 95** | Durée en dessous de laquelle se situent 95 % des réponses. Plus représentative qu'une moyenne. |
 | **Panneau** | Un graphique ou un indicateur à l'intérieur d'un tableau de bord. |
 | **Provisionnement** | Chargement automatique de la configuration au démarrage, à partir de fichiers versionnés. |
-| **Source de données** | Service que Grafana interroge pour obtenir mesures ou journaux. |
+| **Source de données** | Service que Grafana interroge pour obtenir mesures ou logs. |
 | **Tableau de bord** | Page qui regroupe plusieurs panneaux sur un même sujet. |
 
 ## Rôle dans le projet
 
 - Il affiche l'état de la plateforme : trafic, durées de réponse, erreurs, ressources consommées.
-- Il affiche les journaux collectés par [Alloy](alloy.md) et conservés par Loki.
-- Il relie les deux lectures : une anomalie repérée sur une courbe se confirme dans les journaux de la même période.
+- Il affiche les logs collectés par [Alloy](alloy.md) et conservés par Loki.
+- Il relie les deux lectures : une anomalie repérée sur une courbe se confirme dans les logs de la même période.
 - Il charge ses sources de données et ses tableaux de bord au démarrage, à partir de fichiers versionnés.
 - Il conserve ses propres réglages dans la base `grafana` de [PostgreSQL](postgresql.md), par une connexion chiffrée.
 - Il demande une connexion, contrairement aux interfaces de Prometheus et d'Alloy.
-- Sans lui, les mesures restent consultables dans Prometheus, mais sans vue d'ensemble ni accès aux journaux.
+- Sans lui, les mesures restent consultables dans Prometheus, mais sans vue d'ensemble ni accès aux logs.
 
 Ses sources de données sont les suivantes :
 
 | Source | Contenu | Conservation |
 |---|---|---|
 | **Prometheus** | Les mesures de fonctionnement des services. | 6 heures |
-| **Loki** | Les journaux de tous les composants. | 24 heures |
+| **Loki** | Les logs de tous les composants. | 24 heures |
 
 !!! note "À savoir"
     Les courbes sont tracées par exemplaire : la légende indique le service et l'adresse du pod. Après un

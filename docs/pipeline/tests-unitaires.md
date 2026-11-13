@@ -107,7 +107,7 @@ chaque service.
 ## Où voir le résultat
 
 - **Onglet « Tests » de la pipeline** : chaque test, son statut et sa durée. Les rapports JUnit l'alimentent.
-- **Journal du job** : la ligne « Lines » donne la couverture, reprise dans la liste des jobs.
+- **Log du job** : la ligne « Lines » donne la couverture, reprise dans la liste des jobs.
 - **Demande de fusion** : les lignes couvertes sont colorées dans la vue des changements.
 - **Artefacts du job** : le fichier `lcov.info`, lu ensuite par SonarCloud. Il est conservé une semaine.
 

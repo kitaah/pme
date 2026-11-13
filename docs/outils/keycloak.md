@@ -22,7 +22,7 @@ réécrit dans chaque application.
 **Le principe : l'API ne voit jamais le mot de passe.**
 L'interface n'affiche aucun formulaire de mot de passe : elle redirige vers Keycloak, qui renvoie l'utilisateur muni
 d'un jeton. Ce jeton accompagne ensuite chaque appel à l'API. Le mot de passe ne transite donc que par Keycloak, et
-aucun autre composant ne peut le voir, même en lisant ses propres journaux.
+aucun autre composant ne peut le voir, même en lisant ses propres logs.
 
 ```d2
 vars: {
@@ -129,7 +129,7 @@ Ces comptes sont conservés tant que la base de Keycloak n'est pas réinitialis�
 |---|---|
 | **`make deploy`** | Installe Keycloak avec le reste de la plateforme. |
 | **`make keycloak`** | Ouvre Keycloak dans le navigateur. |
-| **`make logs-keycloak`** | Affiche le journal de Keycloak, mis à jour en direct. |
+| **`make logs-keycloak`** | Affiche le log de Keycloak, mis à jour en direct. |
 | **`make pods`** | Indique si Keycloak est prêt. |
 
 !!! note "À savoir"

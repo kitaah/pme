@@ -14,7 +14,7 @@
         docs-serve docs-check docs-image docs-run docs-stop scripts-perms
 
 # NS sert aux commandes kubectl. Il n'est PAS propage aux manifestes : le namespace est
-# fixe dans k8s/kustomization.yaml (voir README, "Limites connues").
+# fixe dans k8s/kustomization.yaml (voir la documentation, page Architecture).
 NS ?= pme
 MINIKUBE_MEMORY ?= 5120
 MINIKUBE_CPUS ?= 2
@@ -581,7 +581,7 @@ format-check:
 	$(ROOT_PRETTIER) --check
 
 # Lint YAML (manifestes Kubernetes, tests d'image, pipeline) : pip install yamllint.
-# Le realm Keycloak est un .json : il n'est pas couvert ici (voir README, "Limites connues").
+# Le realm Keycloak est un .json : il n'est pas couvert ici (voir la documentation, page Lint YAML).
 lint-yaml:
 	yamllint -c .yamllint.yml k8s tests .gitlab-ci.yml .yamllint.yml
 
@@ -619,7 +619,7 @@ sonar:
 quality: lint format-check lint-yaml lint-docker lint-k8s secrets-scan audit
 
 # ---- Tests ----
-# Strategie : voir README (types de tests, outils, place dans la chaine CI/CD)
+# Strategie : voir la documentation, section Pipeline CI/CD (types de tests, outils, place dans la chaine)
 
 # Unitaires : rapides, sans Docker, a chaque commit
 test:

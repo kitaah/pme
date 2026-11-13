@@ -1,5 +1,6 @@
 # Documentation technique du POC, generee par MkDocs (theme Material).
-# Sources : docs/ ; site genere : site/ (non versionne). Voir README, "Documentation".
+# Sources : docs/ ; site genere : site/ (non versionne, ignore par Git).
+# Apercu local : `make docs-serve`. Verification stricte : `make docs-check`.
 site_name: La Petite Maison de l'Épouvante — Documentation technique
 site_description: Documentation technique du POC (React, NestJS, NATS, Keycloak, Minikube)
 repo_url: https://gitlab.com/kitaah/pme
@@ -23,11 +24,13 @@ theme:
     - content.code.copy
     - search.highlight
 
-# Un onglet par grand thème. "Outils" regroupe une fiche par outil du projet (voir outils/modele-fiche.md).
+# Un onglet par grand thème. "Architecture" donne la vue d'ensemble : composants, echanges, trajet d'une annonce.
+# "Outils" regroupe une fiche par outil du projet (voir outils/modele-fiche.md).
 # "Pipeline CI/CD" explique les contrôles automatiques : exigences, fonctionnement et une page par famille de tests.
 # "Securite" recense les mesures de securite du projet, une page par couche (identite, chiffrement, secrets, conteneurs, application).
 nav:
   - Accueil: index.md
+  - Architecture: architecture.md
   - Outils:
       - Adminer: outils/adminer.md
       - Alloy: outils/alloy.md
@@ -36,10 +39,12 @@ nav:
       - container-structure-test: outils/container-structure-test.md
       - GitLab CI: outils/gitlab-ci.md
       - Grafana: outils/grafana.md
+      - Helm: outils/helm.md
       - Istio: outils/istio.md
       - Jest: outils/jest.md
       - k6: outils/k6.md
       - Keycloak: outils/keycloak.md
+      - Kustomize: outils/kustomize.md
       - Loki: outils/loki.md
       - metrics-server: outils/metrics-server.md
       - Minikube: outils/minikube.md
@@ -58,6 +63,7 @@ nav:
       - Testing Library: outils/testing-library.md
       - Traefik: outils/traefik.md
       - Trivy: outils/trivy.md
+      - TypeORM: outils/typeorm.md
       - Vitest: outils/vitest.md
   - Pipeline CI/CD:
       - Vue d'ensemble: pipeline/index.md
@@ -98,14 +104,10 @@ markdown_extensions:
   - pymdownx.details
   - pymdownx.highlight
   - pymdownx.inlinehilite
-  # Blocs ```mermaid rendus en diagrammes (schemas C4, flux)
-  - pymdownx.superfences:
-      custom_fences:
-        - name: mermaid
-          class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
+  # Blocs de code imbriques (un bloc dans une liste ou un encadre). Les schemas passent par le plugin d2, pas ici.
+  - pymdownx.superfences
 
-          # Personnalisation visuelle : gris doux (clair) et anthracite (sombre), contrastes conformes WCAG AA
+# Personnalisation visuelle : gris doux, contrastes conformes WCAG AA
 extra_css:
   - stylesheets/extra.css
 

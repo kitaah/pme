@@ -117,7 +117,7 @@ connus sont les suivants. Chacun est repris, avec son contexte, dans la page con
 | **Moyenne** | **Valeurs de démonstration faibles** | Le mot de passe `pme` retenu en local est court. | [Secrets](secrets.md) |
 | **Moyenne** | **Pas de rotation ni d'audit des secrets** | Rien n'impose de changer un mot de passe ni ne trace qui l'a lu. | [Secrets](secrets.md) |
 | **Moyenne** | **Disque modifiable sur la plupart des composants** | Un code étranger pourrait déposer un programme dans PostgreSQL, Keycloak, Grafana, etc. | [Durcissement](durcissement.md) |
-| **Moyenne** | **Pas de contrôle à l'admission, ni de signature des images** | Rien n'empêche de déployer un pod non conforme ou une image qui ne vient pas de la pipeline. | [Durcissement](durcissement.md) |
+| **Moyenne** | **Contrôle à l'admission limité à `baseline`, pas de signature des images** | Les réglages fins (capacités, compte de service, disque) ne sont pas imposés à l'admission, et rien ne prouve qu'une image vient de la pipeline. | [Durcissement](durcissement.md) |
 | **Basse** | **Composants du maillage en root** | ztunnel et istio-cni gardent des droits élevés sur le nœud, inhérents au mode ambient. Ils sont isolés dans leur namespace, sous profil seccomp, et leurs images sont analysées. | [Durcissement](durcissement.md) |
 | **Basse** | **Autorité de certification locale** | Les certificats ne sont reconnus qu'après import manuel dans le navigateur. | [Chiffrement](chiffrement.md) |
 | **Basse** | **HSTS court, sans préchargement** | La première visite d'un navigateur n'est protégée que par la redirection. | [Chiffrement](chiffrement.md) |

@@ -142,7 +142,7 @@ L'état du circuit est publié dans la mesure `circuit_breaker_state{name="postg
 
 | Commande | Description |
 |---|---|
-| **`make logs-api`** | Affiche le journal de l'API, où chaque échec d'appel à la base est tracé. |
+| **`make logs-api`** | Affiche le log de l'API, où chaque échec d'appel à la base est tracé. |
 
 Lors d'une panne de PostgreSQL, le circuit se comporte ainsi :
 
@@ -150,6 +150,13 @@ Lors d'une panne de PostgreSQL, le circuit se comporte ainsi :
 2. **Coupure** : la base est arrêtée, puis des appels sont envoyés jusqu'à l'ouverture du circuit.
 3. **Circuit ouvert** : un appel reçoit une erreur 503 en moins d'une seconde.
 4. **Remise en service** : la base est relancée, l'API répond de nouveau 200 et le circuit se referme.
+
+!!! warning "Attention"
+    Le disjoncteur est **propre à chaque pod** : il ne se partage pas entre les exemplaires de l'API. Quand
+    l'autoscaler en ajoute, chacun ouvre et referme le sien indépendamment, selon les appels qu'il a lui-même vus. Un
+    membre peut donc recevoir un `503` immédiat d'un pod dont le disjoncteur est ouvert, pendant qu'un autre pod sert
+    encore normalement. C'est acceptable — le disjoncteur protège la base, pas l'uniformité des réponses — mais cela
+    rend un incident déroutant à observer : ne pas conclure d'un seul `503` que la base est tombée.
 
 !!! tip "Astuce"
     `make pods` confirme que PostgreSQL est prêt, et `make logs-api` montre chaque échec d'appel à la base.

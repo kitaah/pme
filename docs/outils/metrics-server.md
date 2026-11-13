@@ -124,15 +124,10 @@ Les composants à un seul exemplaire se justifient aussi :
 |---|---|---|
 | **PostgreSQL** | 1 | Un seul volume de données, et un seul serveur peut y écrire. Plusieurs exemplaires exigeraient une réplication entre serveurs. |
 | **NATS** | 1 | Un seul volume pour les flux JetStream. Plusieurs exemplaires exigeraient un cluster NATS. |
-| **Prometheus** et **Loki** | 1 | Un seul volume de mesures ou de journaux. |
+| **Prometheus** et **Loki** | 1 | Un seul volume de mesures ou de logs. |
 | **Keycloak** | 1 | Mode développement, sans partage de sessions entre exemplaires. |
-| **Alloy** | 1 | Un second collecteur enverrait chaque journal deux fois à Loki. |
+| **Alloy** | 1 | Un second collecteur enverrait chaque log deux fois à Loki. |
 | **Grafana** et **Adminer** | 1 | Outils d'administration, sans enjeu de disponibilité à cette échelle. |
-
-!!! note "À savoir"
-La limitation de débit de l'API est comptée dans la mémoire de chaque pod. Avec plusieurs exemplaires, la limite
-réellement appliquée est donc multipliée par leur nombre. Un compteur partagé, par exemple dans Redis, la rendrait
-exacte : c'est une limite connue du POC, sans conséquence à cette échelle.
 
 ## Fichiers et dossiers principaux
 
@@ -156,15 +151,15 @@ exacte : c'est une limite connue du POC, sans conséquence à cette échelle.
 | **`kubectl -n pme top pods`** | Affiche la consommation de processeur et de mémoire de chaque pod. |
 
 !!! note "À savoir"
-Les premières mesures arrivent environ une minute après l'activation. Pendant ce délai, `make hpa` affiche une
-charge inconnue : c'est normal, il n'y a rien à corriger.
+    Les premières mesures arrivent environ une minute après l'activation. Pendant ce délai, `make hpa` affiche une
+    charge inconnue : c'est normal, il n'y a rien à corriger.
 
 !!! warning "Attention"
-Sans metrics-server, l'autoscaler ne reçoit aucune mesure : il ne fait ni erreur ni ajustement, et le nombre de
-pods reste figé. Une charge qui monte ne déclenche alors aucun renfort.
+    Sans metrics-server, l'autoscaler ne reçoit aucune mesure : il ne fait ni erreur ni ajustement, et le nombre de
+    pods reste figé. Une charge qui monte ne déclenche alors aucun renfort.
 
 !!! tip "Astuce"
-`make minikube-up` active déjà l'addon. Sur un cluster existant, `make metrics-server` suffit, sans le recréer.
+    `make minikube-up` active déjà l'addon. Sur un cluster existant, `make metrics-server` suffit, sans le recréer.
 
 ## Pour aller plus loin
 

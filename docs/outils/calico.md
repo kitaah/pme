@@ -35,6 +35,50 @@ Calico reconnaît un pod à ses **étiquettes**, que n'importe quel administrate
 [Istio](istio.md) le reconnaît à son **identité** cryptographique, qui ne peut pas être imitée. Le projet utilise les
 deux avec les mêmes listes d'appelants : si l'un est contourné ou mal réglé, l'autre bloque encore.
 
+```d2
+vars: {
+  d2-config: {
+    layout-engine: elk
+    theme-id: 5
+    pad: 8
+  }
+}
+direction: down
+
+# Mise en forme commune : texte lisible à la largeur de la page, angles arrondis
+classes: {
+  boite: {
+    style: {
+      font-size: 24
+      border-radius: 12
+    }
+  }
+  refus: {
+    style: {
+      font-size: 24
+      border-radius: 12
+      stroke-dash: 3
+    }
+  }
+}
+
+api: "API\nétiquette pme-api, identité signée" {class: boite}
+front: "Interface\nétiquette pme-frontend" {class: boite}
+
+calico: "Calico\nfiltre sur l'étiquette du pod" {class: boite}
+istio: "Istio\nfiltre sur l'identité du pod" {class: boite}
+
+postgres: "PostgreSQL\nport 5432" {class: boite}
+abandon: "Connexion abandonnée\naucune réponse, l'appelant expire" {class: refus}
+
+api -> calico: appelant déclaré
+front -> calico: appelant non déclaré
+calico -> istio: étiquette reconnue
+calico -> abandon: étiquette inconnue
+istio -> postgres: identité vérifiée
+istio -> abandon: identité absente ou usurpée
+```
+
 **Définitions**
 
 | Terme | Définition |

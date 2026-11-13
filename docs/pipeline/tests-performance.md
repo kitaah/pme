@@ -71,7 +71,7 @@ Le job démarre l'API réelle avec les vrais services dont elle dépend, sans Do
 
 ## Où voir le résultat
 
-- **Journal du job** : le résumé de k6, avec chaque seuil marqué réussi ou échoué.
+- **Log du job** : le résumé de k6, avec chaque seuil marqué réussi ou échoué.
 - **Artefacts du job** : `summary.json` (mesures de k6), `api.log` et `environment.log`, conservés une semaine.
 - **Statut de la pipeline** : le job échoue, avec le code de sortie 99, si un seuil est dépassé.
 

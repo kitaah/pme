@@ -238,7 +238,7 @@ La configuration est lue dans des variables d'environnement, fournies par Kubern
 | **`make lint`** | Signale les erreurs probables, les fonctions trop complexes et les erreurs de type, comme le job `lint:code` de la pipeline. |
 | **`make format-check`** | Vérifie la mise en forme du code (Prettier), comme le job `lint:code`. |
 | **`make image-api`** | Construit l'image Docker de l'API dans le cluster. |
-| **`make logs-api`** | Affiche le journal de l'API, mis à jour en direct. |
+| **`make logs-api`** | Affiche le log de l'API, mis à jour en direct. |
 
 Pour travailler sur l'API en local, l'enchaînement est le suivant :
 

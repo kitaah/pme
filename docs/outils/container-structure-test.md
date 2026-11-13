@@ -37,6 +37,50 @@ Ces vérifications prennent quelques secondes, alors que l'analyse des failles e
 public. Les contrôles de structure passent donc en premier : une image mal construite est rejetée avant que le reste
 du travail ne soit engagé.
 
+```d2
+vars: {
+  d2-config: {
+    layout-engine: elk
+    theme-id: 5
+    pad: 8
+  }
+}
+direction: down
+
+# Mise en forme commune : texte lisible à la largeur de la page, angles arrondis
+classes: {
+  boite: {
+    style: {
+      font-size: 24
+      border-radius: 12
+    }
+  }
+  arret: {
+    style: {
+      font-size: 24
+      border-radius: 12
+      stroke-dash: 3
+    }
+  }
+}
+
+image: "Image construite\npme-api, pme-moderation, pme-frontend" {class: boite}
+
+controles: "container-structure-test — 24 contrôles" {
+  style.font-size: 22
+  commande: "Commande\nl'image ne tourne pas en administrateur" {class: boite}
+  fichier: "Fichier\nni sources, ni .env, ni outils" {class: boite}
+  metadonnees: "Métadonnées\nport exposé, commande de démarrage" {class: boite}
+}
+
+trivy: "Trivy\nanalyse des failles" {class: boite}
+rejet: "Image rejetée\njob en échec" {class: arret}
+
+image -> controles
+controles -> trivy: les 24 contrôles passent
+controles -> rejet: un contrôle échoue
+```
+
 **Définitions**
 
 | Terme | Définition |
@@ -93,7 +137,7 @@ Les contrôles sont répartis par image :
 
 !!! tip "Astuce"
     Chaque contrôle porte un nom lisible, par exemple « l'application ne tourne pas en root ». En cas d'échec, le
-    journal affiche ce nom : il indique directement ce qui manque, sans avoir à ouvrir le fichier de contrôles.
+    log affiche ce nom : il indique directement ce qui manque, sans avoir à ouvrir le fichier de contrôles.
 
 ## Pour aller plus loin
 

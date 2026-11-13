@@ -103,7 +103,7 @@ Les identifiants d'exécution sont choisis pour chaque image : 1000 pour l'API e
 
 **La seule exception : Alloy**
 Alloy est le seul composant à recevoir un jeton de cluster, parce qu'il doit interroger Kubernetes pour savoir quels
-pods existent et lire leurs journaux. Ses droits sont limités à la lecture des pods et de leurs journaux, et à rien
+pods existent et lire leurs logs. Ses droits sont limités à la lecture des pods et de leurs logs, et à rien
 d'autre.
 
 **Les composants du maillage : des droits élevés, mais réduits au strict nécessaire**
@@ -190,8 +190,14 @@ Cela n'est pas seulement déclaré, c'est vérifié à chaque passage de la pipe
   dans une application du projet. Les mesures ci-dessus en limitent l'exposition, sans l'annuler.
 - **Les trois composants d'infrastructure gardent le compte de leur image**, comme expliqué ci-dessus. Un durcissement
   plus poussé reviendrait à reconstruire ces images.
-- **Pas de contrôle à l'admission.** Rien n'empêche de déployer dans le cluster un pod qui ne respecterait aucune de ces
-  règles. Les standards de sécurité des pods, intégrés à Kubernetes, le feraient respecter au niveau du namespace.
+- **Le contrôle à l'admission s'arrête au niveau `baseline`.** Le namespace `pme` applique bien les standards de
+  sécurité des pods intégrés à Kubernetes : `baseline` est imposé, ce qui écarte les conteneurs privilégiés et les accès
+  à l'hôte. Mais `restricted`, le niveau qui exigerait le compte non-root et le disque en lecture seule partout, n'est
+  qu'audité : les écarts sont signalés dans les logs de l'API Kubernetes sans rien bloquer, parce que PostgreSQL
+  démarre en root pour initialiser son volume. Aucun des réglages plus fins décrits dans cette page — capacités
+  retirées, jeton du cluster non monté, compte de service dédié — n'est donc imposé à l'admission : un pod déployé à la
+  main dans `pme` peut tous les ignorer. Un moteur de politiques (Kyverno, Gatekeeper) serait nécessaire pour les
+  rendre obligatoires.
 - **Des failles HIGH connues dans les images d'Istio.** L'analyse en relève plusieurs dizaines par image (bibliothèque
   standard Go, paquets Ubuntu), toutes corrigeables par une nouvelle version d'Istio. Elles sont suivies, sans bloquer la
   pipeline. La montée de version d'Istio (`ISTIO_VERSION` dans le `Makefile`) est le remède.
@@ -216,7 +222,7 @@ sauf dans l'espace temporaire monté à cet effet.
 
 !!! warning "Attention"
     Le disque en lecture seule casse tout composant qui écrit ailleurs que dans son espace temporaire : un cache, un
-    fichier de session, un journal sur disque. C'est à vérifier avant d'activer le réglage sur un nouveau service, pas
+    fichier de session, un log sur disque. C'est à vérifier avant d'activer le réglage sur un nouveau service, pas
     après.
 
 !!! tip "Astuce"

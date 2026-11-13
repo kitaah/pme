@@ -96,7 +96,7 @@ Le détail de chaque contrôle est décrit dans la [vue d'ensemble de la pipelin
 
 !!! note "À savoir"
     Les valeurs sensibles, comme le jeton d'accès à SonarCloud, sont définies dans les réglages CI/CD du projet, et
-    masquées dans les journaux. Elles ne sont jamais écrites dans le dépôt.
+    masquées dans les logs. Elles ne sont jamais écrites dans le dépôt.
 
 ## Fichiers et dossiers principaux
 
@@ -131,7 +131,7 @@ Chaque contrôle de la pipeline a son équivalent sur l'ordinateur, à lancer de
 
 !!! note "À savoir"
     Dans GitLab, le menu **Build**, puis **Pipelines**, liste les pipelines et leur résultat. Le menu **Build**, puis
-    **Jobs**, donne accès au journal complet de chaque job, qui indique la cause exacte d'un échec.
+    **Jobs**, donne accès au log complet de chaque job, qui indique la cause exacte d'un échec.
 
 !!! warning "Attention"
     Chaque pipeline consomme le quota gratuit de 400 minutes de calcul par mois. Une fois épuisé, plus aucun job ne

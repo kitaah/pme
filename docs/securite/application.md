@@ -28,7 +28,7 @@ de résultats plafonné. On ne tente pas de deviner ce qui est hostile : on déc
 **Deuxième principe : ne rien révéler en échouant.**
 Un message d'erreur trop bavard renseigne un attaquant : version du serveur, nom d'une table, trace d'exécution. Toutes
 les erreurs du projet passent donc par un même filtre, qui produit une réponse uniforme. Les détails techniques
-restent dans les journaux du service, où ils sont utiles, et n'en sortent jamais.
+restent dans les logs du service, où ils sont utiles, et n'en sortent jamais.
 
 ```d2
 vars: {
@@ -154,7 +154,7 @@ dans Keycloak, sans toucher aux données métier.
 - **Le compteur de débit est propre à chaque exemplaire.** Avec quatre exemplaires de l'API, la limite réelle est
   quadruplée, et elle dépend du nombre d'exemplaires du moment. Un compteur partagé, dans Redis par exemple, la rendrait
   exacte.
-- **Aucune journalisation des accès.** Les journaux applicatifs enregistrent les erreurs, pas les accès réussis : on ne
+- **Aucun log des accès.** Les logs applicatifs enregistrent les erreurs, pas les accès réussis : on ne
   peut pas reconstituer qui a consulté quoi. Une vraie piste d'audit, horodatée et inaltérable, serait nécessaire dès
   lors que des données personnelles sont en jeu.
 - **Pas de détection d'abus.** Un débit sous le plafond, mais anormal dans sa forme, n'est repéré par personne.
@@ -169,6 +169,12 @@ dans Keycloak, sans toucher aux données métier.
 |---|---|
 | **`make test-integration`** | Rejoue les cas de validation et d'autorisation avec une vraie base. |
 | **`curl -k -I https://pme.localhost/`** | Affiche les en-têtes de sécurité posés par nginx, dont `content-security-policy`. |
+
+!!! warning "Attention"
+    La limitation de débit compte par exemplaire, et l'autoscaler fait varier ce nombre entre deux et quatre selon la
+    charge. La limite réellement opposée à un appelant n'est donc jamais celle qui est écrite dans la configuration :
+    elle vaut cette valeur multipliée par le nombre de pods du moment. Ne pas s'en servir comme d'une protection
+    chiffrée — c'est un garde-fou contre l'emballement, pas une limite contractuelle.
 
 !!! tip "Astuce"
     Pour vérifier la validation sans écrire de test, envoyer un dépôt avec un champ inventé. La réponse doit être un

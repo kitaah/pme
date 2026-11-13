@@ -102,7 +102,7 @@ realm de Keycloak, qui contiennent des valeurs de démonstration sans portée r�
 
 **Dans la pipeline**
 Les valeurs sensibles de la CI ne sont pas dans le dépôt : le jeton SonarCloud est défini dans les réglages du projet
-GitLab et masqué dans les journaux. Les identifiants du registre d'images sont fournis par GitLab pour la seule durée
+GitLab et masqué dans les logs. Les identifiants du registre d'images sont fournis par GitLab pour la seule durée
 du job. Côté images, un contrôle de structure vérifie qu'aucun fichier `.env` n'a été copié par erreur.
 
 !!! note "À savoir"
