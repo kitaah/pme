@@ -91,7 +91,7 @@ helm -> cluster
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/traefik/values.yaml`** | Les réglages de Traefik : ports, redirection, log d'accès. |
+| **`k8s/traefik/values.yaml`** | Les réglages de Traefik : ports, redirection, log d'accès, plugin de validation des jetons, stratégie de mise à jour. |
 | **`k8s/istio/istiod-values.yaml`** | Les réglages du plan de contrôle d'Istio. |
 | **`k8s/istio/cni-values.yaml`** | Les réglages de l'agent réseau par nœud. |
 | **`k8s/istio/ztunnel-values.yaml`** | Les réglages du proxy qui chiffre les échanges. |

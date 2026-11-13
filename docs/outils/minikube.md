@@ -78,7 +78,7 @@ ordinateur.docker.minikube.istio -> ordinateur.docker.minikube.pme
 
 Chaque flèche indique le sens d'une demande : le navigateur s'adresse à l'ingress, qui la transmet aux applications du
 namespace `pme`. Celles-ci s'appuient sur PostgreSQL, NATS et Keycloak, et les outils d'observabilité les surveillent.
-L'ingress expose aussi les interfaces de Keycloak, de Grafana, de Prometheus et d'Adminer (voir [sa fiche](traefik.md)).
+L'ingress expose aussi les interfaces de Keycloak, de Grafana, de Prometheus et d'Adminer, et refuse toute requête sans jeton valide sous `/api/v1` (voir [sa fiche](traefik.md)).
 Le maillage [Istio](istio.md) chiffre en mTLS les échanges entre l'ingress et les applications, ainsi qu'entre les
 applications elles-mêmes.
 

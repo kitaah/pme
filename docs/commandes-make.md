@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Point d'entrée unique de toutes les opérations du projet : cluster, secrets, déploiement, observation, développement, qualité, tests et documentation |
 | **Fichier** | `Makefile`, à la racine du dépôt |
-| **Nombre de commandes** | 78 cibles, regroupées en douze thèmes ci-dessous |
+| **Nombre de commandes** | 79 cibles, regroupées en douze thèmes ci-dessous |
 | **Aide intégrée** | `make help`, qui n'en liste qu'une partie : cette page est la liste complète |
 | **Configuration** | Variables en tête du `Makefile` (voir la dernière section) et fichier `.env` pour les mots de passe |
 
@@ -48,7 +48,7 @@ modification du code : `make redeploy`. Pour repartir de zéro : `make reset`.
 
 - Il rend reproductible la mise en place de l'environnement : un nouveau venu suit la même suite de commandes que les autres.
 - Il reproduit en local les contrôles de la pipeline (`make quality`, `make test`, `make test-perf`, `make image-test`).
-- Il regroupe les vérifications de sécurité (`make mesh-check`, `make authz-check`, `make netpol-check`) qui prouvent le
+- Il regroupe les vérifications de sécurité (`make mesh-check`, `make authz-check`, `make netpol-check`, `make jwt-check`) qui prouvent le
   chiffrement et le cloisonnement du cluster.
 - Il donne des raccourcis de lecture (`make pods`, `make queues`, `make db-listings`) qui évitent d'ouvrir un outil complet.
 
@@ -69,7 +69,7 @@ modification du code : `make redeploy`. Pour repartir de zéro : `make reset`.
 | **`make minikube-up`** | Démarre Minikube (pilote Docker, Calico, ports 80 et 443 publiés sur `127.0.0.1`), puis enchaîne `ingress`, `istio`, `cert-manager`, `ca-cert` et `metrics-server`. Les options de création ne s'appliquent qu'à un cluster neuf. |
 | **`make minikube-down`** | Arrête Minikube. Le cluster et ses données sont conservés. |
 | **`make helm`** | Installe Helm sur l'ordinateur s'il est absent, avec le script officiel (version épinglée, `sudo` demandé). Sans effet s'il est déjà là. Requis par `ingress` et `istio`. |
-| **`make ingress`** | Désactive l'ingress de Minikube, installe Traefik par son chart Helm (version épinglée) et attend qu'il soit prêt. |
+| **`make ingress`** | Désactive l'ingress de Minikube, installe Traefik par son chart Helm (version épinglée, plugin de validation des jetons compris) et attend qu'il soit prêt. Coupe l'ingress quelques secondes lors d'une mise à jour. |
 | **`make inotify`** | Relève la limite `inotify` du noyau (1024 instances par défaut, `sudo` demandé) et la rend permanente. Linux uniquement, sans effet si la limite suffit. Requis par ztunnel, lancé par `istio`. |
 | **`make istio`** | Installe Istio en mode ambient (quatre charts Helm : base, istiod, cni, ztunnel) et enrôle le namespace de Traefik dans le maillage. Exige `make ingress` d'abord. |
 | **`make istio-scan`** | Analyse avec Trivy les trois images d'Istio. Échoue sur une faille CRITICAL corrigeable, signale les HIGH à titre d'information. |
@@ -81,12 +81,13 @@ modification du code : `make redeploy`. Pour repartir de zéro : `make reset`.
 | **`make tunnel`** | Redirige les ports 80 et 443 vers l'ingress (`sudo` demandé) et reste au premier plan. Utile pour un cluster créé sans publication des ports. Ne pas lancer avec `port-forward`. |
 | **`make hosts`** | Affiche la ligne à ajouter à `/etc/hosts` pour les noms en `.localhost`, sans rien écrire. |
 
-### Vérifications du maillage et du réseau
+### Vérifications du maillage, du réseau et de l'ingress
 
 | Commande | Description |
 |---|---|
 | **`make mesh-check`** | Vérifie le mTLS : un pod hors du maillage doit être refusé, puis affiche les derniers échanges vus par ztunnel avec leurs identités. |
 | **`make authz-check`** | Vérifie les autorisations d'Istio avec trois pods temporaires. Attendu : l'identité `default` vers Keycloak est refusée, `pme-api` vers Keycloak passe, `pme-api` vers Prometheus est refusée. |
+| **`make jwt-check`** | Vérifie la validation des jetons par Traefik avec des pods temporaires. Attendu : sans jeton ou avec un jeton invalide, `/api/v1` répond 401 ; le site reste accessible (200). |
 | **`make netpol-check`** | Vérifie les politiques réseau de Calico avec deux pods temporaires. Attendu : avec l'étiquette prévue, Keycloak répond ; sans elle, la connexion est coupée. |
 
 ### Secrets

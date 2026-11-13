@@ -98,6 +98,14 @@ etapes: "" {
 |---|---|---|
 | **`pme-web`** | Authorization Code avec PKCE (S256) | L'interface du site. Les adresses de retour sont limitées à `pme.localhost` et au serveur de développement. |
 
+**À l'entrée du cluster (Traefik)**
+
+- **Premier contrôle** : sous `/api/v1`, Traefik vérifie la signature, l'expiration, l'émetteur et l'application
+  émettrice du jeton avant de transmettre la requête. Sans jeton valide, il répond lui-même par une erreur 401. Le
+  site, servi sans jeton, n'est pas concerné. `make jwt-check` le vérifie.
+- **Les rôles ne sont pas décidés ici** : Traefik ne lit pas `membre` ni `moderateur`. Cette décision reste dans les
+  services, qui connaissent les données qu'ils protègent.
+
 **Côté API et service de modération**
 
 - **Refus par défaut** : sur l'API, une garde globale exige un jeton valide sur toutes les routes. Seules les routes
@@ -147,6 +155,11 @@ défaut une fois le déploiement terminé.
 - **Pas de révocation immédiate** : désactiver un compte dans Keycloak n'invalide pas le jeton déjà remis. Il reste
   utilisable jusqu'à cinq minutes. Un contrôle de la session à chaque requête l'éviterait, au prix d'une dépendance
   permanente à Keycloak ; la durée courte du jeton est le compromis usuel.
+- **Le contrôle de l'entrée repose sur un plugin communautaire.** Traefik open source n'a pas de contrôle de jeton
+  intégré (il est réservé à Traefik Hub, l'offre commerciale). Le plugin est téléchargé depuis GitHub à chaque
+  démarrage de Traefik, en version épinglée, mais son code n'est ni relu ni analysé par la chaîne du projet. S'il ne se
+  charge pas, les routes `/api/v1` sont écartées plutôt que laissées ouvertes. Les services revérifient chaque jeton :
+  la perte de ce plugin n'ouvrirait donc pas l'API.
 - **Les outils d'exploitation n'ont pas d'authentification propre** : Adminer ouvre directement un écran de connexion à
   la base, Prometheus et Alloy répondent sans aucun contrôle. Seule Grafana a un compte administrateur, avec
   l'inscription et l'accès anonyme désactivés. Dans un environnement partagé, ces trois interfaces devraient passer
@@ -180,7 +193,8 @@ Pour vérifier le refus par défaut, trois appels suffisent :
 !!! note "À savoir"
     Le code qui vérifie le jeton est écrit une seule fois, dans le module commun `libs/common`, puis utilisé par l'API et
     par le service de modération. Chaque service reste pourtant responsable de sa propre vérification : il récupère
-    lui-même les clés publiques et valide chaque jeton qu'il reçoit, sans faire confiance à l'autre.
+    lui-même les clés publiques et valide chaque jeton qu'il reçoit, sans faire confiance à l'autre ni à Traefik, qui
+    contrôle déjà le jeton à l'entrée.
 
 ## Fichiers principaux
 

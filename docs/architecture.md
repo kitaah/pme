@@ -6,7 +6,7 @@
 |---|---|
 | **Style** | Deux services applicatifs séparés, qui communiquent par messages plutôt qu'en s'appelant directement |
 | **Composants déployés** | Onze, tous dans le namespace `pme` d'un cluster Minikube |
-| **Point d'entrée unique** | Traefik, qui termine le HTTPS et répartit selon le nom d'hôte et le chemin |
+| **Point d'entrée unique** | Traefik, qui termine le HTTPS, contrôle les jetons sous `/api/v1` et répartit selon le nom d'hôte et le chemin |
 | **Bases de données** | Une seule instance PostgreSQL, quatre bases : `pme`, `moderation`, `keycloak`, `grafana` |
 | **Messagerie** | NATS JetStream, flux `LISTINGS`, sujet `listing.submitted` |
 | **Déploiement** | `kubectl apply -k k8s/` (Kustomize), ordre imposé par les préfixes numériques des manifestes |
@@ -69,7 +69,7 @@ navigateur: "Navigateur\nmembre ou modérateur" {class: boite}
 cluster: "Cluster Minikube — namespace pme" {
   style.font-size: 22
 
-  traefik: "Traefik\nentrée unique, HTTPS" {class: boite}
+  traefik: "Traefik\nentrée unique, HTTPS\ncontrôle des jetons" {class: boite}
 
   applicatif: "Applicatif" {
     style.font-size: 22
@@ -88,7 +88,7 @@ cluster: "Cluster Minikube — namespace pme" {
   traefik -> applicatif.frontend
   traefik -> applicatif.api
   traefik -> applicatif.moderation
-  traefik -> socle.keycloak
+  traefik -> socle.keycloak: connexion et clés\nde vérification des jetons
 
   applicatif.api -> socle.nats: publie listing.submitted
   socle.nats -> applicatif.moderation: consomme
@@ -128,7 +128,7 @@ classes: {
 }
 
 depot: "1. Le membre remplit le formulaire\net valide" {class: boite}
-jeton: "2. L'interface joint son jeton Keycloak\nà l'appel POST /api/v1/listings" {class: boite}
+jeton: "2. L'interface joint son jeton Keycloak\nà l'appel POST /api/v1/listings\nTraefik le vérifie dès l'entrée" {class: boite}
 controle: "3. L'API vérifie le jeton, le rôle « membre »\net valide chaque champ" {class: boite}
 ecriture: "4. L'annonce est écrite en base\nstatut « en attente de modération »" {class: boite}
 publication: "5. L'API publie listing.submitted\ndans le flux LISTINGS" {class: boite}
@@ -161,6 +161,7 @@ reponse -> consommation -> file
 | **Messages plutôt qu'appel direct** | Le dépôt d'annonce survit à une modération arrêtée ou lente. | Il faut gérer le rejeu, les doublons et les messages invalides (flux d'échec). |
 | **Une instance PostgreSQL, quatre bases** | Économiser la mémoire d'un cluster local. | Un seul compte partagé : aucune séparation des droits, limite connue de la [sécurité](securite/durcissement.md). |
 | **Identités déléguées à Keycloak** | L'API ne stocke aucun mot de passe ; elle ne garde que le `sub` du membre. | Keycloak devient indispensable au démarrage de la plateforme. |
+| **Jeton contrôlé à l'entrée, puis dans chaque service** | Traefik refuse tôt toute requête sans jeton valide ; chaque service revérifie le jeton et décide des rôles, sans faire confiance à l'ingress. | Traefik open source n'a pas ce contrôle en natif : un plugin communautaire est téléchargé depuis GitHub à son démarrage, en version épinglée. |
 | **Statut porté par l'annonce, pas par un workflow** | Un simple champ `status` suffit à l'usage du POC. | Le circuit d'approbation ou de rejet n'est pas implémenté : la file se consulte, elle ne se traite pas encore. |
 | **Un seul namespace `pme`** | Toutes les règles de sécurité s'appliquent au même endroit. | Le namespace est écrit en dur dans `k8s/kustomization.yaml` : il ne se change pas par une variable. |
 

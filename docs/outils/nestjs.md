@@ -114,7 +114,8 @@ interrompt le traitement et renvoie une erreur :
    Cette limite protège la plateforme d'un afflux anormal, volontaire ou non. Les sondes de santé et les mesures en
    sont dispensées.
 2. **Le jeton.** Chaque demande doit présenter un **jeton** délivré par [Keycloak](keycloak.md). L'API vérifie sa
-   signature, l'émetteur attendu et l'application qui l'a demandé. Sans jeton valide, la réponse est une erreur 401.
+   signature, l'émetteur attendu et l'application qui l'a demandé. Sans jeton valide, la réponse est une erreur 401. Traefik refuse déjà ces requêtes à
+   l'entrée du cluster ; l'API revérifie quand même, sans faire confiance à l'ingress.
    Le refus est le comportement par défaut : une route n'est publique que si elle le déclare explicitement.
 3. **Le rôle.** Le jeton indique les rôles de l'utilisateur. Déposer une annonce exige le rôle `membre`, consulter la
    file de modération le rôle `moderateur`. Sans le bon rôle, la réponse est une erreur 403.

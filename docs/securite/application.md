@@ -55,7 +55,7 @@ filtres: "" {
   style.opacity: 0
 
   un: "1. Limitation de débit — 200 requêtes par minute" {class: boite}
-  deux: "2. Jeton valide — sinon 401" {class: boite}
+  deux: "2. Jeton valide, déjà vérifié par Traefik — sinon 401" {class: boite}
   trois: "3. Rôle attendu — sinon 403" {class: boite}
   quatre: "4. Validation stricte des champs — sinon 400" {class: boite}
   cinq: "5. Traitement, puis réponse" {class: boite}

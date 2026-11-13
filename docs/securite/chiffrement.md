@@ -204,7 +204,7 @@ depuis un autre pod avec `sslmode=disable` est rejetée par le serveur, avant m�
 | **`k8s/17-authorization-policies.yaml`** | Refus par défaut, puis une règle par composant qui nomme ses appelants autorisés. |
 | **`k8s/18-network-policies.yaml`** | Même filtrage au niveau du réseau du cluster, par étiquette de pod, appliqué par Calico. |
 | **`k8s/08-ingress.yaml`** | Termine le TLS avec le certificat de cert-manager. |
-| **`k8s/08-middlewares.yaml`** | Ajoute l'en-tête HSTS aux réponses de l'ingress. |
+| **`k8s/08-middlewares.yaml`** | Ajoute l'en-tête HSTS aux réponses de l'ingress, compresse les réponses et valide les jetons de l'API. |
 | **`k8s/traefik/values.yaml`** | Redirige le HTTP vers le HTTPS pour tous les noms d'hôte. |
 | **`k8s/config/postgres-hba.conf`** | Impose le TLS et SCRAM-SHA-256 à toute connexion venant du cluster. |
 | **`k8s/config/nats.conf`** | Active le TLS de NATS pour les clients et pour le port de supervision, et fixe la version minimale à 1.3. |

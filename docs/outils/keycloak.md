@@ -56,7 +56,9 @@ keycloak -> api: "jeton joint\nà chaque appel"
 Le jeton est signé par Keycloak avec une clé que lui seul détient. L'API récupère la clé publique correspondante et
 peut ainsi vérifier, seule, qu'un jeton est authentique et n'a pas été modifié. Elle n'a pas besoin d'interroger
 Keycloak à chaque requête : une personne restée connectée ne crée aucun trafic supplémentaire, et une panne de
-Keycloak n'interrompt pas les utilisateurs déjà connectés.
+Keycloak n'interrompt pas les utilisateurs déjà connectés. Traefik fait de même à l'entrée du cluster : il lit les
+clés au premier besoin puis les garde. Après un redémarrage de Traefik, Keycloak doit donc être joignable une fois pour
+que les requêtes reprennent.
 
 **Trois contrôles sur le jeton.**
 L'API ne se contente pas de la signature. Elle vérifie aussi l'**émetteur**, c'est-à-dire que le jeton vient bien du
@@ -84,14 +86,14 @@ sans rien demander à Keycloak.
 ## Rôle dans le projet
 
 - Il gère la connexion des membres et des modérateurs, et il est le seul composant à manipuler les mots de passe.
-- Il délivre les jetons que l'API et le service de modération vérifient à chaque appel.
+- Il délivre les jetons que Traefik, l'API et le service de modération vérifient.
 - Il charge le realm `pme` à son premier démarrage : rôles, applications autorisées, adresses de retour et comptes de
   démonstration.
 - Il enregistre ses données dans la base `keycloak` de [PostgreSQL](postgresql.md), par une connexion chiffrée et
   vérifiée.
 - Il remplace, au déploiement, son compte administrateur temporaire par un compte permanent, puis supprime le premier.
 - Il impose une politique de mots de passe : 12 caractères au moins, avec majuscule, minuscule et chiffre.
-- Il n'est joignable, à l'intérieur du cluster, que par l'ingress, l'API, le service de modération et la tâche qui crée son administrateur permanent.
+- Il n'est joignable, à l'intérieur du cluster, que par l'ingress (page de connexion et clés de vérification des jetons), l'API, le service de modération et la tâche qui crée son administrateur permanent.
 - Sans lui, personne ne peut se connecter : ni dépôt d'annonce, ni modération, ni accès aux tableaux de bord.
 
 Le realm `pme` ne contient aucun compte d'utilisateur. Pour se connecter au site, il faut en créer un dans la console
