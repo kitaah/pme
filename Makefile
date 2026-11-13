@@ -57,7 +57,7 @@ DOCS_IMAGE_URL := http://localhost:$(DOCS_IMAGE_PORT)
 
 APP_URL := https://$(APP_HOST)
 KEYCLOAK_URL := https://$(KEYCLOAK_HOST)
-NATS_URL := http://localhost:$(NATS_MONITOR_PORT)
+NATS_URL := https://localhost:$(NATS_MONITOR_PORT)
 ADMINER_URL := https://$(ADMINER_HOST)
 PROMETHEUS_URL := https://$(PROMETHEUS_HOST)
 GRAFANA_URL := https://$(GRAFANA_HOST)
@@ -452,10 +452,12 @@ logs-moderation:
 logs-keycloak:
 	kubectl -n $(NS) logs -l app=keycloak --tail=100 -f
 
-# Etat des flux JetStream, lu sur le port de supervision de NATS (8222) :
-# messages en attente (`messages`) et consommateurs connectes (`num_waiting`, `ack_floor`).
+# Etat des flux JetStream, lu sur le port de supervision de NATS (8222, HTTPS). La lecture se fait depuis le pod, sur
+# sa boucle locale : wget (busybox) n'a pas l'autorite locale, d'ou --no-check-certificate. Pour verifier le certificat,
+# utiliser `make port-forward` puis curl --cacert avec la CA locale (le certificat couvre `localhost`).
+# Lecture : messages en attente (`messages`) et consommateurs connectes (`num_waiting`, `ack_floor`).
 queues:
-	@kubectl -n $(NS) exec deploy/nats -- wget -qO- 'http://localhost:8222/jsz?streams=1&consumers=1' \
+	@kubectl -n $(NS) exec deploy/nats -- wget --no-check-certificate -qO- 'https://localhost:8222/jsz?streams=1&consumers=1' \
 		| python3 -m json.tool
 
 # Cree la base `grafana` dans un PostgreSQL deja initialise : postgres-init.sh ne s'execute qu'une fois.

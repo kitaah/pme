@@ -6,8 +6,8 @@
 |---|---|
 | **Rôle** | Transmet les événements entre l'API et le service de modération, sans jamais en perdre |
 | **Version** | NATS 2.14, avec JetStream |
-| **Chiffrement** | TLS 1.3 obligatoire sur le port des applications (4222), en plus du mTLS du maillage [Istio](istio.md) |
-| **Adresse en local** | <http://localhost:8222/jsz>, après `make port-forward` |
+| **Chiffrement** | TLS 1.3 obligatoire sur le port des applications (4222) et sur le port de supervision (8222), en plus du mTLS du maillage [Istio](istio.md) |
+| **Adresse en local** | <https://localhost:8222/jsz>, après `make port-forward` |
 
 ## Description
 
@@ -84,7 +84,10 @@ directement. Une fenêtre de déduplication de deux minutes ignore par ailleurs 
 
 **Deux ports, deux usages.**
 Le port 4222 reçoit les applications ; il est chiffré et exige un identifiant. Le port 8222 est un port de supervision
-qui publie l'état du serveur et des flux au format texte. Il reste en HTTP simple : il n'expose aucun message.
+qui publie l'état du serveur et des flux au format texte. Il est servi en **HTTPS**, avec le même certificat et la même
+version minimale de TLS (1.3) que le port des applications : l'option `https_port` du fichier `k8s/config/nats.conf`
+remplace l'option `http_port`, car NATS refuse de démarrer si les deux sont déclarées. Les sondes de Kubernetes
+précisent `scheme: HTTPS` ; le kubelet, l'agent de Kubernetes qui lance ces sondes, n'y vérifie pas le certificat.
 Il n'est plus publié par le service du cluster : les autres composants ne le trouvent donc plus par son nom. En
 pratique, seuls y accèdent les sondes de Kubernetes, qui s'adressent directement au pod, la commande `make queues`, qui
 s'exécute dans le pod, et `make port-forward`, qui ouvre un accès temporaire depuis l'ordinateur. Aucune
@@ -148,7 +151,7 @@ Le serveur est configuré ainsi :
 | Fichier ou dossier | Description |
 |---|---|
 | **`k8s/02-nats.yaml`** | Déploie le serveur NATS dans le cluster, avec JetStream activé. |
-| **`k8s/config/nats.conf`** | Configure le chiffrement du serveur et la limite de stockage des flux. |
+| **`k8s/config/nats.conf`** | Configure le chiffrement du serveur (applications et supervision) et la limite de stockage des flux. |
 | **`libs/common/src/nats/`**<br>**`nats.client.ts`** | Gère la connexion au broker, pour l'API comme pour la modération. |
 | **`api/src/listings/`**<br>**`listing-events.publisher.ts`** | Publie l'événement « annonce déposée ». |
 | **`api/src/listings/listing-events.ts`** | Décrit le contenu de l'événement côté API. La modération en garde sa propre description (`listing-submitted.event.ts`). |
@@ -161,8 +164,9 @@ Le serveur est configuré ainsi :
 
 | Commande | Description |
 |---|---|
-| **`make queues`** | Affiche les flux, le nombre de messages en attente et l'état du consommateur. |
-| **`make nats`** | Ouvre la page de supervision dans le navigateur. |
+| **`make queues`** | Affiche les flux, le nombre de messages en attente et l'état du consommateur. La lecture se fait depuis le pod, sans vérifier le certificat. |
+| **`curl --cacert pme-ca.crt`**<br>**`https://localhost:8222/healthz`** | Vérifie le certificat du port de supervision, après `make port-forward`. Répond `{"status":"ok"}`. |
+| **`make nats`** | Ouvre la page de supervision dans le navigateur. L'autorité locale doit y être importée, comme pour le site. |
 | **`make logs-moderation`** | Affiche le journal du service de modération, mis à jour en direct. |
 | **`make demo-stop-moderation`** | Arrête le service qui lit les messages : ils s'accumulent dans le flux. |
 | **`make demo-start-moderation`** | Relance ce service : les messages en attente sont traités. |

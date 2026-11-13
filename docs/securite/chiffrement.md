@@ -117,7 +117,7 @@ chaine: "" {
 |---|---|
 | **Entre pods** | mTLS par le maillage Istio : chaque connexion est chiffrée et chaque pod porte une identité. Le mode strict refuse toute connexion qui n'arrive pas en mTLS, par exemple celle d'un pod placé hors du maillage. Les politiques d'autorisation refusent ensuite tout appel dont l'identité n'est pas listée pour le composant visé. |
 | **Vers PostgreSQL** | TLS obligatoire côté serveur : les règles d'accès n'acceptent que des connexions chiffrées, et le mot de passe est contrôlé par SCRAM-SHA-256, qui ne le fait jamais circuler. |
-| **Vers NATS** | TLS, avec une version minimale fixée à **1.3**. Sans ce réglage, le serveur accepterait encore TLS 1.2. |
+| **Vers NATS** | TLS, avec une version minimale fixée à **1.3**. Sans ce réglage, le serveur accepterait encore TLS 1.2. Le port de supervision (8222) est servi en HTTPS avec le même certificat. |
 | **Vérification du nom** | L'API, le service de modération, Keycloak et Grafana vérifient que le certificat présenté a bien été émis pour le serveur qu'ils appellent, et non seulement qu'il est signé par l'autorité. |
 
 Le point important du côté de PostgreSQL est que l'obligation est **posée par le serveur**, et non laissée à la
@@ -149,9 +149,10 @@ n'est joignable que depuis le pod lui-même.
 - **Le maillage dépend d'un réglage de l'ordinateur** : ztunnel plante si la limite `inotify` du système est trop
   basse. `make inotify` la relève, avec le mot de passe `sudo`. Sans ztunnel prêt, un namespace déjà enrôlé en mode
   strict devient inaccessible (voir la fiche [Istio](../outils/istio.md)).
-- **Le port de supervision de NATS reste en HTTP simple côté application** : il n'expose que des compteurs, pas de
-  données. Le service du cluster ne le publie pas, et aucune politique d'autorisation ne l'ouvre : seuls le pod
-  lui-même et les sondes de Kubernetes le lisent, en clair.
+- **Le certificat du port de supervision de NATS n'est pas vérifié par `make queues`** : la commande lit ce port
+  depuis le pod, sur sa boucle locale, avec `wget`, qui ne connaît pas l'autorité locale. Les sondes de Kubernetes ne
+  le vérifient pas non plus. Le certificat se vérifie depuis l'ordinateur, après `make port-forward`, avec `curl` et
+  la CA locale.
 - **HSTS de courte durée, sans prechargement** : la durée est de sept jours, et non d'un an. Un HSTS actif interdit de
   passer outre l'alerte du certificat : après un changement d'autorité locale, le navigateur bloque le site tant qu'il
   retient la règle. La toute première visite d'un navigateur reste servie par la redirection, faute de liste de
@@ -169,6 +170,7 @@ n'est joignable que depuis le pod lui-même.
 | **`make mesh-check`** | Vérifie le maillage : un pod hors du maillage est refusé, et les échanges portent des identités. |
 | **`make authz-check`** | Vérifie les autorisations par identité : un appel autorisé aboutit, un appel non prévu est coupé. |
 | **`make netpol-check`** | Vérifie les politiques réseau : un pod sans l'étiquette prévue est coupé, même s'il a la bonne identité. |
+| **`curl --cacert pme-ca.crt`**<br>**`https://localhost:8222/healthz`** | Vérifie le certificat du port de supervision de NATS, après `make port-forward`. Le fichier `pme-ca.crt` est écrit par `make ca-cert`. |
 | **`kubectl -n istio-system logs ds/ztunnel`**<br>**`--tail=500 \| grep src.identity`** | Affiche les connexions chiffrées vues par ztunnel, avec l'identité de la source et de la destination. |
 
 Dans les journaux de ztunnel, une connexion chiffrée par le maillage se reconnaît à deux indices : l'adresse de
@@ -205,7 +207,7 @@ depuis un autre pod avec `sslmode=disable` est rejetée par le serveur, avant m�
 | **`k8s/08-middlewares.yaml`** | Ajoute l'en-tête HSTS aux réponses de l'ingress. |
 | **`k8s/traefik/values.yaml`** | Redirige le HTTP vers le HTTPS pour tous les noms d'hôte. |
 | **`k8s/config/postgres-hba.conf`** | Impose le TLS et SCRAM-SHA-256 à toute connexion venant du cluster. |
-| **`k8s/config/nats.conf`** | Active le TLS de NATS et fixe la version minimale à 1.3. |
+| **`k8s/config/nats.conf`** | Active le TLS de NATS pour les clients et pour le port de supervision, et fixe la version minimale à 1.3. |
 
 ## Pour aller plus loin
 
