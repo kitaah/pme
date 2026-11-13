@@ -54,16 +54,16 @@ Le job démarre l'API réelle avec les vrais services dont elle dépend, sans Do
 5. k6 lance le scénario avec le profil « ci » et écrit son résumé.
 
 !!! note "À savoir"
-    L'API vérifie toujours la signature, l'émetteur et le client du jeton. Seul le serveur qui signe est remplacé.
-    Keycloak est un produit tiers : sa charge se mesure sur l'environnement de recette.
+L'API vérifie toujours la signature, l'émetteur et le client du jeton. Seul le serveur qui signe est remplacé.
+Keycloak est un produit tiers : sa charge se mesure sur l'environnement de recette.
 
 !!! note "À savoir"
-    Le runner de la pipeline est une petite machine partagée. Le profil « ci » est donc plus léger que le profil
-    complet. Ses résultats servent de garde-fou contre une régression, pas de mesure de capacité.
+Le runner de la pipeline est une petite machine partagée. Le profil « ci » est donc plus léger que le profil
+complet. Ses résultats servent de garde-fou contre une régression, pas de mesure de capacité.
 
 !!! note "À savoir"
-    k6 envoie toutes ses demandes depuis une seule adresse IP. La limite de débit de l'API est donc relevée pour la
-    durée du test.
+k6 envoie toutes ses demandes depuis une seule adresse IP. La limite de débit de l'API est donc relevée pour la
+durée du test.
 
 ## Quand il se lance
 
@@ -74,9 +74,10 @@ Le job démarre l'API réelle avec les vrais services dont elle dépend, sans Do
 - **Log du job** : le résumé de k6, avec chaque seuil marqué réussi ou échoué.
 - **Artefacts du job** : `summary.json` (mesures de k6), `api.log` et `environment.log`, conservés une semaine.
 - **Statut de la pipeline** : le job échoue, avec le code de sortie 99, si un seuil est dépassé.
+- **En cas d'échec avant ou pendant le test** (service injoignable, identifiants refusés, API qui ne démarre pas) : le log du job affiche la fin de `environment.log` (faux Keycloak et flux NATS), puis celle de `api.log`.
 
 !!! warning "Attention"
-    Le jeton de test n'est jamais publié dans les artefacts.
+Le jeton de test n'est jamais publié dans les artefacts.
 
 ## Fichiers et dossiers principaux
 
@@ -87,6 +88,16 @@ Le job démarre l'API réelle avec les vrais services dont elle dépend, sans Do
 | **`tests/performance/support/`**<br>**`ci-environment.cjs`** | Faux fournisseur d'identité et création du flux NATS. |
 | **`scripts/perf-ci.sh`** | Orchestre le test dans la pipeline : API, jeton, k6. |
 | **`.gitlab-ci.yml`** | Définit le job `performance-tests` et ses services. |
+
+## Commandes essentielles
+
+À lancer depuis le dossier du projet, Docker démarré et k6 installé.
+
+| Commande | Description |
+|---|---|
+| **`make test-perf`** | Rejoue le job `performance-tests` : PostgreSQL et NATS jetables, API réelle, profil « ci ». |
+
+Les résultats sont écrits dans `perf-results/` (`summary.json`, `api.log`). Les conteneurs sont supprimés à la fin, même si un seuil est dépassé.
 
 ## Pour aller plus loin
 

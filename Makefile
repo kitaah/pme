@@ -2,7 +2,7 @@
 # Reprend l'organisation du Makefile du projet Spring (minikube-up, deploy, redeploy, port-forward, logs...)
 # adaptee a la nouvelle pile : React / NestJS / NATS / Keycloak / PostgreSQL sur Minikube.
 
-.PHONY: help install test test-integration image-test \
+.PHONY: help install test test-integration test-perf image-test \
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
         minikube-up minikube-down helm ingress inotify istio istio-scan mesh-check authz-check netpol-check cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
         env kubeseal sealed-secrets sealed-prereqs seal image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
@@ -130,6 +130,7 @@ help:
 	@echo "  Tests"
 	@echo "    make test                     - Tests unitaires (Jest : libs/common + api + moderation-service, Vitest : frontend)"
 	@echo "    make test-integration         - Tests d'integration avec PostgreSQL et NATS reels (Testcontainers, Docker requis)"
+	@echo "    make test-perf                - Test de charge k6 (profil ci) : PostgreSQL et NATS jetables, API reelle (Docker et k6 requis)"
 	@echo "    make image-test               - Tests des images Docker (container-structure-test + Trivy)"
 	@echo ""
 	@echo "  Documentation (MkDocs, Docker requis)"
@@ -175,7 +176,7 @@ helm:
 # cluster neuf la commande ne fait rien. `helm upgrade --install` sert aussi bien a installer qu'a mettre a jour,
 # et --wait attend que le controleur soit pret : un "make deploy" lance trop tot echouerait sur les ressources Traefik.
 # Le chart installe aussi les definitions des ressources Traefik (Middleware...) utilisees par k8s/08-middlewares.yaml.
-# Redirection HTTP vers HTTPS, ports du noeud et journal d'acces : voir k8s/traefik/values.yaml.
+# Redirection HTTP vers HTTPS, ports du noeud et log d'acces : voir k8s/traefik/values.yaml.
 # Traefik exige TLS 1.2 au minimum par defaut, comme PostgreSQL (k8s/01-postgres.yaml) et NATS (k8s/config/nats.conf).
 # HSTS et compression des reponses : k8s/08-middlewares.yaml.
 ingress:
@@ -632,6 +633,31 @@ test:
 test-integration:
 	cd api && npm run test:integration
 	cd moderation-service && npm run test:integration
+
+# Performance : meme scenario que le job performance-tests de la pipeline (profil allege « ci »).
+# PostgreSQL et NATS sont lances dans des conteneurs jetables, sur des ports decales pour ne pas gener make port-forward.
+# Les identifiants sont ceux des conteneurs jetables (pme / ci) et ecrasent ceux de l'environnement du terminal.
+# Prerequis : Docker et k6 dans le PATH. Resultats (resume k6, logs de l'API) : perf-results/.
+PERF_DB_PORT   ?= 55432
+PERF_NATS_PORT ?= 54222
+PERF_API_PORT  ?= 3100
+PERF_IDP_PORT  ?= 9099
+test-perf:
+	@command -v k6 >/dev/null || { echo "k6 est introuvable : voir https://grafana.com/docs/k6/latest/set-up/install-k6/" >&2; exit 1; }
+	@command -v docker >/dev/null || { echo "Docker est introuvable." >&2; exit 1; }
+	@set -e; \
+	trap 'docker rm -f pme-perf-postgres pme-perf-nats >/dev/null 2>&1 || true' EXIT INT TERM; \
+	docker rm -f pme-perf-postgres pme-perf-nats >/dev/null 2>&1 || true; \
+	echo "== PostgreSQL et NATS jetables"; \
+	docker run -d --name pme-perf-postgres -p 127.0.0.1:$(PERF_DB_PORT):5432 \
+		-e POSTGRES_DB=pme -e POSTGRES_USER=pme -e POSTGRES_PASSWORD=ci postgres:18-alpine >/dev/null; \
+	docker run -d --name pme-perf-nats -p 127.0.0.1:$(PERF_NATS_PORT):4222 \
+		nats:2.14-alpine -js --user pme --pass ci >/dev/null; \
+	for i in $$(seq 1 30); do docker exec pme-perf-postgres pg_isready -U pme -d pme >/dev/null 2>&1 && break; sleep 1; done; \
+	docker exec pme-perf-postgres pg_isready -U pme -d pme >/dev/null || { echo "PostgreSQL ne repond pas." >&2; exit 1; }; \
+	DB_HOST=127.0.0.1 DB_NAME=pme DB_USER=pme DB_PASSWORD=ci NATS_USER=pme NATS_PASSWORD=ci \
+	DB_PORT=$(PERF_DB_PORT) NATS_HOST=127.0.0.1 NATS_PORT=$(PERF_NATS_PORT) PORT=$(PERF_API_PORT) \
+	IDP_PORT=$(PERF_IDP_PORT) KEYCLOAK_JWKS_URI=http://127.0.0.1:$(PERF_IDP_PORT)/certs sh scripts/perf-ci.sh
 
 # Images Docker : structure (utilisateur non-root, port, contenu) puis vulnerabilites HIGH/CRITICAL.
 # Prerequis : container-structure-test et trivy installes, images construites (make image).

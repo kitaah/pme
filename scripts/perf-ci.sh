@@ -25,8 +25,12 @@ PIDS=""
 cleanup() {
   status=$?
   for pid in $PIDS; do kill "$pid" 2>/dev/null || true; done
+  if [ "$status" -ne 0 ] && [ -f "$OUT/environment.log" ]; then
+    echo "---- Fin du log du faux Keycloak et du flux NATS ----"
+    tail -n 30 "$OUT/environment.log"
+  fi
   if [ "$status" -ne 0 ] && [ -f "$OUT/api.log" ]; then
-    echo "---- Fin du journal de l'API ----"
+    echo "---- Fin du log de l'API ----"
     tail -n 30 "$OUT/api.log"
   fi
   exit "$status"
