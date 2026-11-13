@@ -57,7 +57,7 @@ spec:
             - -c
             - shared_buffers=64MB
             # Budget de connexions (100 au maximum, dont 3 reservees au superutilisateur) :
-            # API 4 pods x 10 + moderation 4 pods x 5 + Keycloak 10 + Grafana 10 = 80, soit 17 de marge
+            # API 4 pods x 10 + moderation 3 pods x 5 + Keycloak 10 + Grafana 10 = 75, soit 22 de marge
             # pour les deploiements progressifs, Adminer et psql. Si l'autoscaler ou un pool change, refaire le calcul.
             - -c
             - max_connections=100

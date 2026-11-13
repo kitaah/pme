@@ -61,7 +61,7 @@ coexistent sans se recouvrir : l'un sert à décider, l'autre à observer.
 **Toutes les applications ne sont pas concernées.**
 Seuls le site, l'API et le service de modération disposent de plusieurs exemplaires. Les autres composants, dont
 PostgreSQL, NATS et Keycloak, restent à un exemplaire : les répliquer exigerait de traiter le partage de leurs
-données, ce qui dépasse le périmètre du POC.
+données, ce qui dépasse le périmètre du POC. La justification de chaque nombre figure plus bas.
 
 **Définitions**
 
@@ -85,14 +85,54 @@ Les règles d'ajustement sont les suivantes :
 
 | Application | Minimum | Maximum | Seuil de déclenchement | Disponible en maintenance |
 |---|---|---|---|---|
-| **Site** | 2 | 4 | 70 % du processeur demandé | 1 au minimum |
+| **Site** | 2 | 3 | 70 % du processeur demandé | 1 au minimum |
 | **API** | 2 | 4 | 70 % du processeur demandé | 1 au minimum |
-| **Service de modération** | 2 | 4 | 70 % du processeur demandé | 1 au minimum |
+| **Service de modération** | 2 | 3 | 70 % du processeur demandé | 1 au minimum |
+
+**Pourquoi ces nombres d'exemplaires ?**
+Le **minimum** est le même partout : avec deux exemplaires, un reste en service quand l'autre est remplacé lors d'une
+mise à jour, ou quand son pod s'arrête. C'est le seul choix qui relève de la disponibilité. Le **maximum**, lui, suit
+le point qui limite réellement chaque application : ajouter des exemplaires au-delà n'apporterait aucun gain.
+
+| Application | Minimum | Maximum | Ce qui fixe le maximum |
+|---|---|---|---|
+| **API** | 2 | 4 | Chaque exemplaire ouvre jusqu'à 10 connexions à PostgreSQL. Quatre exemplaires en consomment 40 sur les 100 que le serveur accepte, ce qui laisse de la place aux autres composants (voir [PostgreSQL](postgresql.md)). Au-delà, la base serait saturée avant que l'API ne gagne en capacité. |
+| **Service de modération** | 2 | 3 | Il ne fait que lire les messages de la file de [NATS](nats.md), dont le débit dépend du travail des modérateurs. Les exemplaires se partagent les messages sans les dupliquer : au-delà de trois, les nouveaux exemplaires attendraient sans rien traiter. |
+| **Site (interface)** | 2 | 3 | Il ne sert que des fichiers statiques : un seul exemplaire répond à un grand nombre de visiteurs. Le deuxième assure la disponibilité, et le troisième absorbe un pic, comme la sortie d'un numéro du fanzine. |
+
+Ces valeurs sont des bornes de dimensionnement, fixées d'après le rôle de chaque application. Elles ne résultent pas
+d'une mesure sur le cluster : un test de charge mené sur Kubernetes permettrait de les confirmer ou de les ajuster.
+
+**Pourquoi un seuil de 70 % ?**
+Un nouvel exemplaire n'est pas utilisable tout de suite : l'autoscaler constate la charge avec un léger retard, puis
+Kubernetes crée le pod et attend qu'il soit prêt. Pendant ce délai, les exemplaires existants continuent de répondre. Le
+seuil doit donc laisser une marge :
+
+- **Trop haut (90 % par exemple) :** les exemplaires sont presque saturés quand le renfort est demandé, et le service
+  ralentit avant son arrivée.
+- **Trop bas (50 % par exemple) :** des exemplaires sont ajoutés pour une charge modérée, ce qui immobilise de la
+  mémoire et du processeur sur un cluster aux ressources limitées.
+
+70 % est une valeur courante de départ : elle garde environ 30 % de marge pendant la création du renfort. Elle n'a pas
+été mesurée sur le projet, et un test de charge sur le cluster permettrait de l'ajuster. À l'inverse, la réduction du
+nombre d'exemplaires est volontairement lente : par défaut, l'autoscaler attend 5 minutes de charge basse avant d'en
+retirer, pour éviter les va-et-vient.
+
+Les composants à un seul exemplaire se justifient aussi :
+
+| Composant | Exemplaires | Raison |
+|---|---|---|
+| **PostgreSQL** | 1 | Un seul volume de données, et un seul serveur peut y écrire. Plusieurs exemplaires exigeraient une réplication entre serveurs. |
+| **NATS** | 1 | Un seul volume pour les flux JetStream. Plusieurs exemplaires exigeraient un cluster NATS. |
+| **Prometheus** et **Loki** | 1 | Un seul volume de mesures ou de journaux. |
+| **Keycloak** | 1 | Mode développement, sans partage de sessions entre exemplaires. |
+| **Alloy** | 1 | Un second collecteur enverrait chaque journal deux fois à Loki. |
+| **Grafana** et **Adminer** | 1 | Outils d'administration, sans enjeu de disponibilité à cette échelle. |
 
 !!! note "À savoir"
-    La limitation de débit de l'API est comptée dans la mémoire de chaque pod. Avec plusieurs exemplaires, la limite
-    réellement appliquée est donc multipliée par leur nombre. Un compteur partagé, par exemple dans Redis, la rendrait
-    exacte : c'est une limite connue du POC, sans conséquence à cette échelle.
+La limitation de débit de l'API est comptée dans la mémoire de chaque pod. Avec plusieurs exemplaires, la limite
+réellement appliquée est donc multipliée par leur nombre. Un compteur partagé, par exemple dans Redis, la rendrait
+exacte : c'est une limite connue du POC, sans conséquence à cette échelle.
 
 ## Fichiers et dossiers principaux
 
@@ -116,15 +156,15 @@ Les règles d'ajustement sont les suivantes :
 | **`kubectl -n pme top pods`** | Affiche la consommation de processeur et de mémoire de chaque pod. |
 
 !!! note "À savoir"
-    Les premières mesures arrivent environ une minute après l'activation. Pendant ce délai, `make hpa` affiche une
-    charge inconnue : c'est normal, il n'y a rien à corriger.
+Les premières mesures arrivent environ une minute après l'activation. Pendant ce délai, `make hpa` affiche une
+charge inconnue : c'est normal, il n'y a rien à corriger.
 
 !!! warning "Attention"
-    Sans metrics-server, l'autoscaler ne reçoit aucune mesure : il ne fait ni erreur ni ajustement, et le nombre de
-    pods reste figé. Une charge qui monte ne déclenche alors aucun renfort.
+Sans metrics-server, l'autoscaler ne reçoit aucune mesure : il ne fait ni erreur ni ajustement, et le nombre de
+pods reste figé. Une charge qui monte ne déclenche alors aucun renfort.
 
 !!! tip "Astuce"
-    `make minikube-up` active déjà l'addon. Sur un cluster existant, `make metrics-server` suffit, sans le recréer.
+`make minikube-up` active déjà l'addon. Sur un cluster existant, `make metrics-server` suffit, sans le recréer.
 
 ## Pour aller plus loin
 
