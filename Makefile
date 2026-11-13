@@ -4,7 +4,7 @@
 
 .PHONY: help install test test-integration image-test \
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
-        minikube-up minikube-down helm ingress inotify istio istio-scan mesh-check authz-check cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
+        minikube-up minikube-down helm ingress inotify istio istio-scan mesh-check authz-check netpol-check cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
         env kubeseal sealed-secrets sealed-prereqs seal image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         pods logs logs-api logs-moderation logs-keycloak \
         port-forward stop-forward api moderation frontend \
@@ -94,6 +94,7 @@ help:
 	@echo "    make istio-scan               - Analyse Trivy des trois images d'Istio (echec sur CRITICAL corrigeable, HIGH signalees)"
 	@echo "    make mesh-check               - Verifie le mTLS : un pod hors du mesh est refuse, les echanges portent des identites"
 	@echo "    make authz-check              - Verifie les autorisations par identite : seules les sources prevues joignent chaque composant"
+	@echo "    make netpol-check             - Verifie les politiques reseau (Calico) : un pod sans l'etiquette prevue est coupe, meme avec la bonne identite"
 	@echo "    make ca-configmap             - Copie l'autorite locale dans le namespace $(NS) (verification du TLS de PostgreSQL)"
 	@echo "    make tunnel                   - Redirige les ports 80 et 443 vers l'ingress (cluster cree sans --ports ; laisser ouvert, mot de passe demande)"
 	@echo "    make hosts                    - Affiche la ligne a ajouter dans /etc/hosts pour les noms .localhost"
@@ -146,8 +147,10 @@ help:
 # alors joignable sans "make tunnel" ni redirection. Option prise en compte a la CREATION du cluster seulement :
 # sur un cluster existant, il faut "minikube delete" puis "make minikube-up" (les deploiements sont perdus).
 # Le port 443 sert le HTTPS (cert-manager).
+# --cni=calico : plugin reseau qui APPLIQUE les politiques reseau (k8s/18-network-policies.yaml). Celui de Minikube par defaut
+# ne le fait pas : les politiques seraient acceptees mais sans effet. Meme contrainte : choisi a la creation seulement.
 minikube-up: scripts-perms
-	minikube start --driver=docker --memory=$(MINIKUBE_MEMORY) --cpus=$(MINIKUBE_CPUS) \
+	minikube start --driver=docker --memory=$(MINIKUBE_MEMORY) --cpus=$(MINIKUBE_CPUS) --cni=calico \
 		--ports=127.0.0.1:80:80,127.0.0.1:443:443
 	$(MAKE) ingress
 	$(MAKE) istio
@@ -241,23 +244,44 @@ mesh-check:
 	@echo "Derniers echanges chiffres vus par ztunnel (identites spiffe) :"
 	@kubectl -n istio-system logs ds/ztunnel --tail=300 | grep spiffe | tail -5 || true
 
-# Verifie les politiques d'autorisation (k8s/17-authorization-policies.yaml) avec trois pods temporaires, qui n'ont de
-# differente que leur compte de service, donc leur identite. Chaque ligne annonce le resultat attendu. Un refus de ztunnel
-# se voit a une connexion coupee (curl echoue, sans code HTTP : "HTTP 000") ; une connexion autorisee renvoie un code HTTP.
-#   - compte `default` (aucune regle ne le cite)  -> Keycloak : refuse ;
-#   - compte `pme-api`                            -> Keycloak : autorise, puis Prometheus : refuse.
+# Verifie les politiques d'autorisation d'Istio (k8s/17-authorization-policies.yaml) avec trois pods temporaires. Chacun a une
+# ETIQUETTE que les politiques reseau (k8s/18-network-policies.yaml) autorisent vers sa destination : seule l'IDENTITE (compte de
+# service) decide alors. Chaque ligne annonce le resultat attendu. Un refus de ztunnel se voit a une connexion coupee (curl
+# echoue, sans code HTTP : "HTTP 000") ; une connexion autorisee renvoie un code HTTP.
+#   - etiquette pme-api, compte `default` (aucune regle ne le cite) -> Keycloak : refuse ;
+#   - etiquette pme-api, compte `pme-api`                          -> Keycloak : autorise ;
+#   - etiquette grafana, compte `pme-api`                          -> Prometheus : refuse (Grafana y est autorise, pas l'identite pme-api).
 authz-check:
 	@echo "Identite default vers Keycloak (attendu : refus, HTTP 000) :"
-	@kubectl -n $(NS) run authz-default --rm -i --quiet --restart=Never --image=curlimages/curl -- \
+	@kubectl -n $(NS) run authz-default --rm -i --quiet --restart=Never --image=curlimages/curl \
+		--labels=app.kubernetes.io/name=pme-api -- \
 		curl -sS -m 5 -o /dev/null -w "HTTP %{http_code}\n" http://keycloak:8080/realms/pme || true
 	@echo "Identite pme-api vers Keycloak (attendu : HTTP 200) :"
 	@kubectl -n $(NS) run authz-api-keycloak --rm -i --quiet --restart=Never --image=curlimages/curl \
+		--labels=app.kubernetes.io/name=pme-api \
 		--overrides='{"spec":{"serviceAccountName":"pme-api"}}' -- \
 		curl -sS -m 5 -o /dev/null -w "HTTP %{http_code}\n" http://keycloak:8080/realms/pme || true
 	@echo "Identite pme-api vers Prometheus (attendu : refus, HTTP 000) :"
 	@kubectl -n $(NS) run authz-api-prometheus --rm -i --quiet --restart=Never --image=curlimages/curl \
+		--labels=app.kubernetes.io/name=grafana \
 		--overrides='{"spec":{"serviceAccountName":"pme-api"}}' -- \
 		curl -sS -m 5 -o /dev/null -w "HTTP %{http_code}\n" http://prometheus:9090/-/ready || true
+
+# Verifie les politiques reseau (k8s/18-network-policies.yaml) avec deux pods temporaires qui ont TOUS DEUX l'identite pme-api,
+# donc que les politiques d'Istio autorisent vers Keycloak. Seule l'etiquette differe : c'est elle que lit le reseau.
+#   - etiquette pme-api  -> Keycloak : autorise (HTTP 200) ;
+#   - sans etiquette     -> Keycloak : coupe par Calico (HTTP 000), alors qu'Istio l'aurait laisse passer.
+# Un HTTP 200 sur le second pod signifierait que les politiques ne sont pas appliquees : verifier `minikube start --cni=calico`.
+netpol-check:
+	@echo "Etiquette pme-api (et identite pme-api) vers Keycloak (attendu : HTTP 200) :"
+	@kubectl -n $(NS) run netpol-etiquette --rm -i --quiet --restart=Never --image=curlimages/curl \
+		--labels=app.kubernetes.io/name=pme-api \
+		--overrides='{"spec":{"serviceAccountName":"pme-api"}}' -- \
+		curl -sS -m 5 -o /dev/null -w "HTTP %{http_code}\n" http://keycloak:8080/realms/pme || true
+	@echo "Sans etiquette (identite pme-api) vers Keycloak (attendu : refus, HTTP 000) :"
+	@kubectl -n $(NS) run netpol-sans-etiquette --rm -i --quiet --restart=Never --image=curlimages/curl \
+		--overrides='{"spec":{"serviceAccountName":"pme-api"}}' -- \
+		curl -sS -m 5 -o /dev/null -w "HTTP %{http_code}\n" http://keycloak:8080/realms/pme || true
 
 # metrics-server (addon Minikube) : fournit la charge des pods a l'autoscaler (k8s/11-autoscaling.yaml). Sans lui, la cible
 # de chaque autoscaler reste <unknown> et le nombre de pods ne change jamais. Les premieres mesures arrivent apres ~1 minute.

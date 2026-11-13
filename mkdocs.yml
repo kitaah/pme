@@ -31,6 +31,7 @@ nav:
   - Outils:
       - Adminer: outils/adminer.md
       - Alloy: outils/alloy.md
+      - Calico: outils/calico.md
       - cert-manager: outils/cert-manager.md
       - container-structure-test: outils/container-structure-test.md
       - GitLab CI: outils/gitlab-ci.md

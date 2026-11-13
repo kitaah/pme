@@ -88,7 +88,7 @@ qui publie l'état du serveur et des flux au format texte. Il reste en HTTP simp
 Il n'est plus publié par le service du cluster : les autres composants ne le trouvent donc plus par son nom. En
 pratique, seuls y accèdent les sondes de Kubernetes, qui s'adressent directement au pod, la commande `make queues`, qui
 s'exécute dans le pod, et `make port-forward`, qui ouvre un accès temporaire depuis l'ordinateur. Aucune
-politique d'autorisation d'[Istio](istio.md) n'ouvre ce port aux autres pods. NATS n'a pas d'interface web. Le port 4222,
+politique d'autorisation d'[Istio](istio.md), ni politique réseau, n'ouvre ce port aux autres pods. NATS n'a pas d'interface web. Le port 4222,
 lui, est chiffré deux fois : par le TLS de NATS, puis par le maillage [Istio](istio.md), qui ne l'ouvre qu'à l'API et au
 service de modération.
 
