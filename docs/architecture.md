@@ -5,8 +5,9 @@
 | Information | Détail |
 |---|---|
 | **Style** | Deux services applicatifs séparés, qui communiquent par messages plutôt qu'en s'appelant directement |
-| **Composants déployés** | Onze, tous dans le namespace `pme` d'un cluster Minikube |
-| **Point d'entrée unique** | Traefik, qui termine le HTTPS, contrôle les jetons sous `/api/v1` et répartit selon le nom d'hôte et le chemin |
+| **Périmètre** | Le parcours d'un membre : connexion, dépôt d'une annonce, prise en charge par le service de modération |
+| **Composants déployés** | Onze dans le namespace `pme`, plus Traefik dans son propre namespace, sur un cluster Minikube |
+| **Point d'entrée unique** | Traefik, qui termine le HTTPS, limite le débit et contrôle les jetons sous `/api/v1`, puis répartit selon le nom d'hôte et le chemin |
 | **Bases de données** | Une seule instance PostgreSQL, quatre bases : `pme`, `moderation`, `keycloak`, `grafana` |
 | **Messagerie** | NATS JetStream, flux `LISTINGS`, sujet `listing.submitted` |
 | **Déploiement** | `kubectl apply -k k8s/` (Kustomize), ordre imposé par les préfixes numériques des manifestes |
@@ -34,6 +35,20 @@ Une annonce enregistrée dont l'événement n'aurait pas été publié resterait
 ne la verrait. L'API traite donc ce cas explicitement. Si la publication échoue malgré ses tentatives, elle efface
 l'annonce qu'elle venait d'écrire et répond `503` au membre, avec un message qui l'invite à réessayer. Mieux vaut un
 dépôt refusé qu'une annonce fantôme.
+
+### Le périmètre du POC
+
+Le POC démontre qu'un parcours métier réel fonctionne de bout en bout sur les technologies retenues. Chaque étape
+s'appuie sur des briques précises :
+
+| Étape | Ce que l'on montre | Briques |
+|---|---|---|
+| **Connexion** | Le membre est redirigé vers la page de connexion de Keycloak, s'authentifie, puis revient sur l'interface où son nom d'utilisateur et son rôle « Membre » s'affichent. | Keycloak, React |
+| **Dépôt de l'annonce** | Le membre remplit le formulaire (titre, description, état). Traefik limite le débit et vérifie le jeton, puis l'API revérifie le jeton, le rôle et les données, et l'annonce s'affiche dans « Mes annonces » au statut « En attente de modération ». | Traefik, React, NestJS |
+| **Prise en charge par la modération** | L'API répond sans attendre la modération. L'événement « annonce soumise » est conservé dans le flux JetStream, et le service de modération, séparé de l'API, le consomme (visible dans ses logs). | NATS, NestJS |
+| **Tout le parcours** | Les composants tournent ensemble sur Minikube. | Minikube |
+
+Le parcours s'arrête à la prise en charge : la décision du modérateur (approuver ou rejeter) n'en fait pas partie.
 
 ### Les composants et leurs échanges
 
@@ -66,41 +81,51 @@ classes: {
 
 navigateur: "Navigateur\nmembre ou modérateur" {class: boite}
 
-cluster: "Cluster Minikube — namespace pme" {
+cluster: "Cluster Minikube" {
   style.font-size: 22
 
-  traefik: "Traefik\nentrée unique, HTTPS\ncontrôle des jetons" {class: boite}
-
-  applicatif: "Applicatif" {
+  entree: "Namespace traefik" {
     style.font-size: 22
-    frontend: "Interface React\npme.localhost/" {class: boite}
-    api: "API NestJS\n/api/v1" {class: boite}
-    moderation: "Service de modération\n/api/v1/moderation" {class: boite}
+    traefik: "Traefik\nHTTPS, limite de débit,\ncontrôle des jetons" {class: boite}
   }
 
-  socle: "Socle" {
+  pme: "Namespace pme" {
     style.font-size: 22
-    keycloak: "Keycloak\nidentités et jetons" {class: boite}
-    nats: "NATS JetStream\nflux LISTINGS" {class: boite}
-    postgres: "PostgreSQL\n4 bases" {class: donnee}
+
+    applicatif: "Applicatif" {
+      style.font-size: 22
+      frontend: "Interface React\npme.localhost/" {class: boite}
+      api: "API NestJS\n/api/v1" {class: boite}
+      moderation: "Service de modération\n/api/v1/moderation" {class: boite}
+    }
+
+    socle: "Socle" {
+      style.font-size: 22
+      keycloak: "Keycloak\nidentités et jetons" {class: boite}
+      nats: "NATS JetStream\nflux LISTINGS" {class: boite}
+      postgres: "PostgreSQL\nbases pme, moderation,\nkeycloak, grafana" {class: donnee}
+    }
+
+    applicatif.api -> socle.nats: publie listing.submitted
+    socle.nats -> applicatif.moderation: consomme
+    applicatif.api -> socle.postgres
+    applicatif.moderation -> socle.postgres
+    socle.keycloak -> socle.postgres
   }
 
-  traefik -> applicatif.frontend
-  traefik -> applicatif.api
-  traefik -> applicatif.moderation
-  traefik -> socle.keycloak: connexion et clés\nde vérification des jetons
-
-  applicatif.api -> socle.nats: publie listing.submitted
-  socle.nats -> applicatif.moderation: consomme
-  applicatif.api -> socle.postgres: base pme
-  applicatif.moderation -> socle.postgres: base moderation
-  socle.keycloak -> socle.postgres: base keycloak
+  entree.traefik -> pme.applicatif.frontend
+  entree.traefik -> pme.applicatif.api
+  entree.traefik -> pme.applicatif.moderation
+  entree.traefik -> pme.socle.keycloak: connexion et clés\nde vérification
 }
 
-navigateur -> cluster.traefik: HTTPS
+navigateur -> cluster.entree.traefik: HTTPS
 ```
 
-Cinq composants d'exploitation complètent le tableau : **Prometheus** collecte les mesures de l'API et de la
+Traefik, l'API et le service de modération lisent chacun les clés publiques de Keycloak pour vérifier les jetons : le schéma ne
+trace que la flèche de Traefik, qui est la seule à traverser un namespace.
+
+Cinq composants d'exploitation, dans le namespace `pme`, complètent le tableau : **Prometheus** collecte les mesures de l'API et de la
 modération, **Grafana** les affiche, **Alloy** ramasse les logs que **Loki** conserve, et **Adminer** donne un
 accès direct aux bases. Tous sont joignables sur leur propre nom d'hôte, sauf Loki, qui n'est interrogé que par
 Grafana depuis l'intérieur du cluster. Ils sont décrits dans leurs fiches respectives et n'interviennent pas dans le
@@ -127,17 +152,18 @@ classes: {
   }
 }
 
-depot: "1. Le membre remplit le formulaire\net valide" {class: boite}
-jeton: "2. L'interface joint son jeton Keycloak\nà l'appel POST /api/v1/listings\nTraefik le vérifie dès l'entrée" {class: boite}
-controle: "3. L'API vérifie le jeton, le rôle « membre »\net valide chaque champ" {class: boite}
-ecriture: "4. L'annonce est écrite en base\nstatut « en attente de modération »" {class: boite}
-publication: "5. L'API publie listing.submitted\ndans le flux LISTINGS" {class: boite}
-reponse: "6. L'API répond 201 au membre\nsans attendre la modération" {class: boite}
-consommation: "7. Le service de modération consomme\nle message et le range dans sa file" {class: boite}
-file: "8. Le modérateur consulte la file\nGET /api/v1/moderation/queue" {class: boite}
+connexion: "1. Le membre se connecte sur Keycloak\net revient avec un jeton signé" {class: boite}
+depot: "2. Le membre remplit le formulaire\net valide" {class: boite}
+entree: "3. POST /api/v1/listings arrive à Traefik\nqui limite le débit (429 sinon)\net vérifie le jeton (401 sinon)" {class: boite}
+controle: "4. L'API revérifie le jeton, le rôle « membre »\net valide chaque champ" {class: boite}
+ecriture: "5. L'annonce est écrite en base\nstatut « en attente de modération »" {class: boite}
+publication: "6. L'API publie listing.submitted\ndans le flux LISTINGS" {class: boite}
+reponse: "7. L'API répond 201 au membre\nsans attendre la modération" {class: boite}
+consommation: "8. Le service de modération consomme\nle message et le range dans sa file" {class: boite}
+file: "9. La file se consulte\nGET /api/v1/moderation/queue" {class: boite}
 compensation: "L'annonce est effacée,\nle membre reçoit un 503" {class: boite}
 
-depot -> jeton -> controle -> ecriture -> publication
+connexion -> depot -> entree -> controle -> ecriture -> publication
 publication -> reponse: publication réussie
 publication -> compensation: broker injoignable
 reponse -> consommation -> file
@@ -161,8 +187,9 @@ reponse -> consommation -> file
 | **Messages plutôt qu'appel direct** | Le dépôt d'annonce survit à une modération arrêtée ou lente. | Il faut gérer le rejeu, les doublons et les messages invalides (flux d'échec). |
 | **Une instance PostgreSQL, quatre bases** | Économiser la mémoire d'un cluster local. | Un seul compte partagé : aucune séparation des droits, limite connue de la [sécurité](securite/durcissement.md). |
 | **Identités déléguées à Keycloak** | L'API ne stocke aucun mot de passe ; elle ne garde que le `sub` du membre. | Keycloak devient indispensable au démarrage de la plateforme. |
-| **Jeton contrôlé à l'entrée, puis dans chaque service** | Traefik refuse tôt toute requête sans jeton valide ; chaque service revérifie le jeton et décide des rôles, sans faire confiance à l'ingress. | Traefik open source n'a pas ce contrôle en natif : un plugin communautaire est téléchargé depuis GitHub à son démarrage, en version épinglée. |
-| **Statut porté par l'annonce, pas par un workflow** | Un simple champ `status` suffit à l'usage du POC. | Le circuit d'approbation ou de rejet n'est pas implémenté : la file se consulte, elle ne se traite pas encore. |
+| **Jeton contrôlé à l'entrée, puis dans chaque service** | Traefik refuse tôt toute requête sans jeton valide. Chaque service revérifie le jeton et décide des rôles. | Traefik open source n'a pas ce contrôle en natif : un plugin communautaire est téléchargé à son démarrage, en version épinglée. |
+| **Débit limité à l'entrée** | Traefik plafonne à 200 requêtes par minute et par adresse, avant même l'API. | Le plafond de l'API, par exemplaire, reste en seconde barrière. |
+| **Statut porté par l'annonce, pas par un workflow** | Un simple champ `status` suffit à l'usage du POC. | Le circuit d'approbation ou de rejet est hors périmètre : la file se consulte, elle ne se traite pas. |
 | **Un seul namespace `pme`** | Toutes les règles de sécurité s'appliquent au même endroit. | Le namespace est écrit en dur dans `k8s/kustomization.yaml` : il ne se change pas par une variable. |
 
 !!! note "À savoir"
@@ -184,6 +211,8 @@ reponse -> consommation -> file
 ## Pour aller plus loin
 
 - [Sécurité de la plateforme](securite/index.md)
+- [Authentification et autorisation](securite/authentification.md)
+- [Traefik, le point d'entrée](outils/traefik.md)
 - [NATS, le flux et ses garanties](outils/nats.md)
 - [NestJS, la structure des deux services](outils/nestjs.md)
 - [Kustomize, l'assemblage des manifestes](outils/kustomize.md)
