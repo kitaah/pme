@@ -1,0 +1,26 @@
+# Installe Trivy : version epinglee, archive verifiee par sa somme de controle (SHA-256) avant installation.
+# Meme controle que dans .gitlab-ci.yml. Le binaire est place dans $RUNNER_TEMP/bin, ajoute au PATH des etapes suivantes.
+name: Installer Trivy
+description: Telecharge Trivy en version epinglee et verifie sa somme de controle SHA-256.
+inputs:
+  version:
+    description: Version de Trivy, sans le « v » (exemple 0.71.2).
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Installer Trivy ${{ inputs.version }}
+      shell: bash
+      env:
+        TRIVY_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        mkdir -p "$RUNNER_TEMP/bin"
+        cd "$RUNNER_TEMP"
+        base="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}"
+        archive="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+        curl -sSfLO "$base/$archive"
+        curl -sSfLO "$base/trivy_${TRIVY_VERSION}_checksums.txt"
+        grep " $archive\$" "trivy_${TRIVY_VERSION}_checksums.txt" | sha256sum -c -
+        tar -xzf "$archive" -C "$RUNNER_TEMP/bin" trivy
+        echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
