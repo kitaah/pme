@@ -25,12 +25,14 @@ theme:
     - search.highlight
 
 # Un onglet par grand thème. "Architecture" donne la vue d'ensemble : composants, echanges, trajet d'une annonce.
+# "Commandes make" liste toutes les commandes du Makefile (page de reference, a tenir a jour avec lui).
 # "Outils" regroupe une fiche par outil du projet (voir outils/modele-fiche.md).
 # "Pipeline CI/CD" explique les contrôles automatiques : exigences, fonctionnement et une page par famille de tests.
 # "Securite" recense les mesures de securite du projet, une page par couche (identite, chiffrement, secrets, conteneurs, application).
 nav:
   - Accueil: index.md
   - Architecture: architecture.md
+  - Commandes make: commandes-make.md
   - Outils:
       - Adminer: outils/adminer.md
       - Alloy: outils/alloy.md

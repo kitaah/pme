@@ -12,6 +12,7 @@ chiffré de bout en bout et contrôlé par une pipeline d'intégration continue.
 | Page | Ce qu'on y trouve |
 |---|---|
 | **[Architecture](architecture.md)** | La vue d'ensemble : les composants, qui parle à qui, et le trajet d'une annonce de bout en bout. À lire en premier. |
+| **[Commandes make](commandes-make.md)** | Toutes les commandes du `Makefile`, par thème, avec leur description et leurs variables. |
 | **[Outils](outils/mkdocs.md)** | Une fiche par outil du projet, toutes construites sur le même modèle. |
 | **[Pipeline CI/CD](pipeline/index.md)** | Les contrôles automatiques de qualité : tests, images Docker, performance, analyse du code. |
 | **[Sécurité](securite/index.md)** | Les mesures de sécurité de la plateforme, couche par couche, et leurs limites. |
