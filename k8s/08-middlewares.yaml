@@ -66,7 +66,23 @@ spec:
         azp: pme-web
       skipPrefetch: true
 ---
-# Chaine de l'API et de la moderation : les traitements de reponse, puis la validation du jeton.
+# Limitation de debit a l'entree : 200 requetes par minute et par adresse source, avec une rafale tolerable de 50. Au-dela,
+# Traefik repond 429 sans solliciter l'API. Traefik n'a qu'un exemplaire : le compteur est unique, donc exact (celui de
+# l'API, lui, est compte par pod). Ce plafond s'applique AVANT la validation du jeton, pour que des requetes sans jeton
+# soient limitees elles aussi. L'API garde son propre limiteur : deuxieme barriere, elle ne fait pas confiance a l'ingress.
+# Remarque : sur Minikube, l'adresse source vue par Traefik peut etre celle de la passerelle Docker, commune a tous les
+# clients locaux ; en production, elle serait celle du client (reglage `sourceCriterion.ipStrategy` selon les relais).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: rate-limit
+spec:
+  rateLimit:
+    average: 200
+    period: 1m
+    burst: 50
+---
+# Chaine de l'API et de la moderation : les traitements de reponse, la limitation de debit, puis la validation du jeton.
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
@@ -76,4 +92,5 @@ spec:
     middlewares:
       - name: hsts
       - name: compress
+      - name: rate-limit
       - name: jwt
