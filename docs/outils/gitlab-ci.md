@@ -95,8 +95,8 @@ serveur d'origine serait détectée.
 Le détail de chaque contrôle est décrit dans la [vue d'ensemble de la pipeline](../pipeline/index.md).
 
 !!! note "À savoir"
-Les valeurs sensibles, comme le jeton d'accès à SonarCloud, sont définies dans les réglages CI/CD du projet, et
-masquées dans les logs. Elles ne sont jamais écrites dans le dépôt.
+    Les valeurs sensibles, comme le jeton d'accès à SonarCloud, sont définies dans les réglages CI/CD du projet, et
+    masquées dans les logs. Elles ne sont jamais écrites dans le dépôt.
 
 ## Fichiers et dossiers principaux
 
@@ -131,16 +131,16 @@ Chaque contrôle de la pipeline a son équivalent sur l'ordinateur, à lancer de
 | **`make quality`** | Enchaîne les contrôles statiques. |
 
 !!! note "À savoir"
-Dans GitLab, le menu **Build**, puis **Pipelines**, liste les pipelines et leur résultat. Le menu **Build**, puis
-**Jobs**, donne accès au log complet de chaque job, qui indique la cause exacte d'un échec.
+    Dans GitLab, le menu **Build**, puis **Pipelines**, liste les pipelines et leur résultat. Le menu **Build**, puis
+    **Jobs**, donne accès au log complet de chaque job, qui indique la cause exacte d'un échec.
 
 !!! warning "Attention"
-Chaque pipeline consomme le quota gratuit de 400 minutes de calcul par mois. Une fois épuisé, plus aucun job ne
-démarre avant le mois suivant : mieux vaut regrouper les corrections mineures en un seul envoi.
+    Chaque pipeline consomme le quota gratuit de 400 minutes de calcul par mois. Une fois épuisé, plus aucun job ne
+    démarre avant le mois suivant : mieux vaut regrouper les corrections mineures en un seul envoi.
 
 !!! tip "Astuce"
-Lancer le contrôle équivalent sur son ordinateur avant de pousser évite un aller-retour de plusieurs minutes et
-économise le quota mensuel.
+    Lancer le contrôle équivalent sur son ordinateur avant de pousser évite un aller-retour de plusieurs minutes et
+    économise le quota mensuel.
 
 ## Pour aller plus loin
 

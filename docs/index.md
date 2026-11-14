@@ -29,4 +29,4 @@ chiffré de bout en bout et contrôlé par une pipeline d'intégration continue.
 | **Identités** | Keycloak 26 |
 | **Plateforme** | Minikube, Traefik, Istio en mode ambient, Calico |
 | **Observabilité** | Prometheus, Grafana, Loki, Alloy |
-| **Qualité** | 201 tests unitaires, 27 d'intégration, couverture 100 %, Quality Gate SonarCloud |
+| **Qualité** | 340 tests unitaires, 27 d'intégration, couverture 100 %, Quality Gate SonarCloud |

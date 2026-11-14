@@ -7,7 +7,7 @@
 | **Rôle** | Stocke les photos des annonces, en dehors de la base de données |
 | **Version** | Garage 1.1, image `dxflrs/garage` |
 | **Interface** | S3, celle d'Amazon : le même code fonctionne devant Garage en local et devant un hébergeur européen en production |
-| **Dépôt** | `pme-photos`, préfixe `pending/` pour les annonces en attente de modération |
+| **Bucket** | `pme-photos`, préfixe `pending/` pour les annonces en attente de modération |
 | **Licence** | AGPLv3, projet français (Deuxfleurs) |
 | **Adresse en local** | <https://garage.localhost>, par l'ingress, en lecture seule et par URL signée |
 
@@ -32,10 +32,31 @@ MinIO était le stockage S3 habituel des clusters de développement. Son éditio
 maintenance fin 2025, sans nouvelle image officielle : la dépendance n'était plus tenable. Garage vise exactement
 l'usage du POC : un seul processus, aucune base externe, quelques dizaines de méga-octets de mémoire.
 
-## Ce que fait l'API
+**Pourquoi une URL signée ?**
+La photo d'une annonce qui n'a pas encore été relue ne doit pas être visible de tous. Un bucket public la rendrait
+accessible à qui connaîtrait son adresse. Une URL signée porte sa propre autorisation : elle est calculée avec la clé
+d'accès, vaut pour un objet précis et expire d'elle-même. C'est ce qui permet au navigateur de lire le stockage
+directement, sans que l'API serve chaque image, et sans qu'un jeton Keycloak circule dans une balise `<img>`.
 
-L'API est le seul composant à écrire dans le stockage. Le service de modération n'y a aucun accès : les politiques
-d'[Istio](istio.md) et de [Calico](calico.md) le lui refusent, conformément au C4.
+**Définitions**
+
+| Terme | Définition |
+|---|---|
+| **Bucket** | Conteneur de premier niveau d'un stockage objet, comparable à un dossier racine. Celui du projet s'appelle `pme-photos`. |
+| **Disposition (*layout*)** | Description, donnée à Garage, de l'endroit où ranger les données. Sans elle, Garage ne stocke rien. |
+| **EXIF** | Métadonnées ajoutées par l'appareil photo à une image : modèle, date et, souvent, position GPS. |
+| **Objet** | Un fichier rangé dans un stockage objet, retrouvé par son chemin (sa clé). |
+| **S3** | Protocole de stockage objet d'Amazon, devenu la norme : les bibliothèques S3 fonctionnent devant Garage sans modification. |
+| **URL signée** | Adresse qui porte sa propre autorisation : calculée avec la clé d'accès, elle vaut pour un objet précis et expire d'elle-même. |
+
+## Rôle dans le projet
+
+- Il garde les photos des annonces en dehors de PostgreSQL, comme le prévoit le conteneur « Stockage de fichiers » du C4 niveau 2.
+- Il tient, sur l'ordinateur, le rôle que jouera un hébergeur S3 européen en production : seul le point d'accès change, pas le code.
+- Seule l'API y écrit (relation 25 du C4). Le service de modération n'y a aucun accès : les politiques d'[Istio](istio.md) et de [Calico](calico.md) le lui refusent.
+- Sans lui, une annonce ne pourrait plus porter de photo, ou la photo retournerait dans la base.
+
+Voici ce que fait l'API avec chaque photo :
 
 | Étape | Détail |
 |---|---|
@@ -46,33 +67,53 @@ d'[Istio](istio.md) et de [Calico](calico.md) le lui refusent, conformément au 
 | **Lecture** | L'API calcule une **URL signée** valable cinq minutes, que le navigateur utilise directement. La signature couvre le nom d'hôte : elle est donc calculée pour l'adresse publique, et non pour le service interne |
 | **Suppression** | Si la publication de l'événement échoue, l'annonce est retirée de la base et la photo du stockage : aucun fichier orphelin |
 
-**Pourquoi une URL signée ?**
-La photo d'une annonce qui n'a pas encore été relue ne doit pas être visible de tous. Un dépôt public la rendrait
-accessible à qui connaîtrait son adresse. Une URL signée porte sa propre autorisation : elle est calculée avec la clé
-d'accès, vaut pour un objet précis et expire d'elle-même. C'est ce qui permet au navigateur de lire le stockage
-directement, sans que l'API serve chaque image, et sans qu'un jeton Keycloak circule dans une balise `<img>`.
+!!! note "À savoir"
+    Le POC présente des limites assumées : un seul exemplaire de Garage, donc aucune copie de secours des objets (un
+    hébergeur de production répliquerait sur trois nœuds) ; une seule photo par annonce ; pas d'antivirus, le
+    ré-encodage écartant déjà tout ce qui n'est pas une image ; et un préfixe `pending/` seulement, la décision du
+    modérateur, qui déplacerait l'objet vers `published/`, étant hors périmètre.
 
-## Mise en service
+## Fichiers et dossiers principaux
 
-Garage démarre sans savoir où ranger ses données : il faut lui décrire sa **disposition** (*layout*), puis créer le
-dépôt et la clé d'accès. Une seule commande s'en charge, après le premier déploiement :
-
-```bash
-make garage-init
-```
-
-Elle est sans effet si tout est déjà en place. La clé d'accès n'est pas générée par Garage : elle est **importée**
-depuis `.env`, où l'API lit la même valeur. Les deux côtés partagent donc le secret sans qu'on ait à recopier une
-valeur affichée par un outil. Après un `make reset`, le volume repart vide : la commande est à relancer.
-
-## Limites assumées
-
-| Limite | Raison |
+| Fichier ou dossier | Description |
 |---|---|
-| **Un seul exemplaire** | Aucune copie de secours des objets : le POC démontre un parcours, pas la haute disponibilité. Un hébergeur de production répliquerait sur trois nœuds |
-| **Une seule photo par annonce** | Plusieurs photos demanderaient une table supplémentaire sans rien démontrer de plus |
-| **Pas d'antivirus** | Le ré-encodage écarte tout ce qui n'est pas une image, ce qui suffit à ce périmètre. Une plateforme ouverte au public analyserait les fichiers déposés |
-| **Préfixe `pending/` seulement** | La décision du modérateur, qui déplacerait l'objet vers `published/`, est hors périmètre du POC |
+| **`k8s/03-garage.yaml`** | Déploie Garage : volume persistant, pod en un seul exemplaire et service. L'image est épinglée par empreinte. |
+| **`k8s/config/garage.toml`** | Configure Garage : adresses d'écoute, région S3 et port d'administration, fermé à tout accès extérieur. |
+| **`k8s/08-ingress.yaml`** | Expose `garage.localhost` pour la lecture des photos par URL signée. |
+| **`k8s/17-authorization-policies.yaml`**<br>**`k8s/18-network-policies.yaml`** | Réservent l'accès à l'API (écriture) et à l'ingress (lecture). |
+| **`api/src/storage/`**<br>**`photo-storage.service.ts`** | Contrôle, ré-encode, enregistre, supprime et signe les photos. |
+| **`.env`**<br>**`env.example`** | Portent les quatre secrets de Garage, générés par `make garage-secrets`. |
+
+## Commandes essentielles
+
+À lancer dans un terminal, depuis le dossier du projet.
+
+| Commande | Description |
+|---|---|
+| **`make garage-init`** | Met Garage en service : disposition, bucket `pme-photos` et clé d'accès de l'API. Lancée par `make deploy`, sans effet si tout est déjà en place. |
+| **`make garage-secrets`** | Génère dans `.env` les secrets de Garage qui manquent ou valent `CHANGE_ME`. Lancée par `make seal`. |
+| **`kubectl -n pme exec deploy/garage -- /garage status`** | Affiche l'état du nœud et sa disposition. |
+| **`kubectl -n pme exec deploy/garage -- /garage bucket info pme-photos`** | Affiche le bucket, sa taille et le nombre d'objets. |
+
+Garage démarre sans savoir où ranger ses données : `make garage-init` lui décrit la disposition, crée le bucket, puis
+**importe** la clé d'accès depuis `.env`, où l'API lit la même valeur. Les deux côtés partagent donc le secret sans qu'on
+ait à recopier une valeur affichée par un outil.
+
+Après un `minikube delete`, l'enchaînement est le suivant :
+
+1. `make minikube-up` recrée le cluster.
+2. `make seal` chiffre `.env` pour le nouveau cluster, en réutilisant les secrets de Garage déjà présents.
+3. `make image` reconstruit les images.
+4. `make deploy` déploie tout et remet Garage en service sur son volume vide.
+
+!!! warning "Attention"
+    Ne modifiez pas à la main une valeur `GARAGE_*` de `.env` une fois Garage en service : `make garage-secrets` ne la
+    touche jamais, car la changer désynchroniserait `.env`, le fichier chiffré et la clé déjà importée. `make undeploy`
+    et `make reset` suppriment le volume : les photos disparaissent avec lui.
+
+!!! tip "Astuce"
+    Pour vérifier qu'une photo est bien rangée, lancez `kubectl -n pme exec deploy/garage -- /garage bucket info pme-photos` :
+    le nombre d'objets augmente d'un à chaque annonce déposée avec photo, et revient en arrière si la publication échoue.
 
 ## Pour aller plus loin
 

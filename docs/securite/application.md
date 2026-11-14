@@ -84,12 +84,24 @@ filtres: "" {
 |---|---|
 | **Liste blanche des champs** | Les champs non déclarés sont retirés, et leur présence fait échouer la requête avec une erreur 400. |
 | **Tailles bornées** | Titre de 3 à 100 caractères, description de 1000 au plus. Les mêmes bornes sont posées sur les colonnes de la base. |
-| **Valeurs énumérées** | L'état d'un objet ne peut valoir que `NEW`, `GOOD` ou `FAIR`. |
+| **Valeurs énumérées** | L'état d'un objet ne peut valoir que `NEW`, `VERY_GOOD`, `GOOD`, `FAIR` ou `FOR_PARTS`, le type d'annonce que `EXCHANGE`, `GIFT` ou `SALE`, et le lieu de remise que l'un des quatre magasins ou « à convenir ». |
+| **Prix cohérent** | Un prix n'est accepté que pour une vente (de 1 à 999 999 centimes) et il y est obligatoire. Une contrainte de la base refuse aussi un prix sur un échange ou un don. |
 | **Nombre de résultats plafonné** | Le paramètre de pagination est ramené entre 1 et 100, et une valeur non entière est refusée. |
 | **Messages explicites** | Chaque règle a son message en français, ce qui évite à l'interface de les réécrire. |
 
 Cinq cas de refus sont vérifiés par les [tests d'intégration](../pipeline/tests-integration.md) : titre vide, titre trop
 court, description trop longue, état inconnu, champ inattendu.
+
+**Photos déposées**
+Un fichier envoyé par un navigateur n'est jamais cru sur parole : son nom et son type annoncés ne prouvent rien.
+
+| Mesure | Détail |
+|---|---|
+| **Taille bornée deux fois** | Traefik coupe à 6 Mo de corps de requête avant même l'API, puis l'API refuse (413) un fichier de plus de 5 Mo. Une seule photo par annonce. |
+| **Ré-encodage obligatoire** | L'API décode puis ré-encode l'image en WebP avec la bibliothèque `sharp`. Un fichier qui n'est pas une image exploitable est refusé (415), et ce qui n'est pas de l'image (script, document) ne survit pas au ré-encodage. |
+| **Image bornée** | La taille de l'image décodée est plafonnée et l'image est ramenée à 1600 px au plus : une image piégée, minuscule en fichier mais immense décodée, ne peut pas saturer la mémoire. |
+| **Métadonnées retirées** | Le ré-encodage supprime les données EXIF, dont la position GPS de la prise de vue. |
+| **Lecture contrôlée** | Une photo ne se lit que par une adresse signée valable cinq minutes : celle d'une annonce non modérée n'est jamais publique. |
 
 **Protection contre les injections**
 L'accès aux données passe par TypeORM, qui construit des requêtes paramétrées : une valeur envoyée par un membre ne peut
@@ -120,8 +132,9 @@ autre site ou glissé dans un champ de saisie, est donc refusé, même si la pag
 |---|---|
 | **`default-src 'self'`** | Par défaut, seules les ressources du site lui-même sont acceptées. |
 | **`script-src 'self'`** | Seuls les scripts du site sont exécutés. Aucun script écrit dans la page, aucune évaluation de texte en code. |
-| **`style-src 'self'`** | Seule la feuille de style du site est appliquée. Aucun style écrit dans la page. |
-| **`img-src 'self' data:`** | Les images viennent du site, ou sont intégrées directement dans le fichier. |
+| **`style-src 'self'`** | Seule la feuille de style du site est appliquée. Aucun style écrit dans la page : les styles de la bibliothèque de notifications sont donc importés depuis sa feuille CSS, au lieu d'être injectés par elle. |
+| **`img-src 'self' data:`**<br>**`https://garage.localhost`** | Les images viennent du site, sont intégrées directement dans le fichier, ou sont les photos du stockage, lues par adresse signée. |
+| **`font-src 'self'`** | La police Roboto est servie par le site lui-même : aucune requête vers un service de polices tiers. |
 | **`connect-src 'self'`**<br>**`https://keycloak.localhost`** | Les appels réseau du navigateur ne peuvent viser que l'API et Keycloak. |
 | **`object-src 'none'`** | Aucun module externe (plugin) n'est accepté. |
 | **`base-uri 'self'`** | L'adresse de base des liens de la page ne peut pas être modifiée. |
@@ -139,12 +152,14 @@ autre site ou glissé dans un champ de saisie, est donc refusé, même si la pag
 
 **Données personnelles réduites au minimum**
 La base ne conserve, pour chaque annonce, que l'identifiant Keycloak de son propriétaire et son nom d'affichage. Aucune
-adresse électronique, aucun mot de passe, aucune trace de connexion. Une demande de suppression de compte se traite donc
+adresse électronique, aucun mot de passe, aucune trace de connexion. Le lieu de remise est une liste fermée de magasins,
+et la position GPS des photos est effacée : aucune adresse personnelle n'est collectée. Une demande de suppression de compte se traite donc
 dans Keycloak, sans toucher aux données métier.
 
 !!! note "À savoir"
     Le filtre d'erreurs distingue clairement les situations : 400 pour une saisie invalide, 401 pour un jeton absent ou
-    invalide, 403 pour un rôle insuffisant, 429 pour un débit excessif, 503 quand la base ne répond plus. Cette
+    invalide, 403 pour un rôle insuffisant, 413 pour une photo trop lourde, 415 pour un fichier qui n'est pas une image,
+    429 pour un débit excessif, 503 quand la base ou le stockage des photos ne répond plus. Cette
     distinction aide l'interface à réagir correctement, sans rien révéler du fonctionnement interne.
 
 ## Ce qui n'est pas couvert
@@ -157,6 +172,8 @@ dans Keycloak, sans toucher aux données métier.
 - **Aucun log des accès.** Les logs applicatifs enregistrent les erreurs, pas les accès réussis : on ne
   peut pas reconstituer qui a consulté quoi. Une vraie piste d'audit, horodatée et inaltérable, serait nécessaire dès
   lors que des données personnelles sont en jeu.
+- **Pas d'antivirus sur les photos.** Le ré-encodage écarte tout ce qui n'est pas une image, ce qui suffit à ce périmètre ; une
+  plateforme ouverte au public analyserait aussi les fichiers déposés.
 - **Pas de détection d'abus.** Un débit sous le plafond, mais anormal dans sa forme, n'est repéré par personne.
 - **Pas d'audit d'accessibilité complet.** Les tests contrôlent les contrastes de la palette ; le reste du référentiel
   RGAA relève d'un audit manuel.

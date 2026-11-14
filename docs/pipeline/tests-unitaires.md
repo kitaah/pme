@@ -14,20 +14,20 @@ pipeline. Ils donnent le premier signal d'une régression, et leur couverture al
 
 ## Ce qui est vérifié
 
-La pipeline lance **201 tests unitaires** répartis en 4 jobs, un par module. Les quatre jobs tournent en parallèle.
+La pipeline lance **340 tests unitaires** répartis en 4 jobs, un par module. Les quatre jobs tournent en parallèle.
 
 | Module | Outil | Tests |
 |---|---|---|
-| **Module commun** (`libs/common`) | Jest 30 et ts-jest | 60 |
-| **API** | Jest 30 et ts-jest | 42 |
-| **Service de modération** | Jest 30 et ts-jest | 37 |
-| **Interface** | Vitest 5, Testing Library et jsdom | 62 |
+| **Module commun** (`libs/common`) | Jest 30 et ts-jest | 66 |
+| **API** | Jest 30 et ts-jest | 96 |
+| **Service de modération** | Jest 30 et ts-jest | 47 |
+| **Interface** | Vitest 5, Testing Library et jsdom | 131 |
 
 Le module commun regroupe le code partagé par l'API et le service de modération : authentification Keycloak, erreurs
-RFC 9457, mesures Prometheus, client NATS et lecture de la configuration. Il est testé une seule fois, ici, et non dans
+RFC 9457, mesures Prometheus, client NATS, lecture de la configuration et valeurs des annonces (types, états, lieux de remise). Il est testé une seule fois, ici, et non dans
 chaque service.
 
-### Module commun (60 tests)
+### Module commun (66 tests)
 
 | Fichier (dans `libs/common/src/`) | Tests | Ce qui est vérifié |
 |---|---|---|
@@ -40,29 +40,32 @@ chaque service.
 | **`metrics/metrics.spec.ts`** | 4 | Mesures au format Prometheus, routes de santé et de mesures ignorées. |
 | **`nats/nats.client.spec.ts`** | 11 | Connexion ouverte une seule fois, TLS, nouvelle tentative après un échec, arrêt propre ou fermeture forcée si le broker est injoignable. |
 | **`config/env.spec.ts`** | 23 | Lecture des variables d'environnement (base, NATS, Keycloak) et refus de démarrer si l'une manque. |
+| **`listings/listing-values.spec.ts`** | 6 | Codes et limites partagés des annonces : types, états, lieux de remise, prix maximal. |
 | **`index.spec.ts`** | 1 | L'interface publique de `@pme/common` expose tout ce dont les services ont besoin. |
 
-### API (42 tests)
+### API (96 tests)
 
 | Fichier (dans `api/src/`) | Tests | Ce qui est vérifié |
 |---|---|---|
-| **`listings/listings.service.spec.ts`** | 4 | Dépôt d'une annonce, retrait avec erreur 503 si la publication échoue, lecture des annonces du membre. |
-| **`listings/listings.controller.spec.ts`** | 10 | Dépôt au nom du membre connecté, paramètre `limit` accepté ou refusé (400). |
-| **`listings/create-listing.dto.spec.ts`** | 7 | Règles de validation du dépôt : longueurs, états autorisés, espaces retirés. |
-| **`listings/listing-events.publisher.spec.ts`** | 3 | Contrat de l'événement publié, deux nouvelles tentatives si le broker est injoignable. |
+| **`listings/listings.service.spec.ts`** | 13 | Dépôt avec ou sans photo, photo enregistrée avant l'annonce, retrait de l'annonce et de la photo avec erreur 503 si la publication échoue, prix ignoré hors vente, lecture des annonces avec URL signée. |
+| **`listings/listings.controller.spec.ts`** | 12 | Dépôt au nom du membre connecté avec sa photo, photo trop lourde (413), paramètre `limit` accepté ou refusé (400). |
+| **`listings/create-listing.dto.spec.ts`** | 32 | Règles de validation du dépôt : longueurs, cinq états, trois types, prix obligatoire pour une vente et refusé sinon, lieux de remise, espaces retirés. |
+| **`listings/listing-events.publisher.spec.ts`** | 4 | Contrat de l'événement publié (type, prix, contrepartie, lieu, clé de la photo), deux nouvelles tentatives si le broker est injoignable. |
+| **`storage/photo-storage.service.spec.ts`** | 14 | Ré-encodage en WebP sous `pending/`, réduction à 1600 px, fichier non décodable refusé (415), stockage indisponible (503), suppression qui ne masque pas la cause d'un échec, URL signée pour l'adresse publique. |
 | **`common/database-circuit-breaker.spec.ts`** | 10 | Disjoncteur de la base : ouverture, demi-ouverture, fermeture, erreur 503, mesure publiée. |
 | **`health/health.controller.spec.ts`** | 3 | Sondes de vivacité et de disponibilité, erreur 503 si la base est injoignable. |
 | **`metrics/metrics.controller.spec.ts`** | 1 | Publication des mesures au format Prometheus. |
-| **`config/configuration.spec.ts`** | 4 | Valeurs par défaut, lecture de l'environnement, refus de démarrer sans les variables obligatoires. |
+| **`config/configuration.spec.ts`** | 7 | Valeurs par défaut, lecture de l'environnement, réglages du stockage S3, refus de démarrer sans les variables obligatoires. |
 
-### Service de modération (37 tests)
+### Service de modération (47 tests)
 
 | Fichier (dans `moderation-service/src/`) | Tests | Ce qui est vérifié |
 |---|---|---|
 | **`moderation/listing-submitted.consumer.spec.ts`** | 6 | Message acquitté, doublon, message mal formé, panne passagère, échec de la copie ou du rejet. |
 | **`moderation/listing-submitted.consumer.lifecycle.spec.ts`** | 7 | Démarrage et arrêt du consommateur durable, message illisible envoyé en flux d'échec. |
 | **`moderation/listing-submitted.consumer.validation.spec.ts`** | 1 | Rejet d'un message dont la validation imbriquée échoue. |
-| **`moderation/moderation.service.spec.ts`** | 3 | Ajout à la file, rejeu sans doublon, erreurs de base transmises. |
+| **`moderation/moderation.service.spec.ts`** | 5 | Ajout à la file avec les nouveaux champs, rejeu sans doublon, erreurs de base transmises. |
+| **`moderation/listing-submitted.event.spec.ts`** | 8 | Contrat de l'événement reçu : types, états, prix, lieux de remise et champs facultatifs d'un message publié avant la mise à jour. |
 | **`moderation/moderation.service.pending.spec.ts`** | 2 | Lecture de la file, de la plus ancienne à la plus récente, avec une limite. |
 | **`moderation/moderation.controller.spec.ts`** | 2 | File réservée aux modérateurs authentifiés et limitée en débit. |
 | **`moderation/moderation-item.entity.spec.ts`** | 2 | Les trois statuts de modération. |
@@ -71,18 +74,21 @@ chaque service.
 | **`metrics/metrics.controller.spec.ts`** | 1 | Publication des mesures au format Prometheus. |
 | **`config/configuration.spec.ts`** | 4 | Valeurs par défaut, lecture de l'environnement, refus de démarrer sans les variables obligatoires. |
 
-### Interface (62 tests)
+### Interface (131 tests)
 
 | Fichier (dans `frontend/src/`) | Tests | Ce qui est vérifié |
 |---|---|---|
-| **`theme.test.ts`** | 26 | Contrastes de la palette selon le RGAA : texte à 4,5:1, composants à 3:1, texte courant à 7:1. |
+| **`theme.test.ts`** | 39 | Contrastes de la palette « Nuit de festival » selon le RGAA : texte à 4,5:1, composants à 3:1, pour chaque association réellement utilisée. |
+| **`api.test.ts`** | 24 | Envoi du dépôt en multipart, conversion du prix en centimes, erreurs RFC 9457 transformées en erreur d'interface, messages de secours pour 413 et 415, libellés des statuts, des types et des états. |
 | **`auth.test.ts`** | 9 | Utilisateur déduit du jeton, renouvellement du jeton, déconnexion. |
-| **`api.test.ts`** | 6 | Appels à l'API avec le jeton, erreurs RFC 9457 transformées en erreur d'interface, libellés des statuts. |
-| **`App.test.tsx`** | 5 | Attente de la connexion, alerte si Keycloak est injoignable, rafraîchissement après un dépôt. |
+| **`App.test.tsx`** | 6 | Attente de la connexion, alerte si Keycloak est injoignable, routes du dépôt et de « Mes annonces », redirection des adresses inconnues. |
 | **`config.test.ts`** | 2 | Configuration de développement ou injectée au chargement de la page. |
-| **`components/Header.test.tsx`** | 2 | Nom et rôle affichés, déconnexion au clic. |
-| **`components/ListingForm.test.tsx`** | 5 | Erreurs de l'API affichées, dépôt confirmé et formulaire vidé, état choisi envoyé, message générique si le réseau est coupé. |
-| **`components/MyListings.test.tsx`** | 4 | Libellé de chaque statut, liste vide, erreur si l'API ne répond pas, rechargement à la demande. |
+| **`components/Header.test.tsx`** | 7 | Nom et rôle affichés, déconnexion au clic, rubrique courante, menu et recherche. |
+| **`components/Footer.test.tsx`** | 4 | Colonnes, mentions légales et lien d'accessibilité du pied de page. |
+| **`components/ListingForm.test.tsx`** | 20 | Les trois types d'annonce (contrepartie, prix, don), prix refusé s'il est invalide, photo refusée si trop lourde ou d'un autre format, envoi et redirection, erreurs de l'API affichées avec la saisie conservée. |
+| **`components/MyListings.test.tsx`** | 11 | Libellé de chaque statut, photo entière et centrée, annonce sans photo, type, prix, lieu de remise, liste vide, erreur si l'API ne répond pas. |
+| **`components/ConfirmationToast.test.tsx`** | 4 | Message de confirmation, durée de huit secondes, bouton de fermeture accessible, barre de temps restant. |
+| **`components/ui/sonner.test.tsx`** | 2 | Position en haut à droite sous l'en-tête et durée des notifications. |
 | **`components/ui/button.test.tsx`** | 3 | Variantes du bouton et rendu en lien. |
 
 ### Seuils de couverture

@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Point d'entrée unique de toutes les opérations du projet : cluster, secrets, déploiement, observation, développement, qualité, tests et documentation |
 | **Fichier** | `Makefile`, à la racine du dépôt |
-| **Nombre de commandes** | 79 cibles, regroupées en douze thèmes ci-dessous |
+| **Nombre de commandes** | 81 cibles, regroupées en douze thèmes ci-dessous (plus `seal-now`, étape interne de `make seal`) |
 | **Aide intégrée** | `make help`, qui n'en liste qu'une partie : cette page est la liste complète |
 | **Configuration** | Variables en tête du `Makefile` (voir la dernière section) et fichier `.env` pour les mots de passe |
 
@@ -31,9 +31,10 @@ Chaque ligne donne la commande et ce qu'elle fait. Les prérequis (Docker, `sudo
 dans la description, et une commande lancée par une autre le précise.
 
 **Ordre habituel.**
-Au premier démarrage : `make minikube-up`, import de l'autorité locale dans le navigateur, `make deploy`, puis
-`make garage-init` pour le stockage des photos. Après une
-modification du code : `make redeploy`. Pour repartir de zéro : `make reset`.
+Au premier démarrage, et après un `minikube delete` : `make minikube-up`, import de l'autorité locale dans le
+navigateur, `make seal` (nouveau cluster, donc nouvelle clé ; génère aussi les secrets de Garage s'ils manquent), `make image`
+(le nouveau cluster n'a plus les images), puis `make deploy`, qui lance aussi la mise en service du stockage des photos. Après une modification du code :
+`make redeploy`. Pour repartir de zéro dans le même cluster : `make reset`.
 
 **Définitions**
 
@@ -52,6 +53,12 @@ modification du code : `make redeploy`. Pour repartir de zéro : `make reset`.
 - Il regroupe les vérifications de sécurité (`make mesh-check`, `make authz-check`, `make netpol-check`, `make jwt-check`) qui prouvent le
   chiffrement et le cloisonnement du cluster.
 - Il donne des raccourcis de lecture (`make pods`, `make queues`, `make db-listings`) qui évitent d'ouvrir un outil complet.
+
+!!! note "À savoir"
+    Le `Makefile` crée aussi deux fichiers qui ne sont pas des commandes : `.env`, produit à la demande depuis
+    `env.example`, et `k8s/14-pme-secrets-sealed.yaml`, généré par `make deploy` s'il manque. Une fois présents, ils ne
+    sont jamais réécrits tout seuls : après un changement de mot de passe, c'est `make seal` qui les met à jour. Les
+    quatre secrets de Garage, eux, sont générés dans `.env` par `make seal` s'ils manquent, puis jamais modifiés.
 
 ## Toutes les commandes
 
@@ -80,7 +87,7 @@ modification du code : `make redeploy`. Pour repartir de zéro : `make reset`.
 | **`make metrics-server`** | Active l'addon metrics-server et attend qu'il soit disponible. Indispensable à l'autoscaling. |
 | **`make hpa`** | Suit en continu l'autoscaling : charge actuelle, cible et nombre de pods. `Ctrl+C` pour quitter. |
 | **`make tunnel`** | Redirige les ports 80 et 443 vers l'ingress (`sudo` demandé) et reste au premier plan. Utile pour un cluster créé sans publication des ports. Ne pas lancer avec `port-forward`. |
-| **`make hosts`** | Affiche la ligne à ajouter à `/etc/hosts` pour les noms en `.localhost`, sans rien écrire. |
+| **`make hosts`** | Affiche la ligne à ajouter à `/etc/hosts` pour les noms en `.localhost` (application, Keycloak, Adminer, Grafana, Prometheus, Alloy et `garage.localhost` pour les photos), sans rien écrire. |
 
 ### Vérifications du maillage, du réseau et de l'ingress
 
@@ -97,8 +104,8 @@ modification du code : `make redeploy`. Pour repartir de zéro : `make reset`.
 |---|---|
 | **`make kubeseal`** | Installe l'outil `kubeseal` à la bonne version s'il est absent (Linux, `sudo` demandé). Requis par `seal`. |
 | **`make sealed-secrets`** | Installe le contrôleur Sealed Secrets dans `kube-system`, une fois par cluster, à la même version que `kubeseal`. |
-| **`make sealed-prereqs`** | Contrôle préalable de `seal` : `kubeseal` à la bonne version, les huit variables de `.env` renseignées (aucun `CHANGE_ME`), contrôleur installé (il l'installe sinon). |
-| **`make seal`** | Chiffre `.env` dans `k8s/14-pme-secrets-sealed.yaml`, à versionner dans Git. À relancer après un changement de secret ou sur un nouveau cluster. |
+| **`make sealed-prereqs`** | Contrôle préalable de `seal` : `kubeseal` à la bonne version, les douze variables de `.env` renseignées (aucun `CHANGE_ME` : base, NATS, Keycloak, Grafana et les quatre secrets de Garage), contrôleur installé (il l'installe sinon). |
+| **`make seal`** | Génère les secrets de Garage s'ils manquent (`garage-secrets`), puis chiffre `.env` dans `k8s/14-pme-secrets-sealed.yaml` (`seal-now`), à versionner dans Git. Les deux étapes sont des appels séparés : `make` ne lit `.env` qu'une fois, au démarrage. À relancer après un changement de secret ou sur un nouveau cluster. |
 
 ### Images et déploiement
 
@@ -108,8 +115,9 @@ modification du code : `make redeploy`. Pour repartir de zéro : `make reset`.
 | **`make image-api`** | Construit `pme-api:dev` avec le Docker de l'ordinateur, puis la charge dans Minikube. |
 | **`make image-moderation`** | Même chose pour `pme-moderation:dev`. |
 | **`make image-frontend`** | Construit `pme-frontend:dev` directement dans Minikube. |
-| **`make deploy`** | Génère le fichier de secrets chiffrés s'il manque, copie l'autorité locale, vérifie la présence de Sealed Secrets, cert-manager et Traefik, puis lance `kubectl apply -k k8s/`. |
-| **`make garage-init`** | Première mise en service du [stockage des photos](outils/garage.md) : disposition des données, dépôt `pme-photos` et clé d'accès de l'API. À lancer une fois après `make deploy`, et après chaque `make reset` (le volume repart vide). Sans effet si tout est déjà en place. |
+| **`make deploy`** | Génère le fichier de secrets chiffrés s'il manque, copie l'autorité locale, vérifie la présence de Sealed Secrets, cert-manager et Traefik, lance `kubectl apply -k k8s/`, puis `garage-init`. |
+| **`make garage-secrets`** | Génère dans `.env` les quatre secrets de [Garage](outils/garage.md) (clé d'accès, secret, secret RPC, jeton d'administration) s'ils manquent ou valent `CHANGE_ME`. Appelé par `make seal`. Une valeur déjà présente n'est jamais modifiée. |
+| **`make garage-init`** | Mise en service du [stockage des photos](outils/garage.md) : disposition des données, bucket `pme-photos` et clé d'accès de l'API. Lancé par `make deploy` (donc aussi par `make reset`, dont le volume repart vide) ; peut se lancer seul. Sans effet si tout est déjà en place. |
 | **`make redeploy`** | `image`, puis redémarrage des trois déploiements applicatifs et attente de leur disponibilité. À lancer après une modification du code. |
 | **`make restart`** | Redémarre les trois déploiements applicatifs sans reconstruire les images. |
 | **`make undeploy`** | Supprime le namespace applicatif, données comprises, et attend que la suppression soit terminée. |
@@ -197,18 +205,14 @@ modification du code : `make redeploy`. Pour repartir de zéro : `make reset`.
 
 Si aucun navigateur ne peut être lancé, chaque commande affiche l'adresse à ouvrir à la main.
 
-!!! note "À savoir"
-    Le `Makefile` crée aussi deux fichiers qui ne sont pas des commandes : `.env`, produit à la demande depuis
-    `env.example`, et `k8s/14-pme-secrets-sealed.yaml`, généré par `make deploy` s'il manque. Une fois présents, ils ne
-    sont jamais réécrits tout seuls : après un changement de mot de passe, c'est `make seal` qui les met à jour.
-
 !!! warning "Attention"
-    `make undeploy` et `make reset` suppriment le namespace applicatif, donc les données de PostgreSQL et les messages de
-    NATS. Il n'y a aucune confirmation. Les secrets chiffrés, eux, sont conservés dans Git.
+    `make undeploy` et `make reset` suppriment le namespace applicatif, donc les données de PostgreSQL, les messages de
+    NATS et les photos de Garage. Il n'y a aucune confirmation. Les secrets chiffrés, eux, sont conservés dans Git.
 
 !!! tip "Astuce"
     Pour voir ce qu'une commande exécuterait sans la lancer, ajouter `-n` : `make -n deploy` affiche les commandes
-    sous-jacentes sans les exécuter.
+    sous-jacentes sans les exécuter. Les commandes `make coverage`, `make quality` et `make test-integration` se lancent
+    l'une après l'autre : chacune s'arrête à la première erreur.
 
 ## Variables modifiables
 
@@ -228,7 +232,7 @@ valeurs ci-dessous sont prévues pour cela.
 | **`KUBESEAL_VERSION`** | `0.41.2` | Version de `kubeseal` et du contrôleur Sealed Secrets, qui doivent rester identiques. |
 | **`INOTIFY_INSTANCES`** | `1024` | Limite `inotify` visée par `make inotify`. |
 | **`CA_FILE`** | `pme-ca.crt` | Fichier où `make ca-cert` écrit l'autorité locale. |
-| **`APP_HOST`**, **`KEYCLOAK_HOST`**, **`ADMINER_HOST`**, **`GRAFANA_HOST`**, **`PROMETHEUS_HOST`**, **`ALLOY_HOST`** | `pme`, `keycloak`, `adminer`, `grafana`, `prometheus`, `alloy`, suivis de `.localhost` | Noms d'hôte des interfaces. Ils sont aussi écrits dans les manifestes : les changer ici ne suffit pas. |
+| **`APP_HOST`**, **`KEYCLOAK_HOST`**, **`ADMINER_HOST`**, **`GRAFANA_HOST`**, **`PROMETHEUS_HOST`**, **`ALLOY_HOST`**, **`GARAGE_HOST`** | `pme`, `keycloak`, `adminer`, `grafana`, `prometheus`, `alloy`, `garage`, suivis de `.localhost` | Noms d'hôte des interfaces. Ils sont aussi écrits dans les manifestes : les changer ici ne suffit pas. |
 | **`NATS_MONITOR_PORT`** | `8222` | Port local de la supervision de NATS. |
 | **`DOCS_PORT`** | `8005` | Port de `make docs-serve`. |
 | **`DOCS_IMAGE_PORT`** | `8083` | Port de `make docs-run`. |

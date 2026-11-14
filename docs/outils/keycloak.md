@@ -87,8 +87,9 @@ sans rien demander à Keycloak.
 
 - Il gère la connexion des membres et des modérateurs, et il est le seul composant à manipuler les mots de passe.
 - Il délivre les jetons que Traefik, l'API et le service de modération vérifient.
-- Il charge le realm `pme` à son premier démarrage : rôles, applications autorisées, adresses de retour et comptes de
-  démonstration.
+- Il charge le realm `pme` à son premier démarrage : rôles, applications autorisées, adresses de retour, langue unique
+  (le français) et thème de connexion.
+- Il présente une page de connexion aux couleurs du site : le thème `pme`, hérité de `keycloak.v2`, reprend la palette « Nuit de festival » et la police Roboto, avec les libellés « Nom d'utilisateur ou email », « Se connecter » et « Se souvenir de moi ».
 - Il enregistre ses données dans la base `keycloak` de [PostgreSQL](postgresql.md), par une connexion chiffrée et
   vérifiée.
 - Il remplace, au déploiement, son compte administrateur temporaire par un compte permanent, puis supprime le premier.
@@ -118,7 +119,8 @@ Ces comptes sont conservés tant que la base de Keycloak n'est pas réinitialis�
 |---|---|
 | **`k8s/03-keycloak.yaml`** | Déploie Keycloak dans le cluster et fixe son adresse publique. |
 | **`k8s/03-keycloak-admin-job.yaml`** | Crée le compte administrateur permanent, puis supprime le compte temporaire. |
-| **`k8s/config/realm-pme.json`** | Décrit le realm : rôles et applications autorisées. |
+| **`k8s/config/realm-pme.json`** | Décrit le realm : rôles, applications autorisées, langue, libellés et thème de connexion. |
+| **`k8s/config/keycloak-theme.css`** | Feuille de style du thème de connexion `pme`, montée dans le pod par une ConfigMap. |
 | **`libs/common/src/auth/`**<br>**`jwt.strategy.ts`** | Vérifie la signature, l'émetteur et l'application du jeton, dans l'API comme dans la modération. |
 | **`frontend/src/auth.ts`** | Redirige vers la page de connexion et renouvelle le jeton. |
 | **`.env`** | Contient l'identifiant et le mot de passe de l'administrateur. Ce fichier est exclu de Git. |

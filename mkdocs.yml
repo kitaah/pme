@@ -62,6 +62,7 @@ nav:
       - React: outils/react.md
       - Sealed Secrets: outils/sealed-secrets.md
       - shadcn/ui: outils/shadcn-ui.md
+      - sharp: outils/sharp.md
       - SonarCloud: outils/sonarcloud.md
       - Supertest: outils/supertest.md
       - Testcontainers: outils/testcontainers.md

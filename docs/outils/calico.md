@@ -90,7 +90,7 @@ istio -> abandon: identité absente ou usurpée
 
 ## Rôle dans le projet
 
-- Il applique les douze politiques réseau de `k8s/18-network-policies.yaml` : un refus par défaut, et une règle par composant.
+- Il applique les treize politiques réseau de `k8s/18-network-policies.yaml` : un refus par défaut, et une règle par composant.
 - Il garantit qu'un pod compromis ne peut joindre que les composants dont il est un appelant prévu. L'interface, par exemple, ne peut plus joindre PostgreSQL.
 - Il double le filtrage du maillage [Istio](istio.md), avec une vérification indépendante au niveau du réseau.
 - Sans lui, les politiques réseau sont acceptées par Kubernetes mais ne bloquent plus aucune connexion : seul le filtrage d'Istio subsiste.
@@ -118,7 +118,7 @@ La liste des composants et de leurs appelants autorisés figure dans la page [Du
 |---|---|
 | **`make minikube-up`** | Crée le cluster avec Calico (option `--cni=calico`). |
 | **`make netpol-check`** | Lance deux pods temporaires de même identité, l'un avec l'étiquette prévue, l'autre sans. Le premier obtient `HTTP 200`, le second est coupé (`HTTP 000`). |
-| **`kubectl -n pme get networkpolicy`** | Liste les douze politiques du namespace `pme`. |
+| **`kubectl -n pme get networkpolicy`** | Liste les treize politiques du namespace `pme`. |
 | **`kubectl -n pme describe`**<br>**`networkpolicy allow-postgres`** | Affiche les appelants et les ports autorisés pour PostgreSQL. |
 | **`kubectl -n kube-system get pods`**<br>**`-l k8s-app=calico-node`** | Vérifie que l'agent de Calico tourne sur le nœud. |
 

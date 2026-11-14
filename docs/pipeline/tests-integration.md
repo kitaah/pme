@@ -32,6 +32,9 @@ La pipeline lance **27 tests d'intégration** dans un seul job : 17 pour l'API e
 
 Dans le premier fichier, NATS est remplacé par une doublure pour tester l'API seule. Le second fichier utilise le vrai NATS.
 
+Ces tests envoient le dépôt en JSON, sans photo : le stockage des photos n'est pas démarré. L'envoi multipart, le ré-encodage et
+l'enregistrement dans [Garage](../outils/garage.md) sont couverts par les [tests unitaires](tests-unitaires.md).
+
 Détail des 14 tests du premier fichier :
 
 - Une requête sans jeton est refusée (401).
