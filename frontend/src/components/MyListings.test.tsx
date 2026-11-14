@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { Listing, api } from '../api';
 import { MyListings } from './MyListings';
@@ -6,65 +7,141 @@ import { MyListings } from './MyListings';
 // keycloak-js n'a rien a faire dans un test de composant
 vi.mock('../auth', () => ({ accessToken: vi.fn().mockResolvedValue('jeton-de-test') }));
 
-const listing = (id: string, status: Listing['status']): Listing => ({
+const listing = (id: string, status: Listing['status'], extra: Partial<Listing> = {}): Listing => ({
   id,
   title: `Annonce ${id}`,
   description: 'Description',
   condition: 'GOOD',
+  category: 'FIGURINES',
+  kind: 'EXCHANGE',
+  priceCents: null,
+  wantedInExchange: null,
+  handoverPlace: 'TO_AGREE',
+  photoUrl: null,
   status,
   createdAt: '2026-11-04T10:12:00.000Z',
+  ...extra,
 });
+
+function renderList() {
+  return render(
+    <MemoryRouter>
+      <MyListings />
+    </MemoryRouter>,
+  );
+}
 
 describe('MyListings', () => {
   const myListings = vi.spyOn(api, 'myListings');
 
   it('affiche le libelle de chaque statut renvoye par l API', async () => {
-    // Given : le membre a une annonce dans chacun des trois statuts
     myListings.mockResolvedValue([
       listing('1', 'PENDING_MODERATION'),
       listing('2', 'PUBLISHED'),
       listing('3', 'REJECTED'),
     ]);
 
-    render(<MyListings refreshKey={0} />);
+    renderList();
 
-    // Then : les trois statuts sont lisibles, dans leur libelle francais
-    expect(await screen.findByText('En attente de modération')).toBeInTheDocument();
+    expect(await screen.findByText('En attente de modération', { selector: 'span' })).toBeInTheDocument();
     expect(screen.getByText('Publiée')).toBeInTheDocument();
     expect(screen.getByText('Refusée')).toBeInTheDocument();
   });
 
+  it('resume le nombre d annonces et celles en attente de moderation', async () => {
+    myListings.mockResolvedValue([listing('1', 'PENDING_MODERATION'), listing('2', 'PUBLISHED')]);
+
+    renderList();
+
+    expect(await screen.findByText('2 annonces · 1 en attente de modération')).toBeInTheDocument();
+  });
+
+  it('accorde « annonce » au singulier et ne parle pas de moderation quand rien n attend', async () => {
+    myListings.mockResolvedValue([listing('1', 'PUBLISHED')]);
+
+    renderList();
+
+    expect(await screen.findByText('1 annonce')).toBeInTheDocument();
+  });
+
+  it('met en evidence par un cadre dore les annonces en attente de moderation', async () => {
+    myListings.mockResolvedValue([listing('1', 'PENDING_MODERATION'), listing('2', 'PUBLISHED')]);
+
+    renderList();
+
+    const [pending, published] = await screen.findAllByRole('listitem');
+    expect(pending).toHaveClass('border-gold');
+    expect(published).toHaveClass('border-line');
+  });
+
+  it('affiche la photo, centree et entiere, quand l annonce en a une', async () => {
+    myListings.mockResolvedValue([listing('1', 'PUBLISHED', { photoUrl: 'https://garage.localhost/signed' })]);
+
+    renderList();
+
+    const photo = await screen.findByRole('img', { name: 'Annonce 1' });
+    expect(photo).toHaveAttribute('src', 'https://garage.localhost/signed');
+    expect(photo).toHaveClass('object-contain');
+  });
+
+  it('affiche un cadre sans photo quand l annonce n en a pas', async () => {
+    myListings.mockResolvedValue([listing('1', 'PUBLISHED')]);
+
+    renderList();
+
+    expect(await screen.findByRole('img', { name: 'Aucune photo' })).toBeInTheDocument();
+  });
+
+  it('affiche le type, le prix d une vente, l etat et le lieu de remise', async () => {
+    myListings.mockResolvedValue([
+      listing('1', 'PUBLISHED', { kind: 'SALE', priceCents: 4500, condition: 'NEW', handoverPlace: 'SHOP_LYON' }),
+      listing('2', 'PUBLISHED', { kind: 'GIFT', condition: 'FAIR', handoverPlace: 'SHOP_AIX' }),
+    ]);
+
+    renderList();
+
+    const [sale, gift] = await screen.findAllByRole('listitem');
+    expect(sale).toHaveTextContent(/Vente · 45,00\s€/);
+    expect(sale).toHaveTextContent('Neuf');
+    expect(sale).toHaveTextContent('Magasin de Lyon');
+    expect(gift).toHaveTextContent('Don');
+    expect(gift).not.toHaveTextContent('€');
+    expect(gift).toHaveTextContent('Satisfaisant');
+    expect(gift).toHaveTextContent('Magasin d’Aix-en-Provence');
+  });
+
+  it('affiche ce que le membre cherche en echange, quand il l a precise', async () => {
+    myListings.mockResolvedValue([listing('1', 'PUBLISHED', { wantedInExchange: 'Un Blu-ray' })]);
+
+    renderList();
+
+    const [card] = await screen.findAllByRole('listitem');
+    expect(within(card).getByText('Un Blu-ray')).toBeInTheDocument();
+    expect(card).toHaveTextContent('Recherche : Un Blu-ray');
+  });
+
+  it('propose de deposer une annonce depuis la liste', async () => {
+    myListings.mockResolvedValue([]);
+
+    renderList();
+
+    expect(await screen.findByRole('link', { name: 'Déposer une annonce' })).toHaveAttribute('href', '/');
+  });
+
   it('signale une erreur quand l API est injoignable', async () => {
-    // Given : l'API ne repond pas
     myListings.mockRejectedValue(new Error('injoignable'));
 
-    render(<MyListings refreshKey={0} />);
+    renderList();
 
-    // Then : le membre est prevenu, sans liste vide silencieuse
     expect(await screen.findByRole('alert')).toHaveTextContent('Impossible de charger vos annonces.');
   });
 
-  it('invite à déposer une première annonce quand la liste est vide', async () => {
-    // Given : le membre n'a encore rien déposé
+  it('invite à déposer une première annonce quand la liste est vide, sans résumé', async () => {
     myListings.mockResolvedValue([]);
 
-    render(<MyListings refreshKey={0} />);
+    renderList();
 
-    // Then
-    expect(await screen.findByText('Aucune annonce pour le moment.')).toBeInTheDocument();
-  });
-
-  it('recharge la liste quand la page parente demande un rafraîchissement', async () => {
-    // Given : une première liste vide, puis une annonce déposée entre-temps
-    myListings.mockResolvedValueOnce([]).mockResolvedValueOnce([listing('9', 'PUBLISHED')]);
-    const { rerender } = render(<MyListings refreshKey={0} />);
-    await screen.findByText('Aucune annonce pour le moment.');
-
-    // When : la clé de rafraîchissement change
-    rerender(<MyListings refreshKey={1} />);
-
-    // Then : la nouvelle annonce apparaît et l'ancien message disparaît
-    expect(await screen.findByText('Annonce 9')).toBeInTheDocument();
-    expect(screen.queryByText('Aucune annonce pour le moment.')).not.toBeInTheDocument();
+    expect(await screen.findByText(/Aucune annonce pour le moment/)).toBeInTheDocument();
+    expect(screen.queryByText(/annonce(s)? ·/)).not.toBeInTheDocument();
   });
 });

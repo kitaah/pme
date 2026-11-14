@@ -106,7 +106,7 @@ principal est rouge profond, comme le reste du site.
 - Il place le code des composants dans le dépôt, donc dans le périmètre des relectures et des analyses de qualité.
 - Sans lui, chaque composant interactif devrait être écrit et rendu accessible à la main.
 
-Le bouton est aujourd'hui le seul composant installé. Il propose les variantes suivantes :
+Deux composants sont installés : le bouton, et le gestionnaire de notifications (`sonner`), qui affiche la confirmation du dépôt en haut à droite, sous l'en-tête, pendant huit secondes. Le bouton propose les variantes suivantes :
 
 | Variante | Apparence | Usage |
 |---|---|---|
@@ -126,6 +126,7 @@ Le bouton est aujourd'hui le seul composant installé. Il propose les variantes 
 | **`frontend/components.json`** | Indique à l'outil shadcn où écrire les composants et où lire les styles. |
 | **`frontend/src/components/ui/`** | Contient les composants copiés dans le projet. |
 | **`frontend/src/components/ui/button.tsx`** | Le bouton du design system et ses variantes. |
+| **`frontend/src/components/ui/sonner.tsx`** | Le gestionnaire de notifications : position, décalage et durée de huit secondes. |
 | **`frontend/src/lib/utils.ts`** | Contient `cn`, qui assemble les classes Tailwind sans conflit. |
 | **`frontend/src/styles.css`** | Relie les variables attendues par shadcn/ui aux couleurs du projet. |
 | **`frontend/src/theme.test.ts`** | Vérifie le contraste de chaque association de couleurs utilisée. |

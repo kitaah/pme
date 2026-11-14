@@ -1,9 +1,11 @@
 {
   "realm": "pme",
   "displayName": "La Petite Maison de l'Épouvante",
+  "loginTheme": "pme",
   "enabled": true,
   "sslRequired": "external",
-  "registrationAllowed": false,
+  "registrationAllowed": true,
+  "rememberMe": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
@@ -14,8 +16,7 @@
   "accessTokenLifespan": 300,
   "internationalizationEnabled": true,
   "supportedLocales": [
-    "fr",
-    "en"
+    "fr"
   ],
   "defaultLocale": "fr",
   "roles": {

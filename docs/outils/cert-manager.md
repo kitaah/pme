@@ -63,7 +63,7 @@ sembler anodin, mais il bloque surtout les appels que le site adresse à Keycloa
 alors avec le message « Impossible de joindre le serveur d'authentification ».
 
 **Deux usages dans le projet.**
-L'autorité signe d'abord le certificat public, celui que présente l'ingress aux navigateurs pour les six noms d'hôte.
+L'autorité signe d'abord le certificat public, celui que présente l'ingress aux navigateurs pour les sept noms d'hôte.
 Elle signe aussi les certificats internes de PostgreSQL et de NATS, qui chiffrent les échanges à l'intérieur du
 cluster. Dans ce second cas, ce sont les applications, et non le navigateur, qui vérifient le certificat et le nom du
 serveur. Les certificats d'identité des pods, eux, sont émis par le maillage [Istio](istio.md) et ne passent pas par
@@ -90,7 +90,7 @@ panne arrive toujours au mauvais moment.
 ## Rôle dans le projet
 
 - Il crée l'autorité locale du cluster, une seule fois, et la conserve pendant dix ans.
-- Il fournit un certificat unique valable pour les six noms d'hôte de l'[ingress](traefik.md).
+- Il fournit un certificat unique valable pour les sept noms d'hôte de l'[ingress](traefik.md).
 - Il fournit les certificats internes de [PostgreSQL](postgresql.md) et de [NATS](nats.md).
 - Il renouvelle chaque certificat quinze jours avant son expiration, sans intervention.
 - Il rend la configuration transposable : en production, seul l'émetteur change, par exemple pour Let's Encrypt ou
@@ -101,7 +101,7 @@ Les certificats émis sont les suivants :
 
 | Certificat | Pour qui | Durée | Vérifié par |
 |---|---|---|---|
-| **Les six noms en `.localhost`** | L'ingress | 90 jours | Le navigateur, après import de l'autorité. |
+| **Les sept noms en `.localhost`** | L'ingress | 90 jours | Le navigateur, après import de l'autorité. |
 | **`postgres-tls`** | PostgreSQL | 90 jours | L'API, la modération, Keycloak et Grafana. |
 | **`nats-tls`** | NATS | 90 jours | L'API et le service de modération. |
 
@@ -114,7 +114,7 @@ Les certificats émis sont les suivants :
 | Fichier ou dossier | Description |
 |---|---|
 | **`k8s/cert-manager/issuers.yaml`** | Déclare l'autorité locale et l'émetteur qui signe les certificats. |
-| **`k8s/08-certificate.yaml`** | Demande le certificat des six noms d'hôte. |
+| **`k8s/08-certificate.yaml`** | Demande le certificat des sept noms d'hôte. |
 | **`k8s/00-internal-tls.yaml`** | Demande les certificats internes de PostgreSQL et de NATS. |
 | **`k8s/08-ingress.yaml`** | Utilise le certificat public pour chiffrer les échanges avec le navigateur. |
 | **`pme-ca.crt`** | Certificat de l'autorité locale, à importer dans le navigateur. Ce fichier est exclu de Git. |

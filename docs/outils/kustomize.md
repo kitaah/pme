@@ -81,8 +81,8 @@ rendu -> lint: validation hors ligne
 - Il fixe le namespace `pme` pour toutes les ressources : aucun manifeste ne le répète.
 - Il pose l'étiquette `app.kubernetes.io/part-of: pme` sur les ressources et les modèles de pods, sans toucher aux
   sélecteurs, qui sont immuables.
-- Il génère onze ConfigMaps depuis `k8s/config/` : configuration de NATS, de Prometheus, de Loki, d'Alloy et du front,
-  realm Keycloak, sources de données et tableaux de bord Grafana, script d'initialisation et règles d'accès de
+- Il génère treize ConfigMaps depuis `k8s/config/` : configuration de NATS, de Garage, de Prometheus, de Loki, d'Alloy et du front,
+  realm et thème de connexion Keycloak, sources de données et tableaux de bord Grafana, script d'initialisation et règles d'accès de
   PostgreSQL.
 - Il produit le rendu que `make lint-k8s` envoie à kubeconform : les manifestes sont validés tels qu'ils seront
   déployés, et non tels qu'ils sont écrits.

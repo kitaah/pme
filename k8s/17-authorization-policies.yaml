@@ -45,6 +45,30 @@ spec:
         - operation:
             ports: ["5432"]
 ---
+# Stockage objet (Garage) : l'API ecrit et supprime les photos (relation 25 du C4 niveau 2), et
+# l'ingress achemine les lectures du navigateur par URL signee (relation 13). Le service de
+# moderation n'y a PAS acces : le C4 ne lui donne aucune relation avec le stockage.
+# Le port d'administration (3903) n'est ouvert a personne : la creation du depot et de la cle se
+# fait par `make garage-init`, c'est-a-dire depuis le conteneur lui-meme (kubectl exec).
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-garage
+spec:
+  selector:
+    matchLabels:
+      app: garage
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/pme/sa/pme-api
+              - cluster.local/ns/traefik/sa/traefik
+      to:
+        - operation:
+            ports: ["3900"]
+---
 # NATS : l'API (publie) et la moderation (lit). Le port de supervision 8222 n'est ouvert a personne : seules les sondes de
 # Kubernetes (que ztunnel laisse passer) et `make queues` (kubectl exec, dans le pod) le lisent.
 apiVersion: security.istio.io/v1

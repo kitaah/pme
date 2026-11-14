@@ -1,0 +1,378 @@
+/*
+ * Theme de connexion « pme » : palette « Nuit de festival » et police Roboto, les memes que
+ * l'application (frontend/src/styles.css) et que la documentation. La page de connexion est la
+ * premiere que voit le membre : elle ne doit pas detoner.
+ *
+ * Cette feuille est ajoutee APRES celle de Keycloak (voir theme.properties) : elle ne redefinit
+ * que des couleurs, des bordures et la police. Aucun modele n'est recopie, donc une montee de
+ * version de Keycloak ne casse pas le theme ; au pire une regle ne s'applique plus, et la page
+ * reste utilisable.
+ *
+ * `!important` est volontaire ici : les regles de PatternFly livrees avec Keycloak sont plus
+ * specifiques que les notres, et ce fichier n'a pas d'autre role que de passer devant elles.
+ *
+ * Contrastes (WCAG 2.1, seuils du RGAA 4 : 4,5:1 pour le texte, 3:1 pour les composants) :
+ *   texte #f5f0f7 sur #1b1522 : 15,9:1      aide de saisie #b8aac5 sur #1b1522 : 8,2:1
+ *   bouton #c9303f + texte blanc : 5,3:1    bordure de champ #9a8aa8 sur #271e30 : 5,0:1
+ *   lien #ff9aa3 sur #1b1522 : 8,8:1        anneau de focus #ffd479 : 11,4:1 a 13,7:1
+ */
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  /* Chemin relatif a ce fichier (resources/css/) : la police est dans resources/fonts/ */
+  src: url('../fonts/roboto-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../fonts/roboto-latin-500-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/roboto-latin-700-normal.woff2') format('woff2');
+}
+
+:root {
+  --pme-page: #110c16;
+  --pme-panel: #1b1522;
+  --pme-inset: #271e30;
+  --pme-line: #3b2f47;
+  --pme-control: #9a8aa8;
+  --pme-ink: #f5f0f7;
+  --pme-ink-muted: #d4c9dc;
+  --pme-ink-faint: #b8aac5;
+  --pme-blood: #c9303f;
+  --pme-blood-dark: #a82533;
+  --pme-blood-text: #ff9aa3;
+  --pme-gold: #e6b450;
+  --pme-focus: #ffd479;
+
+  /* PatternFly donne une police propre aux titres : on la remplace par Roboto partout */
+  --pf-v5-global--FontFamily--sans-serif: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  --pf-v5-global--FontFamily--heading--sans-serif: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  --pf-v5-global--FontFamily--text: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ---- Fond de page ---- */
+html,
+body.login-pf,
+body,
+.pf-v5-c-login,
+.pf-v5-c-background-image {
+  background: var(--pme-page) !important;
+  color: var(--pme-ink) !important;
+}
+
+body,
+.pf-v5-c-login,
+h1,
+h2,
+label,
+a,
+.pf-v5-c-title,
+input,
+button,
+select,
+textarea {
+  font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+/* ---- Centrage de la page ----
+   Le bloc (logo, nom, carte) est centre dans la fenetre, a l'horizontale comme a la verticale, quelle
+   que soit la hauteur de l'ecran. `safe` evite de couper le haut quand la fenetre est plus basse que
+   le bloc : la page defile alors normalement. */
+html,
+body {
+  min-height: 100vh;
+}
+
+.pf-v5-c-login {
+  align-items: safe center !important;
+  display: flex !important;
+  justify-content: center !important;
+  min-height: 100vh !important;
+  padding: 24px 16px !important;
+}
+
+/* PatternFly ajoute 64 px au-dessus du logo : ils decaleraient le bloc vers le bas */
+#kc-header {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.pf-v5-c-login__container {
+  display: block !important;
+  margin: 0 auto !important;
+  max-width: 500px !important;
+  padding: 0 !important;
+  width: 100% !important;
+}
+
+/* ---- Carte de connexion ----
+   Keycloak 26 dessine un filet de couleur en haut de la carte (--keycloak-card-top-color, bleu par
+   defaut) : la maquette n'en a pas, il est neutralise. La carte n'a que sa bordure fine. */
+:root {
+  --keycloak-card-top-color: transparent;
+}
+
+.pf-v5-c-login__main {
+  background: var(--pme-panel) !important;
+  border: 1px solid var(--pme-line) !important;
+  border-top: 1px solid var(--pme-line) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+  padding: 20px 32px !important;
+}
+
+.pf-v5-c-login__main::before,
+.pf-v5-c-login__main::after,
+.pf-v5-c-login__main-header::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* Titre « Connexion » centre, directement suivi du formulaire (la maquette n'a pas de phrase d'accueil) */
+.pf-v5-c-login__main-header,
+.pf-v5-c-login__main-header h1,
+#kc-page-title {
+  color: var(--pme-ink) !important;
+  font-size: 22px !important;
+  font-weight: 500 !important;
+  text-align: center !important;
+}
+
+.pf-v5-c-login__main-header {
+  border: 0 !important;
+  display: block !important;
+  margin: 0 0 26px !important;
+  padding: 0 !important;
+}
+
+/* La carte a deja son propre remplissage : le corps et le pied n'en ajoutent pas, sinon les champs
+   sont retrecis et decales par rapport a la maquette */
+.pf-v5-c-login__main-body,
+.pf-v5-c-login__main-footer {
+  padding: 0 !important;
+}
+
+/* Pied de carte (« Pas encore de compte ? Creer un compte ») : un seul trait, au-dessus. PatternFly
+   en dessine un en haut et un en bas de la bande, et le pied en ajoutait un troisieme. */
+.pf-v5-c-login__main-footer {
+  border: 0 !important;
+  margin: 24px 0 0 !important;
+}
+
+.pf-v5-c-login__main-footer-band {
+  background: transparent !important;
+  border: 0 !important;
+  border-top: 1px solid var(--pme-line) !important;
+  color: var(--pme-ink-muted) !important;
+  font-size: 14px !important;
+  margin: 0 !important;
+  padding: 22px 0 0 !important;
+  text-align: center !important;
+}
+
+.pf-v5-c-login__main-footer-band-item {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.pf-v5-c-login__main-header-desc {
+  color: var(--pme-ink-faint) !important;
+  text-align: center !important;
+}
+
+/* ---- En-tete de la page : logo et nom de l'enseigne ----
+   Le nom vient du realm (displayName). Le logo (une maison entre deux filets) est
+   dessine ici : aucun modele n'est recopie. */
+#kc-header-wrapper {
+  color: var(--pme-ink) !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  letter-spacing: normal !important;
+  line-height: 1.2 !important;
+  margin: 0 auto 28px !important;
+  text-align: center !important;
+  text-transform: none !important;
+  white-space: nowrap;
+}
+
+#kc-header-wrapper::before {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='142' height='26' viewBox='0 0 142 26'%3E%3Cpath d='M0 13.5h44M98 13.5h44' stroke='%236b5a78' stroke-width='1'/%3E%3Cg transform='translate(58 1) scale(1.0833)' fill='none' stroke='%23e6b450' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 10.5 12 3l9 7.5'/%3E%3Cpath d='M5 9.5V21h14V9.5'/%3E%3Cpath d='M10 21v-6h4v6'/%3E%3C/g%3E%3C/svg%3E") no-repeat center;
+  content: '';
+  display: block;
+  height: 26px;
+  margin: 0 auto 18px;
+  width: 142px;
+}
+
+/* ---- Libelles et champs ---- */
+.pf-v5-c-form__label-text,
+.pf-v5-c-form__label,
+label {
+  color: var(--pme-ink) !important;
+}
+
+.pf-v5-c-form-control {
+  background: var(--pme-inset) !important;
+  border: 1px solid var(--pme-control) !important;
+  border-radius: 10px !important;
+  color: var(--pme-ink) !important;
+  min-height: 48px;
+}
+
+/* PatternFly place le champ dans une enveloppe : la bordure est portee par l'enveloppe seule,
+   sinon on voit deux cadres imbriques */
+.pf-v5-c-form-control input,
+input[type='text'],
+input[type='password'],
+input[type='email'] {
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--pme-ink) !important;
+  font-size: 15px !important;
+  min-height: 46px;
+  padding: 0 14px !important;
+}
+
+/* Espace entre les champs : l'ecart de la grille du formulaire, et rien d'autre (les marges des
+   groupes s'y ajoutaient et doublaient l'espace) */
+.pf-v5-c-form {
+  gap: 20px !important;
+}
+
+.pf-v5-c-form__group {
+  margin: 0 !important;
+}
+
+.pf-v5-c-form__label-text {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+/* PatternFly souligne le champ actif d'un trait : la bordure complete est plus lisible */
+.pf-v5-c-form-control::after,
+.pf-v5-c-form-control::before {
+  border: 0 !important;
+}
+
+.pf-v5-c-form-control:focus-within,
+input:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--pme-focus) !important;
+  outline-offset: 2px !important;
+}
+
+.pf-v5-c-helper-text__item-text,
+.pf-v5-c-form__helper-text {
+  color: var(--pme-ink-faint) !important;
+}
+
+/* ---- Bouton principal ---- */
+.pf-v5-c-button.pf-m-primary {
+  background: var(--pme-blood) !important;
+  border-radius: 10px !important;
+  color: #ffffff !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  min-height: 50px;
+  width: 100%;
+}
+
+.pf-v5-c-button.pf-m-primary:hover,
+.pf-v5-c-button.pf-m-primary:focus {
+  background: var(--pme-blood-dark) !important;
+}
+
+/* Le bouton « afficher le mot de passe » (l'oeil) n'existe pas dans la maquette : il est masque, avec
+   la case qui le contient. Sans cela, cette case vide (1 px de large, decalee de -1 px par
+   PatternFly) recouvre le bord droit du champ et lui coupe le coin. Le champ garde son type
+   « password » : le navigateur et les gestionnaires de mots de passe continuent de fonctionner. */
+button[data-password-toggle],
+.pf-v5-c-input-group__item:has(> button[data-password-toggle]) {
+  display: none !important;
+}
+
+.pf-v5-c-input-group__item {
+  margin: 0 !important;
+}
+
+/* Sous le champ du mot de passe : « Mot de passe oublie ? » a droite, puis « Se souvenir de moi »
+   a gauche, sur la ligne suivante. Keycloak les place dans l'ordre inverse (la case, puis le lien)
+   sur une meme ligne : l'ordre d'affichage est donc inverse ici, sans toucher au modele. */
+.pf-v5-c-form__helper-text {
+  margin-top: 10px !important;
+}
+
+.pf-v5-c-form__helper-text .pf-v5-c-helper-text {
+  align-items: stretch !important;
+  flex-direction: column-reverse !important;
+  gap: 14px !important;
+}
+
+.pf-v5-c-form__helper-text .pf-v5-c-helper-text__item {
+  align-self: flex-end;
+  margin: 0 !important;
+}
+
+/* ---- Liens (mot de passe oublie, creation de compte) ---- */
+a,
+.pf-v5-c-button.pf-m-link {
+  color: var(--pme-blood-text) !important;
+  text-decoration: underline !important;
+}
+
+/* ---- Case « Se souvenir de moi » ---- */
+.pf-v5-c-check__label {
+  color: var(--pme-ink-muted) !important;
+}
+
+/* ---- Messages d'erreur ----
+   La couleur ne porte pas l'information a elle seule : Keycloak affiche aussi une icone et un
+   texte explicite, conserves tels quels. */
+.pf-v5-c-alert.pf-m-danger,
+.pf-v5-c-alert.pf-m-error {
+  background: var(--pme-panel) !important;
+  border-left: 4px solid var(--pme-blood) !important;
+  color: var(--pme-ink) !important;
+}
+
+.pf-v5-c-alert__title,
+.pf-v5-c-alert__description,
+.kc-feedback-text {
+  color: var(--pme-ink) !important;
+}
+
+/* ---- Case « Se souvenir de moi » ---- */
+input[type='checkbox'] {
+  accent-color: var(--pme-blood);
+  height: 18px;
+  width: 18px;
+}
+
+.pf-v5-c-check__label {
+  color: var(--pme-ink-muted) !important;
+  font-size: 14px !important;
+}
+
+/* ---- Liens : « Mot de passe oublié ? » ---- */
+.pf-v5-c-login__main a,
+.pf-v5-c-login__main-footer-band a {
+  color: var(--pme-blood-text) !important;
+}
+
+.pf-v5-c-login__main a:hover {
+  color: var(--pme-focus) !important;
+}

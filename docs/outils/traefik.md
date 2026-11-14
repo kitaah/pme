@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Point d'entrée unique du cluster : il reçoit les requêtes du navigateur, les déchiffre, vérifie le jeton sous `/api/v1` et les dirige vers le bon service |
 | **Version** | Chart Helm 41.3.0, qui installe Traefik Proxy 3.7, et plugin `jwt-middleware` v1.6.0 pour la validation des jetons |
-| **Adresse en local** | <https://pme.localhost> et les cinq autres noms en `.localhost` |
+| **Adresse en local** | <https://pme.localhost> et les six autres noms en `.localhost` |
 
 ## Description
 
@@ -81,8 +81,9 @@ sensibles : celles vers [PostgreSQL](postgresql.md) et vers [NATS](nats.md).
 
 **Il ajoute des protections aux réponses.**
 Les réglages de réponse sont décrits dans des ressources appelées **middlewares**, que l'ingress référence. L'un ajoute
-l'en-tête HSTS, qui demande au navigateur de n'utiliser que HTTPS pour ces noms. L'autre compresse les réponses
-volumineuses pour accélérer le chargement.
+l'en-tête HSTS, qui demande au navigateur de n'utiliser que HTTPS pour ces noms. Un autre compresse les réponses
+volumineuses pour accélérer le chargement. Un dernier plafonne le corps d'une requête à 6 Mo sous `/api/v1` : une photo de
+5 Mo accompagnée des champs du formulaire passe, un envoi manifestement trop gros est refusé (413) avant d'atteindre l'API.
 
 **Il vérifie le jeton avant que la requête n'entre.**
 Sous `/api/v1`, un troisième middleware contrôle le jeton de connexion : signature, expiration, émetteur et application
@@ -142,7 +143,7 @@ bord, n'est pas exposée non plus.
 - Il écrit un log de chaque requête, au format JSON, consultable avec la commande de log ci-dessous.
 - Sans lui, chaque interface exigerait une redirection de port distincte, à relancer à chaque session de travail.
 
-Les six noms d'hôte sont les suivants :
+Les sept noms d'hôte sont les suivants :
 
 | Adresse | Service | Port | Rôle |
 |---|---|---|---|
@@ -152,6 +153,7 @@ Les six noms d'hôte sont les suivants :
 | **<https://grafana.localhost>** | `grafana` | 3000 | Tableaux de bord. |
 | **<https://prometheus.localhost>** | `prometheus` | 9090 | Mesures brutes et état de la collecte. |
 | **<https://alloy.localhost>** | `alloy` | 12345 | Suivi de la collecte des logs. |
+| **<https://garage.localhost>** | `garage` | 3900 | Lecture des photos par URL signée, sans contrôle de jeton : la signature est l'autorisation. L'administration (3903) n'est jamais exposée. |
 
 !!! note "À savoir"
     Ces noms d'hôte figurent aussi dans le `Makefile`, dans la configuration de Keycloak, de l'API, de la modération,
@@ -163,13 +165,13 @@ Les six noms d'hôte sont les suivants :
 |---|---|
 | **`k8s/traefik/values.yaml`** | Réglages de Traefik : ports 80 et 443, redirection vers HTTPS, log d'accès, plugin de validation des jetons. |
 | **`k8s/08-ingress.yaml`** | Déclare les noms d'hôte, les chemins, les services visés et le certificat, en deux Ingress : l'un pour `/api/v1` (jeton exigé), l'autre pour le reste. |
-| **`k8s/08-middlewares.yaml`** | Décrit l'en-tête HSTS, la compression des réponses et la validation des jetons. |
-| **`k8s/08-certificate.yaml`** | Demande à cert-manager le certificat des six noms d'hôte. |
+| **`k8s/08-middlewares.yaml`** | Décrit l'en-tête HSTS, la compression des réponses, la limite de taille du corps des requêtes et la validation des jetons. |
+| **`k8s/08-certificate.yaml`** | Demande à cert-manager le certificat des sept noms d'hôte. |
 | **`k8s/03-keycloak.yaml`** | Fixe l'adresse publique de Keycloak. |
 | **`k8s/config/realm-pme.json`** | Liste les adresses de retour autorisées après la connexion. |
 | **`k8s/config/frontend-config.js`** | Indique au site l'adresse de Keycloak. |
 | **`Makefile`** | Contient les noms d'hôte, la version du chart et les commandes liées à l'ingress. |
-| **`/etc/hosts`** | Associe les six noms d'hôte à l'adresse de l'ordinateur. |
+| **`/etc/hosts`** | Associe les sept noms d'hôte à l'adresse de l'ordinateur. |
 
 ## Commandes essentielles
 
@@ -192,7 +194,7 @@ Les six noms d'hôte sont les suivants :
 La ligne à ajouter une seule fois au fichier hosts est la suivante :
 
 ```
-127.0.0.1 pme.localhost keycloak.localhost adminer.localhost grafana.localhost prometheus.localhost alloy.localhost
+127.0.0.1 pme.localhost keycloak.localhost adminer.localhost grafana.localhost prometheus.localhost alloy.localhost garage.localhost
 ```
 
 Ce fichier se trouve dans `/etc/hosts` sous Linux et macOS, et dans `C:\Windows\System32\drivers\etc\hosts` sous

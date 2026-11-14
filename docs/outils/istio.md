@@ -188,6 +188,9 @@ ligne affichée par `make mesh-check` ne suffit pas : elle peut ne montrer que l
     dans le `Makefile` avant de recréer le cluster. Un namespace enrôlé en mode strict dont le trafic ne passe pas par
     le maillage devient inaccessible : c'est le cas de Traefik s'il n'est pas enrôlé.
 
+!!! warning "Attention"
+    **Certificats expirés.** Les certificats d'identité du maillage durent 24 h. Si ztunnel ne les renouvelle pas (portable mis en veille, horloge décalée, par exemple), les pods ne se joignent plus : « 502 Bad Gateway » sur tous les sites, PostgreSQL `ECONNRESET`, NATS `CONNECTION_REFUSED`, nouveaux pods en `CrashLoopBackOff` alors que les anciens tournent encore. Le log de ztunnel le confirme : `kubectl -n istio-system logs ds/ztunnel | grep -E "CertificateExpired|ExpiredContext"`. `make mesh-renew` redémarre ztunnel, Traefik puis les applications et règle le problème.
+
 !!! tip "Astuce"
     Devant un échange refusé, commencer par `make authz-check` plutôt que par la lecture des manifestes : la commande
     distingue en quelques secondes un refus d'identité d'un refus d'étiquette, c'est-à-dire une politique d'Istio

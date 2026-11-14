@@ -1,3 +1,4 @@
+import { HandoverPlace, ListingCategory, ListingKind } from '@pme/common';
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 export enum ModerationStatus {
@@ -29,6 +30,26 @@ export class ModerationItem {
 
   @Column({ type: 'varchar', length: 20 })
   condition: string;
+
+  @Column({ type: 'varchar', length: 30, default: ListingCategory.OTHER })
+  category: string;
+
+  @Column({ type: 'varchar', length: 20, default: ListingKind.EXCHANGE })
+  kind: string;
+
+  /** Centimes, pour une vente seulement. */
+  @Column({ name: 'price_cents', type: 'integer', nullable: true })
+  priceCents: number | null;
+
+  @Column({ name: 'wanted_in_exchange', type: 'varchar', length: 120, nullable: true })
+  wantedInExchange: string | null;
+
+  @Column({ name: 'handover_place', type: 'varchar', length: 20, default: HandoverPlace.TO_AGREE })
+  handoverPlace: string;
+
+  /** Chemin de la photo dans le stockage objet, jamais le fichier : le moderateur la lira plus tard. */
+  @Column({ name: 'photo_key', type: 'varchar', length: 200, nullable: true })
+  photoKey: string | null;
 
   @Column({ type: 'varchar', length: 20, default: ModerationStatus.PENDING })
   status: ModerationStatus;

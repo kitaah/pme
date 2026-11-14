@@ -1,0 +1,127 @@
+# Stockage objet des photos d'annonces : le conteneur « Stockage de fichiers » du C4 niveau 2.
+# Garage (compatible S3, AGPLv3, francais) tient le role que jouera un hebergeur europeen en
+# production : seul le point d'acces change, pas le code de l'API (k8s/04-api.yaml, variables S3_*).
+#
+# Garage et non MinIO : MinIO n'a plus d'image communautaire maintenue (mode maintenance fin 2025).
+# Garage est concu pour de petits deploiements : un seul processus, pas de base externe.
+#
+# Pourquoi un conteneur separe de PostgreSQL : une image n'a rien a faire dans une base relationnelle
+# (lignes de plusieurs mega-octets, sauvegardes alourdies, cache de la base pollue). Le C4 niveau 2 le
+# prevoyait deja : seul le coeur ecrit (relation 25), et le navigateur lit par URL signee (relation 13).
+#
+# Un seul exemplaire (pas de replication) : le POC demontre le parcours, pas la haute disponibilite.
+# Le volume garde les photos entre deux redemarrages du pod ; `make undeploy` les supprime avec le
+# namespace, comme les bases.
+#
+# Apres le premier deploiement, le depot (bucket) et la cle d'acces doivent etre crees une fois :
+# `make garage-init` (idempotent).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: garage-data
+  labels:
+    app.kubernetes.io/name: garage
+    app.kubernetes.io/component: storage
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: garage
+  labels:
+    app: garage
+    app.kubernetes.io/name: garage
+    app.kubernetes.io/component: storage
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  # Le volume ne peut etre monte que par un pod a la fois (ReadWriteOnce) : l'ancien pod doit
+  # disparaitre avant que le nouveau demarre.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: garage
+  template:
+    metadata:
+      labels:
+        app: garage
+        app.kubernetes.io/name: garage
+        app.kubernetes.io/component: storage
+    spec:
+      serviceAccountName: garage
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      enableServiceLinks: false
+      containers:
+        - name: garage
+          image: dxflrs/garage:v1.1.0@sha256:fdb8272fcbe643eef830ee17874d5d4ed623a86501f1acbac8012583113b1c26
+          ports:
+            - { name: s3, containerPort: 3900 }
+            - { name: admin, containerPort: 3903 }
+          env:
+            # Secret partage entre les processus Garage d'un meme groupe. Un seul exemplaire ici,
+            # mais le fichier de configuration l'exige. Il ne protege aucune donnee du membre.
+            - name: GARAGE_RPC_SECRET
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: garage-rpc-secret }
+            # Jeton de l'API d'administration (creation du depot et de la cle par make garage-init).
+            - name: GARAGE_ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: garage-admin-token }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/garage }
+            - { name: config, mountPath: /etc/garage.toml, subPath: garage.toml, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+          # L'API d'administration repond des que le processus est lance, avant meme que la
+          # disposition des donnees (layout) soit appliquee : c'est ce que make garage-init attend.
+          startupProbe:
+            httpGet: { path: /health, port: 3903 }
+            periodSeconds: 3
+            failureThreshold: 40
+          readinessProbe:
+            httpGet: { path: /health, port: 3903 }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: 3903 }
+            periodSeconds: 20
+            failureThreshold: 6
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: garage-data
+        - name: config
+          configMap:
+            name: garage-config
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: garage
+  labels:
+    app.kubernetes.io/name: garage
+    app.kubernetes.io/component: storage
+spec:
+  selector:
+    app: garage
+  ports:
+    - { name: s3, port: 3900, targetPort: 3900 }
+    - { name: admin, port: 3903, targetPort: 3903 }

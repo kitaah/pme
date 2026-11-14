@@ -1,0 +1,356 @@
+# Conception : dépôt d'annonce avec photo
+
+## Fiche d'identité
+
+| Information | Détail |
+|---|---|
+| **Objet** | Enrichir le dépôt d'annonce : titre, description, état, photo, puis confirmation par un message et redirection. Le formulaire propose l'échange, le don et la vente, avec les champs propres à chaque type |
+| **Périmètre** | Celui du POC : connexion, dépôt, prise en charge par le service de modération. La décision du modérateur est hors périmètre |
+| **Conteneur C4 concerné** | « Stockage de fichiers » (stockage objet S3), déjà prévu au C4 niveau 2 : aucun conteneur nouveau |
+| **Stockage retenu** | Garage (S3 compatible) dans Minikube, en remplacement local de l'hébergeur européen |
+| **Photo** | Une seule par annonce, facultative, 5 Mo maximum, formats JPEG, PNG ou WebP |
+| **Référentiels** | RGAA 4 (accessibilité), C4 niveau 2 (architecture), Keycloak 26.8.1 |
+
+## Description
+
+Le dépôt d'annonce actuel ne capture pas assez d'informations pour une place de marché : pas de titre séparé, pas de
+photo, des états peu conventionnels, pas de prix. Cette évolution complète le formulaire, ajoute le stockage de la photo
+dans le conteneur prévu pour cela, et améliore le parcours : message de confirmation puis retour à la liste des annonces.
+
+**Le problème : où mettre la photo ?**
+Une image dans PostgreSQL alourdirait la base du cœur et ferait d'elle un stockage de fichiers, alors que le C4 niveau 2
+prévoit un conteneur dédié, « Stockage de fichiers », de technologie « Stockage objet S3 (hébergeur européen) ».
+
+**La réponse : un stockage objet, la base ne garde que la clé.**
+L'API enregistre le fichier dans le stockage objet et ne conserve en base que `photo_key` et `photo_mime`. L'événement
+envoyé sur le bus ne transporte que cette clé, jamais le fichier.
+
+## Décisions prises
+
+| Sujet | Décision | Raison |
+|---|---|---|
+| **Stockage des photos** | S3 dans un conteneur séparé, pas dans PostgreSQL | Conforme au C4 niveau 2 (relation 25) |
+| **Implémentation S3** | Garage | MinIO n'a plus d'image officielle ni de développement actif ; Garage est léger et européen |
+| **Nombre de photos** | Une seule | Suffit à démontrer le parcours ; plusieurs photos ajoutent une table sans rien démontrer de plus |
+| **Types d'annonce** | Le modèle de données, l'API et le formulaire gèrent Échange, Don et Vente. Échange : contrepartie souhaitée (facultative). Vente : prix obligatoire, de 0,01 à 9 999,99 €. Don : ni prix ni contrepartie | Un seul formulaire pour les trois types ; un prix ne peut accompagner qu'une vente, ce que garantit aussi une contrainte de base |
+| **Lecture des photos** | URL signée de courte durée, générée par l'API | La photo d'une annonce non modérée ne doit pas être publique |
+| **Photo en attente de modération** | Affichée à son auteur dans « Mes annonces », avec le statut « En attente de modération » ; invisible des autres membres | Le membre doit pouvoir vérifier sa photo sans attendre la modération |
+| **États de l'objet** | Quatre états, stockés sous forme de codes anglais (`NEW`, `VERY_GOOD`, `GOOD`, `FAIR`) et affichés en français : Neuf, Très bon état, Bon état, Satisfaisant | Grille des grandes places de marché (Vinted, Amazon, eBay : un état neuf puis trois niveaux d'occasion, le dernier étant une usure marquée sur un objet qui fonctionne). Un objet à réparer n'a pas de niveau à part : le défaut se précise dans la description. Les codes anglais suivent ceux du dépôt |
+| **Catégories** | Huit catégories fermées, stockées sous forme de codes anglais (`FIGURINES`, `FILMS`, `BOOKS`, `POSTERS`, `MUSIC`, `GAMES`, `CLOTHING`, `OTHER`) et affichées en français ; « Autres » sert de valeur par défaut | Aide à retrouver une annonce dans un catalogue d'horreur et de pop culture. Une liste fermée suffit : une colonne avec contrainte `CHECK`, sans table de catégories |
+| **Confirmation** | Toast « Annonce soumise pour validation ! » en haut à droite, sous l'en-tête, 8 secondes, puis redirection vers la liste | Demande du porteur du projet |
+| **Langue de Keycloak** | Français seul (`en` retiré de `supportedLocales`), donc plus de sélecteur de langue | Le sélecteur disparaît quand le realm n'a qu'une langue |
+| **Thème de connexion Keycloak** | Création d'un thème `pme` (le dépôt n'en contient aucun), qui reprend la palette « Nuit de festival » | La page de connexion doit suivre le reste de l'application |
+| **Inscription** | Ouverte : `registrationAllowed` passe à `true`, donc le lien « Créer un compte » de la maquette apparaît sous le formulaire | La maquette le montre ; un compte créé n'a aucun rôle tant que `membre` n'est pas ajouté aux rôles par défaut du realm |
+| **Nom de la rubrique** | « Espace membre » | La rubrique couvre l'échange, le don et la vente, pas seulement le troc |
+| **Lieu de remise** | Liste fermée : les quatre magasins de l'entreprise, ou « à convenir » | Sans lieu, une annonce d'échange n'est pas exploitable. Une liste fermée ne collecte aucune donnée personnelle, et la remise en magasin prolonge l'activité de l'enseigne. Une adresse précise serait incohérente : les métadonnées EXIF de la photo, position GPS comprise, sont justement retirées |
+
+## Conformité au C4 niveau 2
+
+| Relation C4 | Rôle dans cette évolution | Conforme |
+|---|---|---|
+| **24** Cœur → Base du cœur | Écrit l'annonce et la clé de la photo | Oui |
+| **25** Cœur → Stockage de fichiers | Écrit la photo (API S3, binaire) | Oui |
+| **26** Cœur → Bus | Publie l'événement `listing.submitted` avec la clé de la photo | Oui |
+| **31** Bus → Modération | Distribue l'annonce à modérer | Oui |
+| **13** App. publique → Stockage de fichiers | Le navigateur lit la photo en HTTPS | Oui |
+
+Deux règles découlent du C4 :
+
+- **Seul le Cœur écrit dans le stockage.** Le navigateur n'écrit jamais directement : l'upload passe par l'API.
+- **Le service de modération n'a aucune relation avec le stockage.** Il reçoit la clé de la photo dans l'événement, mais
+  ne lit ni n'écrit aucun fichier. Dans le C4 complet, c'est le Cœur qui déplacerait la photo à la réception de la décision
+  de modération ; ce circuit est hors périmètre du POC.
+
+!!! note "À savoir"
+    Dans le POC, la photo reste sous le préfixe `pending/` du bucket : la décision du modérateur n'étant pas
+    traitée, rien ne la déplace vers `published/`. Le membre voit sa propre photo par une URL signée fournie par l'API.
+
+## Parcours
+
+1. **Connexion.** Le membre arrive sur la page de connexion Keycloak, en français, sans sélecteur de langue. Le champ
+   s'intitule « Nom d'utilisateur ou email ».
+2. **Formulaire.** Après connexion, la page « Déposer une annonce » s'affiche : type d'annonce (échange, don ou vente),
+   catégorie, état, titre, description, lieu de remise et photo (facultative). Selon le type, le formulaire montre ce qui
+   est recherché en échange (facultatif) ou le prix, et n'affiche rien pour un don.
+3. **Envoi.** Le navigateur envoie le formulaire en multipart à `POST /api/v1/listings`, avec le jeton.
+4. **Contrôles à l'entrée.** Traefik limite la taille du corps (6 Mo), le débit et vérifie le jeton.
+5. **Traitement par l'API.** L'API valide les champs, puis traite la photo : le ré-encodage en WebP est lui-même le
+   contrôle, car seul un fichier que la bibliothèque d'images sait décoder passe, et il supprime au passage les
+   métadonnées EXIF, dont la position GPS. L'image réduite est enregistrée sous `pending/<identifiant>.webp`, puis
+   l'annonce est écrite en base avec le statut « en attente de modération ». Si la base refuse l'annonce, la photo
+   déjà enregistrée est supprimée.
+6. **Événement.** L'API publie `listing.submitted` dans NATS avec la clé de la photo, puis répond `201`.
+7. **Confirmation.** Le navigateur redirige vers la page des annonces et affiche le toast « Annonce soumise pour
+   validation ! » en haut à droite, sous l'en-tête pour ne pas masquer le bouton de déconnexion. Les maquettes le présentent
+   à part. Sur mobile, il prend toute la largeur sous l'en-tête.
+8. **Liste.** La page affiche les annonces du membre avec leur photo, y compris celle de l'annonce qui vient d'être
+   déposée et que la modération n'a pas encore traitée (URL signée de 5 minutes), et le statut « En attente de
+   modération ».
+9. **Modération.** Le service de modération consomme l'événement et place l'annonce dans sa file. La décision est hors
+   périmètre.
+
+Si le dépôt échoue (photo refusée, service indisponible), aucun toast de succès n'est affiché : le formulaire reste
+ouvert avec un message d'erreur, et la photo éventuellement déjà enregistrée est supprimée.
+
+## Modèle de données
+
+Table `listings`, base `pme` :
+
+| Colonne | Type | Règle |
+|---|---|---|
+| `title` | texte | 3 à 100 caractères, obligatoire (inchangé) |
+| `description` | texte | 1000 caractères maximum, obligatoire (inchangé) |
+| `category` | énumération | `FIGURINES`, `FILMS`, `BOOKS`, `POSTERS`, `MUSIC`, `GAMES`, `CLOTHING`, `OTHER` (valeur par défaut) |
+| `condition` | énumération | `NEW`, `VERY_GOOD`, `GOOD`, `FAIR` (`NEW`, `GOOD`, `FAIR` existent déjà) |
+| `kind` | énumération | `EXCHANGE` (valeur par défaut), `GIFT`, `SALE` |
+| `wanted_in_exchange` | texte | Facultatif, 120 caractères maximum, saisi pour un échange |
+| `handover_place` | énumération | `SHOP_ANGOULEME`, `SHOP_AIX`, `SHOP_LYON`, `SHOP_LONDON`, `TO_AGREE` (valeur par défaut) |
+| `price_cents` | entier | Obligatoire si `SALE` (1 à 999 999), vide sinon, garanti par une contrainte de base. En centimes, jamais en nombre décimal |
+| `photo_key` | texte | Clé de l'objet dans le bucket (`pending/<identifiant>.webp`), vide si pas de photo |
+| `photo_mime` | texte | Type de l'image stockée, vide si pas de photo |
+
+Le statut existant (`PENDING_MODERATION`) reste inchangé. Les migrations initiales ne sont pas modifiées : trois
+nouvelles migrations TypeORM, chacune présente dans l'API et dans le service de modération (deux bases séparées), font
+évoluer les tables.
+
+1. `1763100000000-add-listing-details` ajoute les colonnes du dépôt et remplace la contrainte `CHECK` de `condition`.
+2. `1763200000000-remove-for-parts-condition` retire l'état `FOR_PARTS` : les annonces et les éléments de la file qui
+   l'avaient passent en `FAIR` (« Satisfaisant »), puis la contrainte est remplacée par les quatre valeurs restantes.
+3. `1763300000000-add-listing-category` ajoute la colonne `category`, décrite ci-dessous.
+
+Le validateur de l'événement reçu par le service de modération accepte les nouveaux codes.
+
+La migration `1763300000000-add-listing-category` ajoute la colonne `category` (`VARCHAR(30) NOT NULL DEFAULT 'OTHER'`) avec une contrainte `CHECK` sur les
+huit codes. Les annonces déjà en base passent donc en `OTHER` (« Autres »). La catégorie est facultative dans l'API
+(`OTHER` si elle est absente, ce qui garde compatibles les messages publiés par une ancienne version) ; le formulaire,
+lui, en envoie toujours une.
+
+**Pourquoi une colonne et non une table de catégories ?** La liste est fermée, courte et sans gestion en ligne : une
+colonne avec contrainte `CHECK` et une énumération partagée (`ListingCategory` dans `libs/common`) suffisent, comme pour
+l'état, le type et le lieu de remise. L'API et le service de modération ayant chacun leur base, une table obligerait en
+plus à la dupliquer. Une table ne se justifierait qu'avec une gestion par un administrateur, des sous-catégories ou des
+métadonnées par catégorie.
+
+| Code | Libellé affiché |
+|---|---|
+| `FIGURINES` | Figurines et statues |
+| `FILMS` | Films |
+| `BOOKS` | Livres et fanzines |
+| `POSTERS` | Affiches et goodies |
+| `MUSIC` | Musique |
+| `GAMES` | Jeux |
+| `CLOTHING` | Vêtements |
+| `OTHER` | Autres |
+
+À l'écran, le front traduit les codes par une table de correspondance (comme `CONDITION_LABELS` dans `api.ts`) :
+
+| Code | Libellé affiché |
+|---|---|
+| `NEW` | Neuf |
+| `VERY_GOOD` | Très bon état |
+| `GOOD` | Bon état |
+| `FAIR` | Satisfaisant |
+
+Les types d'annonce suivent la même logique : `EXCHANGE` « Échange », `GIFT` « Don », `SALE` « Vente ».
+
+## Interface de programmation et événement
+
+| Élément | Détail |
+|---|---|
+| **Dépôt** | `POST /api/v1/listings`, `multipart/form-data` : champs texte et fichier `photo`. L'API accepte les trois types ; `kind` vaut `EXCHANGE` par défaut |
+| **Liste** | `GET /api/v1/listings/mine` : chaque annonce renvoie `photoUrl`, URL signée valable 5 minutes |
+| **Erreurs** | `400` champ invalide, `413` fichier trop gros, `415` type de fichier refusé |
+| **Événement** | `listing.submitted` : `listingId`, `ownerId`, `ownerUsername`, `title`, `description`, `condition`, `category`, `kind`, `priceCents`, `wantedInExchange`, `handoverPlace`, `photoKey`, `submittedAt`. Le prix, la contrepartie et la photo ne sont présents que s'ils existent. Les champs ajoutés sont facultatifs à la réception : pendant un déploiement progressif, un pod de l'API encore à l'ancienne version publie un message sans eux |
+
+## Bibliothèques et composants à installer
+
+### Front-end (`frontend/`)
+
+| Paquet | Rôle |
+|---|---|
+| `lucide-react` | Icônes (déjà installée) : convention de shadcn/ui, importées une par une |
+| `react-router` | Routes : formulaire, liste des annonces, redirection après dépôt |
+| `sonner` | Toast : composant de toast de shadcn/ui, positionné en haut à droite, avec un décalage sous l'en-tête (`position="top-right"`, `offset`) |
+
+### API (`api/`)
+
+| Paquet | Rôle |
+|---|---|
+| `@aws-sdk/client-s3` | Client S3 : envoi, suppression, lecture. Le point d'accès est configurable (Garage en local, hébergeur européen ensuite) |
+| `@aws-sdk/s3-request-presigner` | URL signées de lecture |
+| `@types/multer` | Types pour l'upload multipart, géré par `FileInterceptor` de NestJS |
+| `class-validator`, `class-transformer` | Validation des champs du formulaire |
+| `sharp` | Décode, redimensionne et ré-encode l'image en WebP : un fichier qui n'est pas une image est refusé (415), et les métadonnées EXIF sont retirées |
+
+### Infrastructure (`k8s/`)
+
+| Composant | Rôle |
+|---|---|
+| **Garage** | Deployment avec volume persistant, service interne, image officielle `dxflrs/garage` en version fixée et épinglée par empreinte |
+| **Mise en service** | `make garage-init`, lancé par `make deploy` : crée la disposition du nœud, le bucket, importe la clé d'accès de l'API, puis l'autorise sur le bucket. Aucun Job Kubernetes : le port d'administration n'est ouvert à personne |
+| **Sealed Secret** | Les quatre secrets de Garage (clé d'accès, secret, secret RPC, jeton d'administration), générés dans `.env` par `make garage-secrets` |
+| **Middleware Traefik** | Limite la taille du corps de requête sur `pme-api` (6 Mo) |
+| **NetworkPolicy** | Autorise l'API vers Garage, et le navigateur vers Garage pour les URL signées |
+| **Keycloak** | `realm-pme.json` : langue unique `fr`, thème `pme`, textes « Nom d'utilisateur ou email », « Se connecter » et « Se souvenir de moi » |
+
+## Interface et accessibilité (RGAA)
+
+- **Toast :** annoncé aux lecteurs d'écran par la région `aria-live` de Sonner, visible 8 secondes, mis en pause au
+  survol et au focus, fermable au bouton « Fermer la notification ». Il survit à la redirection : il est monté au niveau
+  de l'application, pas de la page. L'information n'est pas perdue à sa disparition : la nouvelle annonce reste
+  affichée avec son statut « En attente de modération ». Les styles de Sonner sont importés depuis sa feuille CSS, car la
+  politique de sécurité du site (`style-src 'self'`) bloque ceux qu'il injecterait lui-même.
+- **Focus :** le titre de chaque page est focalisable (`tabIndex=-1`), mais le focus n'y est pas déplacé
+  automatiquement après la redirection : à compléter.
+- **Photo :** le texte alternatif reprend le titre de l'annonce.
+- **Champs :** libellé visible associé à chaque champ, erreurs rattachées au champ concerné, champs obligatoires indiqués
+  autrement que par la couleur seule.
+- **Icônes :** décoratives (`aria-hidden`), sauf bouton-icône qui porte un nom accessible (`aria-label`).
+- **Couleurs :** palette « Nuit de festival » décrite plus bas, avec tous ses codes et ses contrastes. Le test
+  `theme.test.ts` contrôle 4,5:1 pour le texte et 3:1 pour les composants.
+
+## Maquettes
+
+Les maquettes sont dans le canevas « Maquettes — La Petite Maison de l'Épouvante ». Elles montrent sept écrans et une
+notification.
+
+| N° | Écran | Contenu |
+|---|---|---|
+| **1** | Connexion (Keycloak) | Titre « Connexion » centré, champ « Nom d'utilisateur ou email », lien d'inscription, aucun sélecteur de langue |
+| **2** | Dépôt d'annonce | « Déposer une annonce » : choix du type (échange, don, vente), puis catégorie et état côte à côte, titre, description, « Je cherche en échange » (facultatif), lieu de remise, photo avec son aperçu, encart « Avant de publier ». Le champ « Prix » de la vente n'y est pas dessiné |
+| **3** | Mes annonces | Quatre annonces avec photo et statut (En attente de modération, Publiée, Refusée) |
+| **3b** | Notification de confirmation | Toast « Annonce soumise pour validation ! », en haut à droite sous l'en-tête |
+| **4** | Dépôt sur mobile | Même formulaire en 390 px, bouton d'action en bas |
+| **5** | Connexion sur mobile | Même page de connexion en 390 px |
+| **6** | Mes annonces sur mobile | Une colonne de cartes, en 390 px |
+
+Les maquettes montrent le type « Échange » ; pour une vente le champ « Prix » remplace la contrepartie, et pour un don aucun des deux ne s'affiche. Le lien « Annuler » a été retiré : le fil d'ariane « Mes annonces ›
+Déposer une annonce » et l'en-tête assurent le retour, et le RGAA n'impose pas de bouton d'annulation pour ce formulaire.
+La grille des annonces passe de trois colonnes à une seule selon la largeur de l'écran, et le bloc du membre reste à
+droite de l'en-tête.
+
+## Menu et pied de page
+
+Ils reprennent les conventions d'un site marchand, à partir des activités décrites dans le contexte de l'entreprise :
+fanzine, boutique, collectif Evil Ed, Petit Festival, actualités et espace membre (dépôt et suivi d'annonces).
+
+| Zone | Contenu |
+|---|---|
+| **En-tête** | Logo et nom de l'entreprise, recherche de produit, nom du membre, rôle, panier, bouton de déconnexion |
+| **Navigation principale** | Boutique, Fanzine, Evil Ed, Festival, Actualités, Espace membre. La rubrique courante porte `aria-current="page"` et un soulignement |
+| **Pied de page, colonnes** | Boutique (figurines et goodies, films, bandes dessinées, jeux de société) ; Le fanzine (abonnement, numéros, newsletter) ; Evil Ed (web séries, éditions restaurées, soutien) ; L'entreprise (magasins, festival, actualités, contact) |
+| **Pied de page, bas** | Accroche « Le lieu de rêve pour frissonner », hébergement en Europe, copyright, mentions légales, conditions générales de vente, données personnelles, cookies, accessibilité |
+| **Mobile** | Bouton de menu, logo, panier et déconnexion sur une ligne, membre dessous ; pied de page en deux colonnes |
+
+Le lien « Accessibilité : partiellement conforme » est une obligation légale du pied de page : le niveau réel sera fixé
+après audit. La page de connexion n'a ni menu ni pied de page : Keycloak la rend seule, et c'est la convention.
+
+Le panier, la recherche et les rubriques Boutique, Fanzine, Evil Ed et Festival situent l'espace membre dans la plateforme
+complète. Ils ne font pas partie du POC : seuls la connexion, le dépôt d'annonce et la liste sont démontrés.
+
+## Palette de couleurs « Nuit de festival »
+
+Thème sombre. Les contrastes sont calculés selon la formule WCAG 2.1 ; les seuils du RGAA sont 4,5:1 pour le texte
+courant et 3:1 pour les composants d'interface.
+
+### Surfaces et traits
+
+| Jeton | Code | Usage | Contraste avec le texte principal |
+|---|---|---|---|
+| `page` | `#110c16` | Fond de page | 17,2:1 |
+| `panel` | `#1b1522` | Cartes, en-tête, pied de page | 15,9:1 |
+| `inset` | `#271e30` | Champs de saisie, zones creusées | 14,2:1 |
+| `line` | `#3b2f47` | Séparateurs et bordures de cartes, décoratifs | 1,3:1 à 1,6:1, hors exigence |
+| `control` | `#9a8aa8` | Bordure des champs et des boutons-icônes | 5,0:1 à 6,0:1 (seuil 3:1) |
+
+### Textes, sur `page`, `panel` et `inset`
+
+| Jeton | Code | Usage | `page` | `panel` | `inset` |
+|---|---|---|---|---|---|
+| `ink` | `#f5f0f7` | Texte courant, titres | 17,2:1 | 15,9:1 | 14,2:1 |
+| `ink-muted` | `#d4c9dc` | Texte secondaire, liens du pied de page | 12,1:1 | 11,2:1 | 10,0:1 |
+| `ink-faint` | `#b8aac5` | Aides de saisie, mentions | 8,8:1 | 8,2:1 | 7,3:1 |
+| `blood-text` | `#ff9aa3` | Liens, statut « Refusée », texte rouge | 9,6:1 | 8,8:1 | 7,9:1 |
+| `gold` | `#e6b450` | Accent : sous-titre, rubrique courante, titres du pied de page | 10,1:1 | 9,4:1 | 8,4:1 |
+| `success` | `#7fdba5` | Statut « Publiée », rôle « Membre », bordure du toast | 11,6:1 | 10,7:1 | 9,6:1 |
+| `warning` | `#f2b866` | Statut « En attente de modération » | 10,9:1 | 10,1:1 | 9,0:1 |
+
+### Actions et focus
+
+| Jeton | Code | Usage | Contraste |
+|---|---|---|---|
+| `blood` | `#c9303f` | Fond du bouton principal et pastille du panier | Texte blanc `#ffffff` dessus : 5,3:1. Forme contre `page` 3,7:1, `panel` 3,4:1, `inset` 3,0:1 (seuil 3:1) |
+| `blood-dark` | `#a82533` | Bouton principal au survol | Texte blanc dessus : 7,1:1 |
+| `focus` | `#ffd479` | Anneau de focus de 2 px, décalé de 2 px | 11,4:1 à 13,7:1 sur les surfaces ; 3,8:1 sur `blood` et 5,0:1 sur `blood-dark` |
+| `on-gold` | `#110c16` | Texte du bouton de recherche, sur fond `gold` | 10,1:1 |
+
+Règles d'usage :
+
+- **Rouge :** `blood` sert seulement de fond d'action principale. Sur fond sombre, un texte rouge utilise `blood-text`, plus
+  clair, car `blood` seul n'atteindrait pas 4,5:1.
+- **Information :** aucune information n'est portée par la couleur seule. Les statuts associent un libellé et une icône, et la
+  rubrique courante du menu ajoute un soulignement et le gras.
+- **Bouton désactivé :** il passe à 60 % d'opacité, ce que le RGAA admet pour un composant inactif.
+- **Icônes décoratives :** le motif d'image vide des cartes (`#6b5a78`, 2,6:1) est décoratif, avec le texte alternatif porté
+  par l'élément ; il n'est pas soumis au seuil.
+
+**Application des codes.** Ces codes sont les jetons de `frontend/src/styles.css`. Le test `theme.test.ts` calcule le
+contraste de chaque association réellement utilisée dans l'interface et dans le thème Keycloak.
+
+### Thème de connexion Keycloak
+
+Le dépôt ne contenait aucun thème : le thème `pme` (type `login`, hérité de `keycloak.v2`) a été créé. Sa feuille de style,
+`k8s/config/keycloak-theme.css`, reprend les jetons de la palette et la police ; elle est montée dans le pod Keycloak par
+une ConfigMap, puis le thème est déclaré dans `realm-pme.json` par `loginTheme`. Le realm n'étant importé qu'une fois, il
+faut le réimporter ou repartir d'une base vide (`make reset`). Les libellés (« Nom d'utilisateur ou email », « Se
+connecter », « Se souvenir de moi », « Pas encore de compte ? », « Créer un compte ») sont dans le fichier de messages du
+thème, `k8s/config/keycloak-messages-fr.properties`, lu au démarrage de Keycloak sans réimporter le realm. L'apostrophe s'y
+écrit en typographique (`d’utilisateur`, U+2019) : Keycloak formate ces textes comme des messages Java, et une apostrophe
+droite disparaît (« Nom dutilisateur »), même doublée selon le chemin que suit le texte. Un libellé saisi dans la console (Realm settings, Localization) passe devant ce fichier :
+pour le retrouver, il faut supprimer la personnalisation de la console.
+Le bouton « afficher le mot de passe » (l'œil) est masqué avec sa case : la maquette n'en a pas. Sous le champ, « Mot de
+passe oublié ? » est à droite, puis « Se souvenir de moi » à gauche sur la ligne suivante, et les liens sont soulignés
+(un lien ne se distingue pas par sa seule couleur, RGAA 10.6). Keycloak place la case avant le lien dans la page : l'ordre
+d'affichage est inversé par la feuille de style, l'ordre de tabulation reste celui de la page.
+La page ne porte que le logo, le nom de l'enseigne sur une seule ligne et la carte de connexion : la signature et la phrase
+d'accueil ont été retirées pour remonter le formulaire.
+
+### Typographie
+
+Roboto sert pour tout le site, y compris la page de connexion Keycloak. Les fichiers sont hébergés par le site lui-même
+(`frontend/public/fonts`, mêmes fichiers que la documentation) : aucune requête vers un service tiers. Les maquettes
+utilisent aussi Roboto (chargée depuis Google Fonts, car ce ne sont que des pages de présentation).
+
+
+## Découpage
+
+Une seule branche, `feat/depot-annonce-photo` : la connexion, le stockage et le formulaire se démontrent ensemble, et
+un déploiement partiel n'aurait rien à montrer. Les tests unitaires (couverture de 100 %) ont été ajustés en dernier ; les
+tests d'intégration existants passent sans changement.
+
+| Domaine | Contenu |
+|---|---|
+| **Keycloak** | Realm en français seul, libellé « Nom d'utilisateur ou email », thème de connexion `pme` créé (le dépôt n'en avait aucun) : palette et police du site, monté dans le pod et déclaré par `loginTheme` |
+| **Stockage** | Garage : manifeste, configuration, clés dans le secret chiffré, politiques d'Istio et de Calico, ingress et certificat, limite de taille du corps des requêtes, `make garage-init` |
+| **API** | Migration, états et types, prix, lieu de remise, envoi multipart, contrôle et ré-encodage de la photo, URL signées, événement enrichi |
+| **Modération** | Migration, contrat de l'événement, nouvelles colonnes de la file |
+| **Interface** | Routeur, formulaire complet, notification, liste avec photos, en-tête et pied de page, palette et police |
+| **Documentation** | Architecture (conteneur de stockage et relations), fiche Garage, commandes make, cette fiche |
+
+!!! warning "Attention"
+    Le realm Keycloak n'est importé qu'une fois. Pour appliquer le changement de langue et de libellé, il faut
+    réimporter le realm ou repartir d'une base Keycloak vierge (`make reset`). Ne désactivez pas l'internationalisation :
+    Keycloak repasserait en anglais.
+
+!!! tip "Astuce"
+    Pour tester le toast, ouvrez la page des annonces avec un lecteur d'écran ou l'inspecteur d'accessibilité du
+    navigateur : la région `aria-live` doit contenir le message juste après la redirection.
+
+## Hors périmètre
+
+- Décision du modérateur, déplacement de la photo vers `published/` et publication de l'annonce.
+- Test d'intégration du dépôt avec photo et test de charge avec photo : les scénarios actuels envoient du JSON sans photo.
+- Déplacement automatique du focus vers le titre après la redirection.
+- Plusieurs photos par annonce.
+- Hébergeur S3 européen de production : seul le point d'accès change, pas le code.
+- Antivirus sur les fichiers déposés.

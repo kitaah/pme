@@ -18,5 +18,17 @@ export interface ListingSubmittedEvent {
   title: string;
   description: string;
   condition: string;
+  category: string;
+  kind: string;
+  /** Centimes, pour une vente seulement. */
+  priceCents?: number;
+  wantedInExchange?: string;
+  handoverPlace: string;
+  /**
+   * Chemin de la photo dans le stockage objet, jamais le fichier : un message de flux reste
+   * petit, et seul le coeur ecrit dans le stockage (relation 25 du C4 niveau 2). Le service de
+   * moderation ne lit pas la photo dans le POC.
+   */
+  photoKey?: string;
   submittedAt: string;
 }

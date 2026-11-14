@@ -18,6 +18,9 @@ seuil de temps de réponse ou d'erreurs est dépassé : il peut donc bloquer une
 Chaque utilisateur virtuel dépose une annonce, attend une seconde, lit la liste de ses annonces, puis attend encore une
 seconde. Le scénario recommence tant que le test dure.
 
+Le dépôt est envoyé en JSON, sans photo : le test mesure le parcours texte (validation, base, événement), pas le traitement de
+l'image ni l'envoi vers [Garage](../outils/garage.md), qui seront plus coûteux.
+
 **Contrôles du scénario**
 
 | Contrôle | Attendu |

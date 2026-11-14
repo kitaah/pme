@@ -33,8 +33,17 @@ export class ListingEventsPublisher {
       title: listing.title,
       description: listing.description,
       condition: listing.condition,
+      category: listing.category,
+      kind: listing.kind,
+      handoverPlace: listing.handoverPlace,
       submittedAt: listing.createdAt.toISOString(),
     };
+
+    // Les champs facultatifs ne sont pas envoyes a vide : `undefined` disparait de la
+    // representation JSON, et la validation a la reception les traite comme absents.
+    if (listing.priceCents !== null) event.priceCents = listing.priceCents;
+    if (listing.wantedInExchange !== null) event.wantedInExchange = listing.wantedInExchange;
+    if (listing.photoKey !== null) event.photoKey = listing.photoKey;
 
     const jetstream = await this.nats.jetstream();
     await this.publishWithRetry(jetstream, event);

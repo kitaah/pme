@@ -1,4 +1,6 @@
-# API REST NestJS : depose et liste les annonces, publie `listing.submitted` sur NATS JetStream.
+# API REST NestJS : depose et liste les annonces, publie `listing.submitted` sur NATS JetStream,
+# et enregistre les photos dans le stockage objet (k8s/03-garage.yaml). Seul ce service y ecrit :
+# c'est la relation 25 du C4 niveau 2.
 # Image construite dans Minikube (make image-api), executee sans privilege root (utilisateur `node`).
 apiVersion: apps/v1
 kind: Deployment
@@ -97,6 +99,29 @@ spec:
             # Le job de performance de la pipeline la leve pour la duree du test (scripts/perf-ci.sh).
             - name: THROTTLE_LIMIT
               value: "200"
+            # ---- Stockage objet des photos (Garage, k8s/03-garage.yaml) ----
+            # Deux adresses pour un seul stockage : l'API ECRIT par le service interne, et SIGNE
+            # les URL de lecture pour l'adresse publique, celle que le navigateur utilisera. La
+            # signature couvre le nom d'hote : calculee pour l'adresse interne, elle serait
+            # refusee lors de la lecture (relation 13 du C4 niveau 2).
+            - name: S3_ENDPOINT
+              value: http://garage:3900
+            - name: S3_PUBLIC_ENDPOINT
+              value: https://garage.localhost
+            - name: S3_REGION
+              value: garage
+            - name: S3_BUCKET
+              value: pme-photos
+            # Duree de validite d'une URL de lecture : la photo d'une annonce en attente de
+            # moderation n'est jamais publique, et le lien expire de lui-meme.
+            - name: S3_URL_TTL
+              value: "300"
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: garage-access-key }
+            - name: S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: garage-secret-key }
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
