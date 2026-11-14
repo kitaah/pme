@@ -11,6 +11,7 @@ import { MetricsController } from './metrics/metrics.controller';
 import { Listing } from './listings/listing.entity';
 import { ListingsModule } from './listings/listings.module';
 import { CreateListings1730000000000 } from './migrations/1730000000000-create-listings';
+import { AddListingDetails1763100000000 } from './migrations/1763100000000-add-listing-details';
 
 @Module({
   imports: [
@@ -28,7 +29,8 @@ import { CreateListings1730000000000 } from './migrations/1730000000000-create-l
           // du serveur soit signe par elle ET emis pour le nom utilise dans `host` (ici `postgres`).
           ssl: db.sslCaFile ? { ca: readFileSync(db.sslCaFile, 'utf8'), rejectUnauthorized: true } : false,
           entities: [Listing],
-          migrations: [CreateListings1730000000000],
+          // Ordre d'application : la liste est parcourue dans l'ordre des horodatages des noms.
+          migrations: [CreateListings1730000000000, AddListingDetails1763100000000],
           migrationsRun: true, // schema gere uniquement par migrations (jamais synchronize)
           synchronize: false,
           poolSize: db.poolSize, // plafond de connexions par instance : evite de saturer PostgreSQL quand l'autoscaler ajoute des pods

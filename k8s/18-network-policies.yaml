@@ -57,6 +57,34 @@ spec:
         - { protocol: TCP, port: 5432 }
         - { protocol: TCP, port: 15008 }
 ---
+# Stockage objet (Garage) : l'API (ecriture des photos) et l'ingress Traefik, qui achemine les
+# lectures du navigateur. Le service de moderation n'est pas autorise : il n'a aucune relation avec
+# le stockage dans le C4. Le port d'administration (3903) n'est ouvert a personne.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-garage
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: garage
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: pme-api
+        # Traefik est dans un autre namespace : il est designe par celui-ci et par son etiquette.
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - { protocol: TCP, port: 3900 }
+        - { protocol: TCP, port: 15008 }
+---
 # NATS : l'API (publie) et la moderation (lit). Le port de supervision 8222 n'est ouvert a personne.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

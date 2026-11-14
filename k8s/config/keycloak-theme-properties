@@ -1,0 +1,17 @@
+# Theme de connexion « pme » de Keycloak 26.8.1, type login.
+# Monte dans /opt/keycloak/themes/pme/login (voir k8s/03-keycloak.yaml) et declare par
+# "loginTheme": "pme" dans k8s/config/realm-pme.json.
+#
+# parent=keycloak.v2 : le theme par defaut de Keycloak 26 (modeles, classes PatternFly v5,
+# traductions). Seules les couleurs et la police sont redefinies : aucun modele n'est recopie,
+# donc rien a reprendre a la prochaine montee de version de Keycloak.
+#
+# styles est une LISTE, et redefinir une propriete remplace celle du parent : la feuille du
+# parent (css/styles.css) doit donc etre citee avant la notre, sinon la page perd toute sa mise
+# en forme. stylesCommon (PatternFly) n'est pas redefini : il est herite tel quel.
+#
+# Les langues ne sont pas declarees ici : c'est le realm qui n'en annonce qu'une (supportedLocales),
+# ce qui suffit a faire disparaitre le selecteur de langue.
+parent=keycloak.v2
+import=common/keycloak
+styles=css/styles.css css/pme.css

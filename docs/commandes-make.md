@@ -31,7 +31,8 @@ Chaque ligne donne la commande et ce qu'elle fait. Les prérequis (Docker, `sudo
 dans la description, et une commande lancée par une autre le précise.
 
 **Ordre habituel.**
-Au premier démarrage : `make minikube-up`, import de l'autorité locale dans le navigateur, puis `make deploy`. Après une
+Au premier démarrage : `make minikube-up`, import de l'autorité locale dans le navigateur, `make deploy`, puis
+`make garage-init` pour le stockage des photos. Après une
 modification du code : `make redeploy`. Pour repartir de zéro : `make reset`.
 
 **Définitions**
@@ -108,6 +109,7 @@ modification du code : `make redeploy`. Pour repartir de zéro : `make reset`.
 | **`make image-moderation`** | Même chose pour `pme-moderation:dev`. |
 | **`make image-frontend`** | Construit `pme-frontend:dev` directement dans Minikube. |
 | **`make deploy`** | Génère le fichier de secrets chiffrés s'il manque, copie l'autorité locale, vérifie la présence de Sealed Secrets, cert-manager et Traefik, puis lance `kubectl apply -k k8s/`. |
+| **`make garage-init`** | Première mise en service du [stockage des photos](outils/garage.md) : disposition des données, dépôt `pme-photos` et clé d'accès de l'API. À lancer une fois après `make deploy`, et après chaque `make reset` (le volume repart vide). Sans effet si tout est déjà en place. |
 | **`make redeploy`** | `image`, puis redémarrage des trois déploiements applicatifs et attente de leur disponibilité. À lancer après une modification du code. |
 | **`make restart`** | Redémarre les trois déploiements applicatifs sans reconstruire les images. |
 | **`make undeploy`** | Supprime le namespace applicatif, données comprises, et attend que la suppression soit terminée. |

@@ -6,9 +6,10 @@
 |---|---|
 | **Style** | Deux services applicatifs séparés, qui communiquent par messages plutôt qu'en s'appelant directement |
 | **Périmètre** | Le parcours d'un membre : connexion, dépôt d'une annonce, prise en charge par le service de modération |
-| **Composants déployés** | Onze dans le namespace `pme`, plus Traefik dans son propre namespace, sur un cluster Minikube |
+| **Composants déployés** | Douze dans le namespace `pme`, plus Traefik dans son propre namespace, sur un cluster Minikube |
 | **Point d'entrée unique** | Traefik, qui termine le HTTPS, limite le débit et contrôle les jetons sous `/api/v1`, puis répartit selon le nom d'hôte et le chemin |
 | **Bases de données** | Une seule instance PostgreSQL, quatre bases : `pme`, `moderation`, `keycloak`, `grafana` |
+| **Stockage des fichiers** | Garage (compatible S3), dépôt `pme-photos` : les photos des annonces, jamais dans la base |
 | **Messagerie** | NATS JetStream, flux `LISTINGS`, sujet `listing.submitted` |
 | **Déploiement** | `kubectl apply -k k8s/` (Kustomize), ordre imposé par les préfixes numériques des manifestes |
 
@@ -44,7 +45,7 @@ s'appuie sur des briques précises :
 | Étape | Ce que l'on montre | Briques |
 |---|---|---|
 | **Connexion** | Le membre est redirigé vers la page de connexion de Keycloak, s'authentifie, puis revient sur l'interface où son nom d'utilisateur et son rôle « Membre » s'affichent. | Keycloak, React |
-| **Dépôt de l'annonce** | Le membre remplit le formulaire (titre, description, état). Traefik limite le débit et vérifie le jeton, puis l'API revérifie le jeton, le rôle et les données, et l'annonce s'affiche dans « Mes annonces » au statut « En attente de modération ». | Traefik, React, NestJS |
+| **Dépôt de l'annonce** | Le membre remplit le formulaire (titre, description, état, lieu de remise, photo). Traefik limite le débit, la taille du corps de la requête et vérifie le jeton, puis l'API revérifie le jeton, le rôle et les données, enregistre la photo dans le stockage objet, et l'annonce s'affiche dans « Mes annonces » au statut « En attente de modération », photo comprise. | Traefik, React, NestJS, Garage |
 | **Prise en charge par la modération** | L'API répond sans attendre la modération. L'événement « annonce soumise » est conservé dans le flux JetStream, et le service de modération, séparé de l'API, le consomme (visible dans ses logs). | NATS, NestJS |
 | **Tout le parcours** | Les composants tournent ensemble sur Minikube. | Minikube |
 
@@ -104,11 +105,13 @@ cluster: "Cluster Minikube" {
       keycloak: "Keycloak\nidentités et jetons" {class: boite}
       nats: "NATS JetStream\nflux LISTINGS" {class: boite}
       postgres: "PostgreSQL\nbases pme, moderation,\nkeycloak, grafana" {class: donnee}
+      garage: "Garage\nstockage objet S3\nphotos des annonces" {class: donnee}
     }
 
     applicatif.api -> socle.nats: publie listing.submitted
     socle.nats -> applicatif.moderation: consomme
     applicatif.api -> socle.postgres
+    applicatif.api -> socle.garage: enregistre la photo
     applicatif.moderation -> socle.postgres
     socle.keycloak -> socle.postgres
   }
@@ -117,6 +120,7 @@ cluster: "Cluster Minikube" {
   entree.traefik -> pme.applicatif.api
   entree.traefik -> pme.applicatif.moderation
   entree.traefik -> pme.socle.keycloak: connexion et clés\nde vérification
+  entree.traefik -> pme.socle.garage: lecture des photos\n(URL signée)
 }
 
 navigateur -> cluster.entree.traefik: HTTPS
@@ -124,6 +128,14 @@ navigateur -> cluster.entree.traefik: HTTPS
 
 Traefik, l'API et le service de modération lisent chacun les clés publiques de Keycloak pour vérifier les jetons : le schéma ne
 trace que la flèche de Traefik, qui est la seule à traverser un namespace.
+
+**Les photos ne sont pas dans la base.** Une image de plusieurs méga-octets dans une colonne alourdirait chaque
+sauvegarde et chasserait les données utiles du cache de PostgreSQL. Elles vont donc dans un stockage objet, le
+conteneur « Stockage de fichiers » que prévoyait déjà le niveau 2 du C4 : **Garage**, compatible S3, tient ici le rôle
+que jouera un hébergeur européen en production. Seule l'API y écrit ; la base ne garde que le chemin de l'objet.
+Le navigateur lit l'image directement, par une URL signée valable cinq minutes que l'API calcule : la photo d'une
+annonce en attente de modération n'est donc jamais publique. Le service de modération n'a aucun accès au stockage,
+et les politiques d'Istio comme celles de Calico le lui refusent.
 
 Cinq composants d'exploitation, dans le namespace `pme`, complètent le tableau : **Prometheus** collecte les mesures de l'API et de la
 modération, **Grafana** les affiche, **Alloy** ramasse les logs que **Loki** conserve, et **Adminer** donne un

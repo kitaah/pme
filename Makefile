@@ -6,6 +6,7 @@
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
         minikube-up minikube-down helm ingress inotify istio istio-scan mesh-check authz-check netpol-check jwt-check cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
         env kubeseal sealed-secrets sealed-prereqs seal image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
+        garage-secrets seal-now garage-init \
         pods logs logs-api logs-moderation logs-keycloak \
         port-forward stop-forward api moderation frontend \
         queues db-listings db-moderation create-grafana-db \
@@ -49,6 +50,7 @@ ADMINER_HOST ?= adminer.localhost
 GRAFANA_HOST ?= grafana.localhost
 PROMETHEUS_HOST ?= prometheus.localhost
 ALLOY_HOST ?= alloy.localhost
+GARAGE_HOST ?= garage.localhost
 NATS_MONITOR_PORT ?= 8222
 DOCS_PORT ?= 8005
 DOCS_IMAGE_PORT ?= 8083
@@ -62,7 +64,7 @@ ADMINER_URL := https://$(ADMINER_HOST)
 PROMETHEUS_URL := https://$(PROMETHEUS_HOST)
 GRAFANA_URL := https://$(GRAFANA_HOST)
 ALLOY_URL := https://$(ALLOY_HOST)
-HOSTS := $(APP_HOST) $(KEYCLOAK_HOST) $(ADMINER_HOST) $(GRAFANA_HOST) $(PROMETHEUS_HOST) $(ALLOY_HOST)
+HOSTS := $(APP_HOST) $(KEYCLOAK_HOST) $(ADMINER_HOST) $(GRAFANA_HOST) $(PROMETHEUS_HOST) $(ALLOY_HOST) $(GARAGE_HOST)
 
 # Charge .env s'il existe (POSTGRES_*, NATS_*, KEYCLOAK_ADMIN*, GRAFANA_ADMIN*), non versionne.
 -include .env
@@ -106,7 +108,9 @@ help:
 	@echo "    make sealed-secrets           - Installe le controleur Sealed Secrets (fait aussi par seal si absent)"
 	@echo "    make seal                     - Re-chiffre .env dans k8s/14-pme-secrets-sealed.yaml (a versionner)"
 	@echo "    make image                    - Construit les 3 images dans Minikube"
-	@echo "    make deploy                   - secrets chiffres (generes si absents) + ca-configmap + kubectl apply -k k8s/ (Postgres, NATS, Keycloak, API, moderation, front, ingress)"
+	@echo "    make deploy                   - secrets chiffres (generes si absents) + ca-configmap + kubectl apply -k k8s/ (Postgres, NATS, Keycloak, Garage, API, moderation, front, ingress)"
+	@echo "    make garage-secrets           - Genere dans .env les secrets de Garage s'ils manquent (fait par make seal)"
+	@echo "    make garage-init              - Mise en service du stockage des photos : disposition, depot et cle (fait par make deploy)"
 	@echo "    make redeploy                 - image + redemarrage des 3 deployments (apres une modification du code)"
 	@echo "    make undeploy                 - Supprime le namespace (donnees comprises)"
 	@echo "    make create-grafana-db        - Cree la base grafana dans un PostgreSQL existant (make reset la cree d'office)"
@@ -403,7 +407,8 @@ sealed-secrets:
 
 sealed-prereqs:
 	@{ command -v kubeseal >/dev/null && kubeseal --version 2>/dev/null | grep -q "$(KUBESEAL_VERSION)"; } || { echo "kubeseal $(KUBESEAL_VERSION) absent : lancer make kubeseal"; exit 1; }
-	@for v in POSTGRES_USER POSTGRES_PASSWORD NATS_USER NATS_PASSWORD KEYCLOAK_ADMIN KEYCLOAK_ADMIN_PASSWORD GRAFANA_ADMIN GRAFANA_ADMIN_PASSWORD; do \
+	@for v in POSTGRES_USER POSTGRES_PASSWORD NATS_USER NATS_PASSWORD KEYCLOAK_ADMIN KEYCLOAK_ADMIN_PASSWORD GRAFANA_ADMIN GRAFANA_ADMIN_PASSWORD \
+		GARAGE_ACCESS_KEY GARAGE_SECRET_KEY GARAGE_RPC_SECRET GARAGE_ADMIN_TOKEN; do \
 		test -n "$$(printenv $$v)" || { echo "$$v absent de .env"; exit 1; }; \
 		test "$$(printenv $$v)" != "CHANGE_ME" || { echo "$$v vaut encore CHANGE_ME dans .env : choisir un mot de passe"; exit 1; }; \
 	done
@@ -412,22 +417,79 @@ sealed-prereqs:
 # Les valeurs viennent de l'environnement de make (.env), jamais d'arguments de commande : elles
 # n'apparaissent ni dans la liste des processus ni dans l'historique du shell. Le fichier temporaire est prive
 # (umask 077) et supprime a la fin. A relancer apres un changement de secret ou un nouveau cluster (nouvelle cle).
-seal: .env sealed-prereqs
+# Les trois etapes sont des appels separes ($(MAKE)) : make lit .env UNE fois, au demarrage. Les secrets de Garage
+# generes par garage-secrets ne seraient pas vus par la suite de ce meme appel ; le nouvel appel relit .env.
+seal: .env
+	@$(MAKE) --no-print-directory garage-secrets
+	@$(MAKE) --no-print-directory seal-now
+
+seal-now: .env sealed-prereqs
 	@umask 077; tmp=$$(mktemp); trap 'rm -f "$$tmp" "$(SEALED_FILE).tmp"' EXIT; \
 	printf '%s\n' \
 		"db-username=$$POSTGRES_USER" "db-password=$$POSTGRES_PASSWORD" \
 		"nats-username=$$NATS_USER" "nats-password=$$NATS_PASSWORD" \
 		"keycloak-admin-username=$$KEYCLOAK_ADMIN" "keycloak-admin-password=$$KEYCLOAK_ADMIN_PASSWORD" \
-		"grafana-admin-username=$$GRAFANA_ADMIN" "grafana-admin-password=$$GRAFANA_ADMIN_PASSWORD" > "$$tmp"; \
+		"grafana-admin-username=$$GRAFANA_ADMIN" "grafana-admin-password=$$GRAFANA_ADMIN_PASSWORD" \
+		"garage-access-key=$$GARAGE_ACCESS_KEY" "garage-secret-key=$$GARAGE_SECRET_KEY" \
+		"garage-rpc-secret=$$GARAGE_RPC_SECRET" "garage-admin-token=$$GARAGE_ADMIN_TOKEN" > "$$tmp"; \
 	kubectl create secret generic pme-secrets --namespace $(NS) --from-env-file="$$tmp" --dry-run=client -o yaml \
 		| kubeseal --controller-name sealed-secrets-controller --controller-namespace kube-system --namespace $(NS) --format yaml \
 		> "$(SEALED_FILE).tmp" && mv "$(SEALED_FILE).tmp" "$(SEALED_FILE)"
 	@echo "$(SEALED_FILE) mis a jour (valeurs chiffrees, non affichees) : a versionner dans Git"
 
+# Secrets de Garage (cle d'acces de l'API, secret, secret RPC, jeton d'administration) : generes dans .env
+# SEULEMENT s'ils manquent ou valent encore CHANGE_ME. Une valeur deja presente n'est jamais touchee : la changer
+# desynchroniserait .env, le fichier chiffre et la cle deja importee dans Garage. Appele par `make seal`, donc
+# avant tout chiffrement. .env survit a un `minikube delete` : les memes valeurs resservent au cluster suivant.
+# Formats (voir env.example) : GK + 24 hexa pour l'identifiant, 64 hexa pour les trois autres. Rien n'est affiche
+# des valeurs, seuls les noms des variables generees.
+garage-secrets: .env
+	@set -e; umask 077; \
+	gen() { \
+		cur=$$(sed -n "s/^$$1=//p" .env | tail -1); \
+		if [ -z "$$cur" ] || [ "$$cur" = "CHANGE_ME" ]; then \
+			awk -v k="$$1" -v v="$$2" 'BEGIN { FS = OFS = "=" } $$1 == k { print k "=" v; f = 1; next } { print } END { if (!f) print k "=" v }' .env > .env.tmp \
+				&& mv .env.tmp .env && echo "  $$1 genere dans .env"; \
+		fi; \
+	}; \
+	gen GARAGE_ACCESS_KEY "GK$$(openssl rand -hex 12)"; \
+	gen GARAGE_SECRET_KEY "$$(openssl rand -hex 32)"; \
+	gen GARAGE_RPC_SECRET "$$(openssl rand -hex 32)"; \
+	gen GARAGE_ADMIN_TOKEN "$$(openssl rand -hex 32)"
+
 # Fichier chiffre absent (premier deploiement) : il est genere automatiquement. Present, il n'est jamais regenere ;
 # apres un changement dans .env, lancer `make seal`.
 $(SEALED_FILE): | .env
 	@$(MAKE) --no-print-directory seal
+
+# ---- Stockage objet : premiere mise en service ----
+# Lance automatiquement par `make deploy` (donc aussi par `make reset`, qui repart d'un volume vide) : aucune commande
+# a retenir apres un `minikube delete`. Peut aussi se lancer seul. Sans effet si tout est deja en place : chaque etape
+# verifie avant d'agir.
+#
+# Garage demarre sans savoir ou ranger les donnees : il faut lui decrire sa disposition (layout),
+# puis creer le depot (bucket) et la cle d'acces. La cle n'est pas generee par Garage : elle est
+# IMPORTEE depuis .env, ou l'API lit la meme valeur (k8s/04-api.yaml). Les commandes passent par le
+# conteneur lui-meme : le port d'administration n'est ouvert a personne (k8s/18-network-policies.yaml).
+garage-init: .env
+	@test -n "$$GARAGE_ACCESS_KEY" || { echo "GARAGE_ACCESS_KEY absent de .env"; exit 1; }
+	@kubectl -n $(NS) rollout status deployment garage --timeout=300s
+	@echo "Disposition des donnees (layout) :"
+	@kubectl -n $(NS) exec deploy/garage -- /garage status | grep -q "NO ROLE ASSIGNED" && { \
+		id=$$(kubectl -n $(NS) exec deploy/garage -- /garage node id -q | cut -d@ -f1); \
+		kubectl -n $(NS) exec deploy/garage -- /garage layout assign -z dc1 -c 1G "$$id"; \
+		kubectl -n $(NS) exec deploy/garage -- /garage layout apply --version 1; \
+	} || echo "  deja definie"
+	@echo "Depot des photos :"
+	@kubectl -n $(NS) exec deploy/garage -- /garage bucket info pme-photos >/dev/null 2>&1 \
+		&& echo "  pme-photos existe deja" \
+		|| kubectl -n $(NS) exec deploy/garage -- /garage bucket create pme-photos
+	@echo "Cle d'acces de l'API :"
+	@kubectl -n $(NS) exec deploy/garage -- /garage key info pme >/dev/null 2>&1 \
+		&& echo "  cle pme existe deja" \
+		|| kubectl -n $(NS) exec deploy/garage -- /garage key import --yes -n pme "$$GARAGE_ACCESS_KEY" "$$GARAGE_SECRET_KEY"
+	@kubectl -n $(NS) exec deploy/garage -- /garage bucket allow --read --write pme-photos --key pme
+	@echo "Stockage pret : depot pme-photos accessible a l'API."
 
 image: image-api image-moderation image-frontend
 
@@ -449,6 +511,7 @@ deploy: ca-configmap | $(SEALED_FILE)
 	@kubectl get crd certificates.cert-manager.io >/dev/null 2>&1 || { echo "cert-manager est absent : lancer make cert-manager"; exit 1; }
 	@kubectl get crd middlewares.traefik.io >/dev/null 2>&1 || { echo "Traefik est absent : lancer make ingress"; exit 1; }
 	kubectl apply -k k8s/
+	@$(MAKE) --no-print-directory garage-init
 	@echo "Deploiement lance. Suivre : make pods (Keycloak met ~1 min a demarrer)"
 
 redeploy: image

@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
-import { ListingCondition, ListingStatus } from './listing.enums';
+import { HandoverPlace, ListingCondition, ListingKind, ListingStatus } from './listing.enums';
 
 @Entity({ name: 'listings' })
 @Index('idx_listings_owner', ['ownerId', 'createdAt'])
@@ -22,6 +22,33 @@ export class Listing {
 
   @Column({ type: 'varchar', length: 20 })
   condition: ListingCondition;
+
+  @Column({ type: 'varchar', length: 20, default: ListingKind.EXCHANGE })
+  kind: ListingKind;
+
+  /**
+   * Prix en centimes, pour une vente seulement : un entier ne souffre pas des arrondis d'un
+   * nombre decimal. Vide pour un echange ou un don (contrainte chk_listings_price).
+   */
+  @Column({ name: 'price_cents', type: 'integer', nullable: true })
+  priceCents: number | null;
+
+  @Column({ name: 'wanted_in_exchange', type: 'varchar', length: 120, nullable: true })
+  wantedInExchange: string | null;
+
+  @Column({ name: 'handover_place', type: 'varchar', length: 20, default: HandoverPlace.TO_AGREE })
+  handoverPlace: HandoverPlace;
+
+  /**
+   * Chemin de la photo dans le stockage objet (`pending/<uuid>.webp`), jamais son contenu : les
+   * fichiers sont dans le conteneur « Stockage de fichiers » du C4, pas dans PostgreSQL.
+   */
+  @Column({ name: 'photo_key', type: 'varchar', length: 200, nullable: true })
+  photoKey: string | null;
+
+  /** Type de l'image stockee. L'API ne conserve que du WebP : elle re-encode a l'enregistrement. */
+  @Column({ name: 'photo_mime', type: 'varchar', length: 40, nullable: true })
+  photoMime: string | null;
 
   @Column({ type: 'varchar', length: 30, default: ListingStatus.PENDING_MODERATION })
   status: ListingStatus;

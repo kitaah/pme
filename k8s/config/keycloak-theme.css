@@ -1,0 +1,266 @@
+/*
+ * Theme de connexion « pme » : palette « Nuit de festival » et police Roboto, les memes que
+ * l'application (frontend/src/styles.css) et que la documentation. La page de connexion est la
+ * premiere que voit le membre : elle ne doit pas detoner.
+ *
+ * Cette feuille est ajoutee APRES celle de Keycloak (voir theme.properties) : elle ne redefinit
+ * que des couleurs, des bordures et la police. Aucun modele n'est recopie, donc une montee de
+ * version de Keycloak ne casse pas le theme ; au pire une regle ne s'applique plus, et la page
+ * reste utilisable.
+ *
+ * `!important` est volontaire ici : les regles de PatternFly livrees avec Keycloak sont plus
+ * specifiques que les notres, et ce fichier n'a pas d'autre role que de passer devant elles.
+ *
+ * Contrastes (WCAG 2.1, seuils du RGAA 4 : 4,5:1 pour le texte, 3:1 pour les composants) :
+ *   texte #f5f0f7 sur #1b1522 : 15,9:1      aide de saisie #b8aac5 sur #1b1522 : 8,2:1
+ *   bouton #c9303f + texte blanc : 5,3:1    bordure de champ #9a8aa8 sur #271e30 : 5,0:1
+ *   lien #ff9aa3 sur #1b1522 : 8,8:1        anneau de focus #ffd479 : 11,4:1 a 13,7:1
+ */
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  /* Chemin relatif a ce fichier (resources/css/) : la police est dans resources/fonts/ */
+  src: url('../fonts/roboto-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/roboto-latin-700-normal.woff2') format('woff2');
+}
+
+:root {
+  --pme-page: #110c16;
+  --pme-panel: #1b1522;
+  --pme-inset: #271e30;
+  --pme-line: #3b2f47;
+  --pme-control: #9a8aa8;
+  --pme-ink: #f5f0f7;
+  --pme-ink-muted: #d4c9dc;
+  --pme-ink-faint: #b8aac5;
+  --pme-blood: #c9303f;
+  --pme-blood-dark: #a82533;
+  --pme-blood-text: #ff9aa3;
+  --pme-gold: #e6b450;
+  --pme-focus: #ffd479;
+}
+
+/* ---- Fond de page ---- */
+html,
+body.login-pf,
+body,
+.pf-v5-c-login,
+.pf-v5-c-background-image {
+  background: var(--pme-page) !important;
+  color: var(--pme-ink) !important;
+}
+
+body,
+.pf-v5-c-login,
+input,
+button,
+select,
+textarea {
+  font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+/* ---- Carte de connexion ----
+   Keycloak 26 dessine un filet de couleur en haut de la carte (--keycloak-card-top-color, bleu par
+   defaut) : la maquette n'en a pas, il est neutralise. La carte n'a que sa bordure fine. */
+:root {
+  --keycloak-card-top-color: transparent;
+}
+
+.pf-v5-c-login__main {
+  background: var(--pme-panel) !important;
+  border: 1px solid var(--pme-line) !important;
+  border-top: 1px solid var(--pme-line) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+  padding: 36px 32px !important;
+}
+
+.pf-v5-c-login__main::before,
+.pf-v5-c-login__main::after,
+.pf-v5-c-login__main-header::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* Titre « Connexion » centre, puis la phrase d'accueil de la maquette */
+.pf-v5-c-login__main-header,
+.pf-v5-c-login__main-header h1,
+#kc-page-title {
+  color: var(--pme-ink) !important;
+  font-size: 22px !important;
+  font-weight: 500 !important;
+  text-align: center !important;
+}
+
+.pf-v5-c-login__main-header {
+  border: 0 !important;
+  margin: 0 0 4px !important;
+  padding: 0 !important;
+}
+
+.pf-v5-c-login__main-header::after {
+  content: 'Connectez-vous pour accéder à votre espace membre.';
+  display: block;
+  margin: 4px 0 26px;
+  color: var(--pme-ink-muted);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.pf-v5-c-login__main-header-desc,
+.pf-v5-c-login__main-footer-band {
+  color: var(--pme-ink-faint) !important;
+  text-align: center !important;
+}
+
+/* ---- En-tete de la page : logo, nom et signature de l'enseigne ----
+   Le nom vient du realm (displayName). Le logo (une maison entre deux filets) et la signature sont
+   dessines ici : aucun modele n'est recopie. */
+#kc-header-wrapper {
+  color: var(--pme-ink) !important;
+  font-size: 34px !important;
+  font-weight: 700 !important;
+  letter-spacing: normal !important;
+  line-height: 1.2 !important;
+  margin: 0 auto 36px !important;
+  max-width: 340px !important;
+  text-align: center !important;
+  text-transform: none !important;
+  text-wrap: balance;
+}
+
+#kc-header-wrapper::before {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='142' height='26' viewBox='0 0 142 26'%3E%3Cpath d='M0 13.5h44M98 13.5h44' stroke='%236b5a78' stroke-width='1'/%3E%3Cg transform='translate(58 1) scale(1.0833)' fill='none' stroke='%23e6b450' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 10.5 12 3l9 7.5'/%3E%3Cpath d='M5 9.5V21h14V9.5'/%3E%3Cpath d='M10 21v-6h4v6'/%3E%3C/g%3E%3C/svg%3E") no-repeat center;
+  content: '';
+  display: block;
+  height: 26px;
+  margin: 0 auto 18px;
+  width: 142px;
+}
+
+#kc-header-wrapper::after {
+  color: var(--pme-gold);
+  content: 'Le lieu de rêve pour frissonner';
+  display: block;
+  font-size: 16px;
+  font-style: italic;
+  font-weight: 400;
+  margin-top: 14px;
+}
+
+/* ---- Libelles et champs ---- */
+.pf-v5-c-form__label-text,
+.pf-v5-c-form__label,
+label {
+  color: var(--pme-ink) !important;
+}
+
+.pf-v5-c-form-control,
+.pf-v5-c-form-control input,
+input[type='text'],
+input[type='password'],
+input[type='email'] {
+  background: var(--pme-inset) !important;
+  border: 1px solid var(--pme-control) !important;
+  border-radius: 10px !important;
+  color: var(--pme-ink) !important;
+}
+
+/* PatternFly souligne le champ actif d'un trait : la bordure complete est plus lisible */
+.pf-v5-c-form-control::after,
+.pf-v5-c-form-control::before {
+  border: 0 !important;
+}
+
+.pf-v5-c-form-control:focus-within,
+input:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--pme-focus) !important;
+  outline-offset: 2px !important;
+}
+
+.pf-v5-c-helper-text__item-text,
+.pf-v5-c-form__helper-text {
+  color: var(--pme-ink-faint) !important;
+}
+
+/* ---- Bouton principal ---- */
+.pf-v5-c-button.pf-m-primary {
+  background: var(--pme-blood) !important;
+  border-radius: 10px !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.pf-v5-c-button.pf-m-primary:hover,
+.pf-v5-c-button.pf-m-primary:focus {
+  background: var(--pme-blood-dark) !important;
+}
+
+/* Bouton d'affichage du mot de passe : identifie par sa bordure (WCAG 1.4.11) */
+.pf-v5-c-button.pf-m-control {
+  background: var(--pme-inset) !important;
+  border: 1px solid var(--pme-control) !important;
+  color: var(--pme-ink-muted) !important;
+}
+
+/* ---- Liens (mot de passe oublie, creation de compte) ---- */
+a,
+.pf-v5-c-button.pf-m-link {
+  color: var(--pme-blood-text) !important;
+}
+
+/* ---- Case « Se souvenir de moi » ---- */
+.pf-v5-c-check__label {
+  color: var(--pme-ink-muted) !important;
+}
+
+/* ---- Messages d'erreur ----
+   La couleur ne porte pas l'information a elle seule : Keycloak affiche aussi une icone et un
+   texte explicite, conserves tels quels. */
+.pf-v5-c-alert.pf-m-danger,
+.pf-v5-c-alert.pf-m-error {
+  background: var(--pme-panel) !important;
+  border-left: 4px solid var(--pme-blood) !important;
+  color: var(--pme-ink) !important;
+}
+
+.pf-v5-c-alert__title,
+.pf-v5-c-alert__description,
+.kc-feedback-text {
+  color: var(--pme-ink) !important;
+}
+
+/* ---- Case « Se souvenir de moi » ---- */
+input[type='checkbox'] {
+  accent-color: var(--pme-blood);
+  height: 18px;
+  width: 18px;
+}
+
+.pf-v5-c-check__label {
+  color: var(--pme-ink-muted) !important;
+  font-size: 14px !important;
+}
+
+/* ---- Liens : « Mot de passe oublié ? » ---- */
+.pf-v5-c-login__main a,
+.pf-v5-c-login__main-footer-band a {
+  color: var(--pme-blood-text) !important;
+}
+
+.pf-v5-c-login__main a:hover {
+  color: var(--pme-focus) !important;
+}

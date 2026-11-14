@@ -14,6 +14,7 @@
 #   grafana.localhost    -> grafana
 #   prometheus.localhost -> prometheus
 #   alloy.localhost      -> alloy (interface de suivi de la collecte des logs)
+#   garage.localhost     -> garage (photos des annonces, lues par URL signee)
 # Loki, NATS, PostgreSQL et MkDocs n'ont pas d'ingress (Loki n'est interroge que par Grafana) : NATS et PostgreSQL restent joints par "make port-forward".
 #
 # Controleur : Traefik, installe par Helm (make ingress). Il remplace ingress-nginx, archive en mars 2026.
@@ -72,6 +73,7 @@ spec:
         - grafana.localhost
         - prometheus.localhost
         - alloy.localhost
+        - garage.localhost
   rules:
     - host: pme.localhost
       http:
@@ -115,3 +117,15 @@ spec:
             pathType: Prefix
             backend:
               service: { name: alloy, port: { number: 12345 } }
+    # Stockage objet : le navigateur lit les photos ici, par URL signee de courte duree fournie
+    # par l'API (relation 13 du C4 niveau 2). Pas de validation de jeton a l'ingress : la
+    # signature de l'URL EST l'autorisation, et un jeton Keycloak ne circulerait pas dans la
+    # balise <img> d'une page. Rien n'est public pour autant : sans signature valable, Garage
+    # refuse la lecture. Seule l'interface S3 (3900) est exposee, jamais l'administration (3903).
+    - host: garage.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: garage, port: { number: 3900 } }

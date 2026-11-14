@@ -12,6 +12,7 @@ resources:
   - 02-nats.yaml
   - 03-keycloak.yaml
   - 03-keycloak-admin-job.yaml
+  - 03-garage.yaml
   - 04-api.yaml
   - 05-moderation.yaml
   - 06-frontend.yaml
@@ -48,6 +49,18 @@ configMapGenerator:
   - name: keycloak-realm
     files:
       - realm-pme.json=config/realm-pme.json
+  # Theme de connexion « pme » : les cles sont montees aux chemins attendus par Keycloak
+  # (k8s/03-keycloak.yaml). Les fichiers de police sont binaires : Kustomize les range
+  # automatiquement dans `binaryData`.
+  - name: keycloak-theme
+    files:
+      - theme.properties=config/keycloak-theme-properties
+      - pme.css=config/keycloak-theme.css
+      - roboto-400.woff2=config/roboto-latin-400-normal.woff2
+      - roboto-700.woff2=config/roboto-latin-700-normal.woff2
+  - name: garage-config
+    files:
+      - garage.toml=config/garage.toml
   - name: frontend-config
     files:
       - config.js=config/frontend-config.js
