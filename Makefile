@@ -4,7 +4,7 @@
 
 .PHONY: help install test test-integration test-perf image-test \
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
-        minikube-up minikube-down helm ingress inotify istio istio-scan mesh-check authz-check netpol-check jwt-check cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
+        minikube-up minikube-down helm ingress ingress-restart mesh-renew inotify istio istio-scan mesh-check authz-check netpol-check jwt-check cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
         env kubeseal sealed-secrets sealed-prereqs seal image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         garage-secrets seal-now garage-init \
         pods logs logs-api logs-moderation logs-keycloak \
@@ -87,6 +87,8 @@ help:
 	@echo "    make minikube-down            - Arrete Minikube"
 	@echo "    make helm                     - Installe Helm sur l'ordinateur s'il est absent (requis par make ingress)"
 	@echo "    make ingress                  - Installe l'ingress Traefik (Helm) et attend qu'il soit pret"
+	@echo "    make ingress-restart          - Redemarre Traefik (donne un certificat neuf au pod) : a lancer en cas de 502 Bad Gateway partout"
+	@echo "    make mesh-renew               - Renouvelle les certificats du maillage Istio (redemarre ztunnel, Traefik puis les applications) : a lancer en cas de CertificateExpired"
 	@echo "    make cert-manager             - Installe cert-manager et l'autorite locale (certificats TLS)"
 	@echo "    make metrics-server           - Active metrics-server (addon Minikube), requis par l'autoscaling"
 	@echo "    make hpa                      - Suit l'autoscaling : charge, cible et nombre de pods"
@@ -190,6 +192,27 @@ ingress:
 	helm repo add traefik https://traefik.github.io/charts --force-update
 	helm upgrade --install traefik traefik/traefik --version $(TRAEFIK_CHART_VERSION) \
 		--namespace $(TRAEFIK_NS) --create-namespace --values k8s/traefik/values.yaml --wait --timeout 3m
+
+# Redemarre Traefik. A lancer quand TOUS les sites repondent 502 Bad Gateway alors que les pods sont prets : le
+# certificat que le maillage Istio delivre a Traefik dure 24 h, et s'il n'est pas renouvele (portable mis en veille,
+# ztunnel gele), les pods refusent les connexions de Traefik. Un pod neuf recoit un certificat neuf. Le log de ztunnel
+# le confirme : `kubectl -n istio-system logs ds/ztunnel | grep ExpiredContext`. Ce n'est pas lance par deploy ni
+# redeploy : cela couperait l'ingress a chaque deploiement pour un incident rare.
+ingress-restart:
+	kubectl -n $(TRAEFIK_NS) rollout restart deploy/traefik
+	kubectl -n $(TRAEFIK_NS) rollout status deploy/traefik --timeout=120s
+
+# Renouvelle les certificats du maillage Istio (mTLS). Ils durent 24 h ; si ztunnel ne les renouvelle pas (portable
+# mis en veille, horloge decalee), les pods ne se joignent plus : PostgreSQL ECONNRESET, NATS CONNECTION_REFUSED, nouveaux
+# pods en CrashLoopBackOff. Le log de ztunnel le confirme : `kubectl -n istio-system logs ds/ztunnel | grep -E
+# "CertificateExpired|ExpiredContext"`. Dans l'ordre : ztunnel (il porte les identites), Traefik, puis les applications,
+# qui recoivent ainsi des certificats neufs. Ce n'est pas lance par deploy ni redeploy : incident rare.
+mesh-renew:
+	kubectl -n istio-system rollout restart ds/ztunnel
+	kubectl -n istio-system rollout status ds/ztunnel --timeout=120s
+	@$(MAKE) --no-print-directory ingress-restart
+	kubectl -n $(NS) rollout restart deployment pme-api pme-moderation pme-frontend
+	kubectl -n $(NS) rollout status deployment pme-api pme-moderation pme-frontend --timeout=180s
 
 # Prerequis de l'ordinateur pour Istio : ztunnel surveille ses certificats avec inotify. Minikube (pilote Docker) partage
 # le noyau de l'ordinateur, dont la limite par defaut (128 instances) est vite atteinte : ztunnel plante alors avec

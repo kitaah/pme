@@ -7,14 +7,32 @@
 
 /**
  * Etat de l'objet propose. Grille conventionnelle des places de marche.
- * NEW, GOOD et FAIR existaient avant l'enrichissement du depot : aucune reprise de donnees.
+ * Quatre niveaux : Neuf, Tres bon etat, Bon etat, Satisfaisant (FAIR). Un objet a reparer n'a pas de
+ * niveau a part : le defaut se precise dans la description.
  */
 export enum ListingCondition {
   NEW = 'NEW',
   VERY_GOOD = 'VERY_GOOD',
   GOOD = 'GOOD',
   FAIR = 'FAIR',
-  FOR_PARTS = 'FOR_PARTS',
+}
+
+/**
+ * Categorie de l'objet : une liste fermee de huit rubriques, dans l'univers de la boutique (horreur
+ * et collection). Une liste fixe, validee par le code et par la base, suffit tant que personne ne
+ * doit creer ou renommer une categorie depuis l'application ; sinon, une table prendrait le relais.
+ * OTHER est la valeur par defaut : une annonce sans categorie (message d'une ancienne version de
+ * l'API, ligne deja en base) reste valide.
+ */
+export enum ListingCategory {
+  FIGURINES = 'FIGURINES',
+  FILMS = 'FILMS',
+  BOOKS = 'BOOKS',
+  POSTERS = 'POSTERS',
+  MUSIC = 'MUSIC',
+  GAMES = 'GAMES',
+  CLOTHING = 'CLOTHING',
+  OTHER = 'OTHER',
 }
 
 /**

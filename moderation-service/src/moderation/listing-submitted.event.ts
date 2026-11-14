@@ -1,4 +1,4 @@
-import { HandoverPlace, ListingCondition, ListingKind } from '@pme/common';
+import { HandoverPlace, ListingCategory, ListingCondition, ListingKind } from '@pme/common';
 import { IsDateString, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 
 /** Sujets : doivent rester identiques a ceux de l'API (api/src/listings/listing-events.ts). */
@@ -35,6 +35,7 @@ export class ListingSubmittedEvent {
    * enverrait ces messages vers le flux des messages en echec alors qu'ils sont exploitables ;
    * les valeurs par defaut sont appliquees a la mise en file.
    */
+  @IsOptional() @IsEnum(ListingCategory) category?: string;
   @IsOptional() @IsEnum(ListingKind) kind?: string;
   @IsOptional() @IsInt() @Min(1) priceCents?: number;
   @IsOptional() @IsString() @MaxLength(120) wantedInExchange?: string;

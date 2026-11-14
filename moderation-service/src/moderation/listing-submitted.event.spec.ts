@@ -26,6 +26,7 @@ describe('ListingSubmittedEvent', () => {
     await expect(
       messages({
         ...base,
+        category: 'FILMS',
         kind: 'SALE',
         priceCents: 4500,
         wantedInExchange: 'Un Blu-ray',
@@ -36,6 +37,7 @@ describe('ListingSubmittedEvent', () => {
   });
 
   it.each([
+    ['category', 'MEUBLES'],
     ['kind', 'TROC'],
     ['priceCents', 0],
     ['priceCents', 12.5],

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   api,
   ApiError,
+  CATEGORY_LABELS,
   CONDITION_LABELS,
   HANDOVER_PLACE_LABELS,
   KIND_LABELS,
@@ -25,6 +26,7 @@ describe('api', () => {
     title: 'Figurine',
     description: 'Edition 2019',
     condition: 'GOOD',
+    category: 'FIGURINES',
     kind: 'EXCHANGE',
     handoverPlace: 'TO_AGREE',
   };
@@ -50,7 +52,8 @@ describe('api', () => {
     expect(init.body).toBeInstanceOf(FormData);
     expect(init.headers).toEqual({ Authorization: 'Bearer jeton-test' });
     const form = init.body as FormData;
-    expect([...form.keys()]).toEqual(['title', 'description', 'condition', 'kind', 'handoverPlace']);
+    expect([...form.keys()]).toEqual(['title', 'description', 'condition', 'category', 'kind', 'handoverPlace']);
+    expect(form.get('category')).toBe('FIGURINES');
     expect(form.get('kind')).toBe('EXCHANGE');
     expect(form.get('handoverPlace')).toBe('TO_AGREE');
   });
@@ -120,13 +123,25 @@ describe('api', () => {
 });
 
 describe('libelles', () => {
-  it('fournit un libelle francais pour chacun des cinq etats', () => {
+  it('fournit un libelle francais pour chacune des huit categories', () => {
+    expect(CATEGORY_LABELS).toEqual({
+      FIGURINES: 'Figurines et statues',
+      FILMS: 'Films',
+      BOOKS: 'Livres et fanzines',
+      POSTERS: 'Affiches et goodies',
+      MUSIC: 'Musique',
+      GAMES: 'Jeux',
+      CLOTHING: 'Vêtements',
+      OTHER: 'Autres',
+    });
+  });
+
+  it('fournit un libelle francais pour chacun des quatre etats', () => {
     expect(CONDITION_LABELS).toEqual({
       NEW: 'Neuf',
       VERY_GOOD: 'Très bon état',
       GOOD: 'Bon état',
-      FAIR: 'État correct',
-      FOR_PARTS: 'Pour pièces',
+      FAIR: 'Satisfaisant',
     });
   });
 

@@ -1,6 +1,7 @@
 import { accessToken } from './auth';
 
-export type Condition = 'NEW' | 'VERY_GOOD' | 'GOOD' | 'FAIR' | 'FOR_PARTS';
+export type Condition = 'NEW' | 'VERY_GOOD' | 'GOOD' | 'FAIR';
+export type Category = 'FIGURINES' | 'FILMS' | 'BOOKS' | 'POSTERS' | 'MUSIC' | 'GAMES' | 'CLOTHING' | 'OTHER';
 export type ListingKind = 'EXCHANGE' | 'GIFT' | 'SALE';
 export type HandoverPlace = 'SHOP_ANGOULEME' | 'SHOP_AIX' | 'SHOP_LYON' | 'SHOP_LONDON' | 'TO_AGREE';
 export type ListingStatus = 'PENDING_MODERATION' | 'PUBLISHED' | 'REJECTED';
@@ -10,6 +11,7 @@ export interface Listing {
   title: string;
   description: string;
   condition: Condition;
+  category: Category;
   kind: ListingKind;
   /** Centimes, pour une vente seulement. */
   priceCents: number | null;
@@ -29,6 +31,7 @@ export interface NewListing {
   title: string;
   description: string;
   condition: Condition;
+  category: Category;
   kind: ListingKind;
   priceCents?: number;
   wantedInExchange?: string;
@@ -80,6 +83,7 @@ function toFormData(input: NewListing): FormData {
   form.append('title', input.title);
   form.append('description', input.description);
   form.append('condition', input.condition);
+  form.append('category', input.category);
   form.append('kind', input.kind);
   if (input.priceCents !== undefined) form.append('priceCents', String(input.priceCents));
   form.append('handoverPlace', input.handoverPlace);
@@ -97,8 +101,18 @@ export const CONDITION_LABELS: Record<Condition, string> = {
   NEW: 'Neuf',
   VERY_GOOD: 'Très bon état',
   GOOD: 'Bon état',
-  FAIR: 'État correct',
-  FOR_PARTS: 'Pour pièces',
+  FAIR: 'Satisfaisant',
+};
+
+export const CATEGORY_LABELS: Record<Category, string> = {
+  FIGURINES: 'Figurines et statues',
+  FILMS: 'Films',
+  BOOKS: 'Livres et fanzines',
+  POSTERS: 'Affiches et goodies',
+  MUSIC: 'Musique',
+  GAMES: 'Jeux',
+  CLOTHING: 'Vêtements',
+  OTHER: 'Autres',
 };
 
 export const KIND_LABELS: Record<ListingKind, string> = {

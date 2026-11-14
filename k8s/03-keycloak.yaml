@@ -129,7 +129,9 @@ spec:
             items:
               - { key: theme.properties, path: theme.properties }
               - { key: pme.css, path: resources/css/pme.css }
+              - { key: messages_fr.properties, path: messages/messages_fr.properties }
               - { key: roboto-400.woff2, path: resources/fonts/roboto-latin-400-normal.woff2 }
+              - { key: roboto-500.woff2, path: resources/fonts/roboto-latin-500-normal.woff2 }
               - { key: roboto-700.woff2, path: resources/fonts/roboto-latin-700-normal.woff2 }
         # Autorite locale, copiee depuis le namespace cert-manager par `make ca-configmap` : sert a verifier
         # le certificat de PostgreSQL. En entreprise, trust-manager produit et maintient cette meme ConfigMap.

@@ -15,6 +15,7 @@ const created: Listing = {
   title: 'Figurine',
   description: 'Édition 2019',
   condition: 'GOOD',
+  category: 'FIGURINES',
   kind: 'EXCHANGE',
   priceCents: null,
   wantedInExchange: null,
@@ -40,7 +41,14 @@ const submit = () => userEvent.click(screen.getByRole('button', { name: "Dépose
 describe('ListingForm', () => {
   const createListing = vi.spyOn(api, 'createListing');
 
+  // jsdom n'implemente pas les adresses temporaires de fichier : l'apercu de la photo en a besoin.
+  const createObjectURL = vi.fn(() => 'blob:apercu');
+  const revokeObjectURL = vi.fn();
+
   beforeEach(() => {
+    createObjectURL.mockClear();
+    revokeObjectURL.mockClear();
+    Object.assign(URL, { createObjectURL, revokeObjectURL });
     createListing.mockReset();
     vi.mocked(notifyListingSubmitted).mockReset();
   });
@@ -58,11 +66,13 @@ describe('ListingForm', () => {
       expect(screen.getByRole('link', { name: 'mes annonces' })).toHaveAttribute('href', '/mes-annonces');
     });
 
-    it('propose les cinq etats et les cinq lieux de remise, a convenir par defaut', () => {
+    it('propose les huit categories, les quatre etats et les cinq lieux de remise, a convenir par defaut', () => {
       renderForm();
 
+      expect(screen.getByLabelText('Catégorie')).toHaveValue('FIGURINES');
+      expect(screen.getByLabelText('Catégorie').querySelectorAll('option')).toHaveLength(8);
       expect(screen.getByLabelText("État de l'objet")).toHaveValue('GOOD');
-      expect(screen.getByLabelText("État de l'objet").querySelectorAll('option')).toHaveLength(5);
+      expect(screen.getByLabelText("État de l'objet").querySelectorAll('option')).toHaveLength(4);
       expect(screen.getByLabelText('Lieu de remise')).toHaveValue('TO_AGREE');
       expect(screen.getByLabelText('Lieu de remise').querySelectorAll('option')).toHaveLength(5);
     });
@@ -105,6 +115,7 @@ describe('ListingForm', () => {
       await userEvent.type(screen.getByLabelText("Titre de l'annonce"), 'Figurine Pyramid Head');
       await userEvent.type(screen.getByLabelText('Description'), 'Édition 2019');
       await userEvent.type(screen.getByLabelText(/Je cherche en échange/), 'Un Blu-ray');
+      await userEvent.selectOptions(screen.getByLabelText('Catégorie'), 'FILMS');
       await userEvent.selectOptions(screen.getByLabelText("État de l'objet"), 'FAIR');
       await userEvent.selectOptions(screen.getByLabelText('Lieu de remise'), 'SHOP_LYON');
       await submit();
@@ -114,6 +125,7 @@ describe('ListingForm', () => {
         title: 'Figurine Pyramid Head',
         description: 'Édition 2019',
         condition: 'FAIR',
+        category: 'FILMS',
         kind: 'EXCHANGE',
         priceCents: undefined,
         wantedInExchange: 'Un Blu-ray',
@@ -229,6 +241,23 @@ describe('ListingForm', () => {
 
       await waitFor(() => expect(createListing).toHaveBeenCalledTimes(1));
       expect(createListing).toHaveBeenCalledWith(expect.objectContaining({ photo: png }));
+    });
+
+    it('affiche un apercu de la photo choisie, puis le retire avec elle', async () => {
+      const user = userEvent.setup({ applyAccept: false });
+      renderForm();
+      const input = screen.getByLabelText(/Photo/);
+      expect(screen.queryByRole('img', { name: 'Aperçu de la photo choisie' })).not.toBeInTheDocument();
+
+      await user.upload(input, png);
+
+      expect(screen.getByRole('img', { name: 'Aperçu de la photo choisie' })).toHaveAttribute('src', 'blob:apercu');
+      expect(createObjectURL).toHaveBeenCalledWith(png);
+
+      await user.upload(input, new File(['x'], 'notes.pdf', { type: 'application/pdf' }));
+
+      expect(screen.queryByRole('img', { name: 'Aperçu de la photo choisie' })).not.toBeInTheDocument();
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:apercu');
     });
 
     it('refuse un format autre que JPEG, PNG ou WebP, sans l envoyer', async () => {

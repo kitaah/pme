@@ -54,10 +54,10 @@ describe('CreateListingDto', () => {
   it('refuse un etat inconnu', async () => {
     const { messages } = await check({ ...valid, condition: 'CASSE' });
 
-    expect(messages).toEqual(["l'état doit valoir NEW, VERY_GOOD, GOOD, FAIR ou FOR_PARTS"]);
+    expect(messages).toEqual(["l'état doit valoir NEW, VERY_GOOD, GOOD ou FAIR"]);
   });
 
-  it.each(['NEW', 'VERY_GOOD', 'GOOD', 'FAIR', 'FOR_PARTS'])('accepte l etat %s', async (condition) => {
+  it.each(['NEW', 'VERY_GOOD', 'GOOD', 'FAIR'])('accepte l etat %s', async (condition) => {
     const { messages } = await check({ ...valid, condition });
 
     expect(messages).toEqual([]);
@@ -98,6 +98,39 @@ describe('CreateListingDto', () => {
       const { messages } = await check({ ...valid, kind: 'EXCHANGE', priceCents: 'abc' });
 
       expect(messages).toEqual([]);
+    });
+  });
+
+  describe('categorie', () => {
+    it.each(['FIGURINES', 'FILMS', 'BOOKS', 'POSTERS', 'MUSIC', 'GAMES', 'CLOTHING', 'OTHER'])(
+      'accepte la categorie %s',
+      async (category) => {
+        const { messages } = await check({ ...valid, category });
+
+        expect(messages).toEqual([]);
+      },
+    );
+
+    it('accepte l absence de categorie : « autres » est appliquee par le service', async () => {
+      const { dto, messages } = await check(valid);
+
+      expect(messages).toEqual([]);
+      expect(dto.category).toBeUndefined();
+    });
+
+    it('traite une categorie vide comme absente (champ multipart)', async () => {
+      const { dto, messages } = await check({ ...valid, category: '  ' });
+
+      expect(messages).toEqual([]);
+      expect(dto.category).toBeUndefined();
+    });
+
+    it('refuse une categorie inconnue', async () => {
+      const { messages } = await check({ ...valid, category: 'MEUBLES' });
+
+      expect(messages).toEqual([
+        'la catégorie doit valoir FIGURINES, FILMS, BOOKS, POSTERS, MUSIC, GAMES, CLOTHING ou OTHER',
+      ]);
     });
   });
 

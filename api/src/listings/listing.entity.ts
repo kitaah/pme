@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
-import { HandoverPlace, ListingCondition, ListingKind, ListingStatus } from './listing.enums';
+import { HandoverPlace, ListingCategory, ListingCondition, ListingKind, ListingStatus } from './listing.enums';
 
 @Entity({ name: 'listings' })
 @Index('idx_listings_owner', ['ownerId', 'createdAt'])
@@ -22,6 +22,9 @@ export class Listing {
 
   @Column({ type: 'varchar', length: 20 })
   condition: ListingCondition;
+
+  @Column({ type: 'varchar', length: 30, default: ListingCategory.OTHER })
+  category: ListingCategory;
 
   @Column({ type: 'varchar', length: 20, default: ListingKind.EXCHANGE })
   kind: ListingKind;

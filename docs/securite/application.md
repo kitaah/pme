@@ -84,7 +84,7 @@ filtres: "" {
 |---|---|
 | **Liste blanche des champs** | Les champs non déclarés sont retirés, et leur présence fait échouer la requête avec une erreur 400. |
 | **Tailles bornées** | Titre de 3 à 100 caractères, description de 1000 au plus. Les mêmes bornes sont posées sur les colonnes de la base. |
-| **Valeurs énumérées** | L'état d'un objet ne peut valoir que `NEW`, `VERY_GOOD`, `GOOD`, `FAIR` ou `FOR_PARTS`, le type d'annonce que `EXCHANGE`, `GIFT` ou `SALE`, et le lieu de remise que l'un des quatre magasins ou « à convenir ». |
+| **Valeurs énumérées** | L'état d'un objet ne peut valoir que `NEW`, `VERY_GOOD`, `GOOD` ou `FAIR`, sa catégorie que l'une des huit valeurs de la liste (`FIGURINES`, `FILMS`, `BOOKS`, `POSTERS`, `MUSIC`, `GAMES`, `CLOTHING`, `OTHER`), le type d'annonce que `EXCHANGE`, `GIFT` ou `SALE`, et le lieu de remise que l'un des quatre magasins ou « à convenir ». |
 | **Prix cohérent** | Un prix n'est accepté que pour une vente (de 1 à 999 999 centimes) et il y est obligatoire. Une contrainte de la base refuse aussi un prix sur un échange ou un don. |
 | **Nombre de résultats plafonné** | Le paramètre de pagination est ramené entre 1 et 100, et une valeur non entière est refusée. |
 | **Messages explicites** | Chaque règle a son message en français, ce qui évite à l'interface de les réécrire. |
@@ -133,7 +133,7 @@ autre site ou glissé dans un champ de saisie, est donc refusé, même si la pag
 | **`default-src 'self'`** | Par défaut, seules les ressources du site lui-même sont acceptées. |
 | **`script-src 'self'`** | Seuls les scripts du site sont exécutés. Aucun script écrit dans la page, aucune évaluation de texte en code. |
 | **`style-src 'self'`** | Seule la feuille de style du site est appliquée. Aucun style écrit dans la page : les styles de la bibliothèque de notifications sont donc importés depuis sa feuille CSS, au lieu d'être injectés par elle. |
-| **`img-src 'self' data:`**<br>**`https://garage.localhost`** | Les images viennent du site, sont intégrées directement dans le fichier, ou sont les photos du stockage, lues par adresse signée. |
+| **`img-src 'self' data: blob:`**<br>**`https://garage.localhost`** | Les images viennent du site, sont intégrées directement dans le fichier, sont les photos du stockage lues par adresse signée, ou sont l'aperçu de la photo choisie (`blob:`, lue depuis le fichier local, rien n'est envoyé avant le dépôt). |
 | **`font-src 'self'`** | La police Roboto est servie par le site lui-même : aucune requête vers un service de polices tiers. |
 | **`connect-src 'self'`**<br>**`https://keycloak.localhost`** | Les appels réseau du navigateur ne peuvent viser que l'API et Keycloak. |
 | **`object-src 'none'`** | Aucun module externe (plugin) n'est accepté. |

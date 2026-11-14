@@ -12,6 +12,7 @@ const listing = (id: string, status: Listing['status'], extra: Partial<Listing> 
   title: `Annonce ${id}`,
   description: 'Description',
   condition: 'GOOD',
+  category: 'FIGURINES',
   kind: 'EXCHANGE',
   priceCents: null,
   wantedInExchange: null,
@@ -94,7 +95,7 @@ describe('MyListings', () => {
   it('affiche le type, le prix d une vente, l etat et le lieu de remise', async () => {
     myListings.mockResolvedValue([
       listing('1', 'PUBLISHED', { kind: 'SALE', priceCents: 4500, condition: 'NEW', handoverPlace: 'SHOP_LYON' }),
-      listing('2', 'PUBLISHED', { kind: 'GIFT', condition: 'FOR_PARTS', handoverPlace: 'SHOP_AIX' }),
+      listing('2', 'PUBLISHED', { kind: 'GIFT', condition: 'FAIR', handoverPlace: 'SHOP_AIX' }),
     ]);
 
     renderList();
@@ -105,7 +106,7 @@ describe('MyListings', () => {
     expect(sale).toHaveTextContent('Magasin de Lyon');
     expect(gift).toHaveTextContent('Don');
     expect(gift).not.toHaveTextContent('€');
-    expect(gift).toHaveTextContent('Pour pièces');
+    expect(gift).toHaveTextContent('Satisfaisant');
     expect(gift).toHaveTextContent('Magasin d’Aix-en-Provence');
   });
 

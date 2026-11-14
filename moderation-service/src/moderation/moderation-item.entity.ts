@@ -1,4 +1,4 @@
-import { HandoverPlace, ListingKind } from '@pme/common';
+import { HandoverPlace, ListingCategory, ListingKind } from '@pme/common';
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 export enum ModerationStatus {
@@ -30,6 +30,9 @@ export class ModerationItem {
 
   @Column({ type: 'varchar', length: 20 })
   condition: string;
+
+  @Column({ type: 'varchar', length: 30, default: ListingCategory.OTHER })
+  category: string;
 
   @Column({ type: 'varchar', length: 20, default: ListingKind.EXCHANGE })
   kind: string;

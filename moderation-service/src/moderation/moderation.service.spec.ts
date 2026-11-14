@@ -34,6 +34,7 @@ describe('ModerationService', () => {
 
     expect(repository.insert).toHaveBeenCalledWith(
       expect.objectContaining({
+        category: 'OTHER',
         kind: 'EXCHANGE',
         priceCents: null,
         wantedInExchange: null,
@@ -43,9 +44,10 @@ describe('ModerationService', () => {
     );
   });
 
-  it('conserve le type, le prix, la contrepartie, le lieu et le chemin de la photo recus', async () => {
+  it('conserve la categorie, le type, le prix, la contrepartie, le lieu et le chemin de la photo recus', async () => {
     await service.enqueue({
       ...event,
+      category: 'FILMS',
       kind: 'SALE',
       priceCents: 4500,
       wantedInExchange: 'Un Blu-ray',
@@ -55,6 +57,7 @@ describe('ModerationService', () => {
 
     expect(repository.insert).toHaveBeenCalledWith(
       expect.objectContaining({
+        category: 'FILMS',
         kind: 'SALE',
         priceCents: 4500,
         wantedInExchange: 'Un Blu-ray',

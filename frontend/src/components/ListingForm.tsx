@@ -1,8 +1,10 @@
-import { ChangeEvent, FormEvent, ReactNode, useState } from 'react';
+import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 import { Check, Image as ImageIcon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import {
   ApiError,
+  CATEGORY_LABELS,
+  Category,
   CONDITION_LABELS,
   Condition,
   HANDOVER_PLACE_LABELS,
@@ -36,6 +38,25 @@ function toErreur(error: unknown): Erreur {
   return { text: apiError?.message ?? 'Une erreur est survenue.', details: apiError?.errors };
 }
 
+/**
+ * Cadre de la photo : apercu de l'image choisie, lu depuis le fichier local (rien n'est envoye avant
+ * le depot), ou pictogramme tant qu'aucune photo n'est choisie. L'adresse temporaire est liberee
+ * des que la photo change ou que le cadre disparait.
+ */
+function ApercuPhoto({ photo }: Readonly<{ photo?: File }>) {
+  const url = useMemo(() => (photo ? URL.createObjectURL(photo) : undefined), [photo]);
+  useEffect(() => () => (url ? URL.revokeObjectURL(url) : undefined), [url]);
+  return (
+    <div className="flex size-[72px] flex-none items-center justify-center overflow-hidden rounded-[10px] border border-line bg-panel text-gold">
+      {url ? (
+        <img src={url} alt="Aperçu de la photo choisie" className="size-full object-cover" />
+      ) : (
+        <ImageIcon aria-hidden="true" className="size-[26px]" strokeWidth={1.5} />
+      )}
+    </div>
+  );
+}
+
 function Help({ id, children }: Readonly<{ id: string; children: ReactNode }>) {
   return (
     <p className="hint" id={id}>
@@ -60,6 +81,7 @@ export function ListingForm() {
   const [kind, setKind] = useState<ListingKind>('EXCHANGE');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [category, setCategory] = useState<Category>('FIGURINES');
   const [condition, setCondition] = useState<Condition>('GOOD');
   const [wantedInExchange, setWantedInExchange] = useState('');
   const [price, setPrice] = useState('');
@@ -104,6 +126,7 @@ export function ListingForm() {
         title,
         description,
         condition,
+        category,
         kind,
         priceCents,
         wantedInExchange: kind === 'EXCHANGE' ? wantedInExchange : undefined,
@@ -169,6 +192,43 @@ export function ListingForm() {
             </div>
           </fieldset>
 
+          <div className="mb-[26px] flex flex-wrap gap-x-6 gap-y-5">
+            <div className="min-w-0 flex-[1_1_220px]">
+              <label className="label mt-0" htmlFor="category">
+                Catégorie
+              </label>
+              <select
+                id="category"
+                className="field h-12 rounded-[10px] px-3 py-0 text-[15px]"
+                value={category}
+                onChange={(e) => setCategory(e.target.value as Category)}
+              >
+                {(Object.keys(CATEGORY_LABELS) as Category[]).map((key) => (
+                  <option key={key} value={key}>
+                    {CATEGORY_LABELS[key]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="min-w-0 flex-[1_1_220px]">
+              <label className="label mt-0" htmlFor="condition">
+                État de l'objet
+              </label>
+              <select
+                id="condition"
+                className="field h-12 rounded-[10px] px-3 py-0 text-[15px]"
+                value={condition}
+                onChange={(e) => setCondition(e.target.value as Condition)}
+              >
+                {(Object.keys(CONDITION_LABELS) as Condition[]).map((key) => (
+                  <option key={key} value={key}>
+                    {CONDITION_LABELS[key]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <label className="label mt-0" htmlFor="title">
             Titre de l'annonce
           </label>
@@ -198,25 +258,9 @@ export function ListingForm() {
           />
           <Help id="description-hint">{DESCRIPTION_MAX} caractères maximum.</Help>
 
-          <label className="label mt-[22px]" htmlFor="condition">
-            État de l'objet
-          </label>
-          <select
-            id="condition"
-            className="field mb-[26px] h-12 rounded-[10px] px-3 py-0 text-[15px]"
-            value={condition}
-            onChange={(e) => setCondition(e.target.value as Condition)}
-          >
-            {(Object.keys(CONDITION_LABELS) as Condition[]).map((key) => (
-              <option key={key} value={key}>
-                {CONDITION_LABELS[key]}
-              </option>
-            ))}
-          </select>
-
           {kind === 'EXCHANGE' && (
             <>
-              <label className="label mt-0" htmlFor="wanted">
+              <label className="label mt-[22px]" htmlFor="wanted">
                 Je cherche en échange <span className="font-normal text-ink-faint">(facultatif)</span>
               </label>
               <input
@@ -236,7 +280,7 @@ export function ListingForm() {
 
           {kind === 'SALE' && (
             <>
-              <label className="label mt-0" htmlFor="price">
+              <label className="label mt-[22px]" htmlFor="price">
                 Prix (en euros)
               </label>
               <input
@@ -253,12 +297,12 @@ export function ListingForm() {
           )}
 
           {kind === 'GIFT' && (
-            <p className="mb-[26px] rounded-[10px] border-l-[3px] border-gold bg-inset p-4 text-[13px] leading-[1.7] text-ink-muted">
+            <p className="mt-[22px] rounded-[10px] border-l-[3px] border-gold bg-inset p-4 text-[13px] leading-[1.7] text-ink-muted">
               Un don est gratuit : aucun prix ni contrepartie à indiquer.
             </p>
           )}
 
-          <label className="label mt-0" htmlFor="handover">
+          <label className="label mt-[26px]" htmlFor="handover">
             Lieu de remise
           </label>
           <select
@@ -282,9 +326,7 @@ export function ListingForm() {
             Photo <span className="font-normal text-ink-faint">(facultative)</span>
           </label>
           <div className="mb-[30px] flex flex-wrap items-center gap-[18px] rounded-xl border border-dashed border-control bg-inset p-5">
-            <div className="flex size-[72px] flex-none items-center justify-center rounded-[10px] border border-line bg-panel text-gold">
-              <ImageIcon aria-hidden="true" className="size-[26px]" strokeWidth={1.5} />
-            </div>
+            <ApercuPhoto photo={photo} />
             <div className="min-w-0 flex-[1_1_260px]">
               <input
                 id="photo"

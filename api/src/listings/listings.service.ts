@@ -5,7 +5,7 @@ import { AuthenticatedUser } from '@pme/common';
 import { DatabaseCircuitBreaker } from '../common/database-circuit-breaker';
 import { PhotoStorageService, StoredPhoto } from '../storage/photo-storage.service';
 import { CreateListingDto } from './create-listing.dto';
-import { HandoverPlace, ListingKind, ListingStatus } from './listing.enums';
+import { HandoverPlace, ListingCategory, ListingKind, ListingStatus } from './listing.enums';
 import { Listing } from './listing.entity';
 import { ListingEventsPublisher } from './listing-events.publisher';
 
@@ -72,6 +72,7 @@ export class ListingsService {
             title: dto.title,
             description: dto.description,
             condition: dto.condition,
+            category: dto.category ?? ListingCategory.OTHER,
             kind,
             // Le prix n'est retenu que pour une vente : la contrainte chk_listings_price
             // refuserait un prix accompagnant un echange ou un don.

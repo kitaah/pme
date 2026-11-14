@@ -56,7 +56,9 @@ configMapGenerator:
     files:
       - theme.properties=config/keycloak-theme-properties
       - pme.css=config/keycloak-theme.css
+      - messages_fr.properties=config/keycloak-messages-fr.properties
       - roboto-400.woff2=config/roboto-latin-400-normal.woff2
+      - roboto-500.woff2=config/roboto-latin-500-normal.woff2
       - roboto-700.woff2=config/roboto-latin-700-normal.woff2
   - name: garage-config
     files:

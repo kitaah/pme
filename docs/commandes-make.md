@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Point d'entrée unique de toutes les opérations du projet : cluster, secrets, déploiement, observation, développement, qualité, tests et documentation |
 | **Fichier** | `Makefile`, à la racine du dépôt |
-| **Nombre de commandes** | 81 cibles, regroupées en douze thèmes ci-dessous (plus `seal-now`, étape interne de `make seal`) |
+| **Nombre de commandes** | 83 cibles, regroupées en douze thèmes ci-dessous (plus `seal-now`, étape interne de `make seal`) |
 | **Aide intégrée** | `make help`, qui n'en liste qu'une partie : cette page est la liste complète |
 | **Configuration** | Variables en tête du `Makefile` (voir la dernière section) et fichier `.env` pour les mots de passe |
 
@@ -78,6 +78,8 @@ navigateur, `make seal` (nouveau cluster, donc nouvelle clé ; génère aussi le
 | **`make minikube-down`** | Arrête Minikube. Le cluster et ses données sont conservés. |
 | **`make helm`** | Installe Helm sur l'ordinateur s'il est absent, avec le script officiel (version épinglée, `sudo` demandé). Sans effet s'il est déjà là. Requis par `ingress` et `istio`. |
 | **`make ingress`** | Désactive l'ingress de Minikube, installe Traefik par son chart Helm (version épinglée, plugin de validation des jetons compris) et attend qu'il soit prêt. Coupe l'ingress quelques secondes lors d'une mise à jour. |
+| **`make ingress-restart`** | Redémarre Traefik et attend qu'il soit prêt. À lancer quand tous les sites répondent « 502 Bad Gateway » alors que les pods sont prêts : le certificat que le maillage donne à Traefik dure 24 h, et s'il n'a pas été renouvelé (portable mis en veille, par exemple), les pods refusent ses connexions. Le log de `ztunnel` affiche alors `ExpiredContext`. |
+| **`make mesh-renew`** | Renouvelle les certificats du maillage Istio : redémarre `ztunnel`, Traefik, puis l'API, la modération et le front. À lancer quand les pods n'arrivent plus à se joindre (PostgreSQL `ECONNRESET`, NATS `CONNECTION_REFUSED`, nouveaux pods en `CrashLoopBackOff`) et que le log de `ztunnel` affiche `CertificateExpired` ou `ExpiredContext`. Non lancé par `deploy` ni `redeploy`. |
 | **`make inotify`** | Relève la limite `inotify` du noyau (1024 instances par défaut, `sudo` demandé) et la rend permanente. Linux uniquement, sans effet si la limite suffit. Requis par ztunnel, lancé par `istio`. |
 | **`make istio`** | Installe Istio en mode ambient (quatre charts Helm : base, istiod, cni, ztunnel) et enrôle le namespace de Traefik dans le maillage. Exige `make ingress` d'abord. |
 | **`make istio-scan`** | Analyse avec Trivy les trois images d'Istio. Échoue sur une faille CRITICAL corrigeable, signale les HIGH à titre d'information. |

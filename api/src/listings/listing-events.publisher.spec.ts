@@ -1,4 +1,4 @@
-import { HandoverPlace, ListingCondition, ListingKind, ListingStatus } from './listing.enums';
+import { HandoverPlace, ListingCategory, ListingCondition, ListingKind, ListingStatus } from './listing.enums';
 import { Listing } from './listing.entity';
 import { LISTING_SUBMITTED_SUBJECT } from './listing-events';
 import { ListingEventsPublisher } from './listing-events.publisher';
@@ -12,6 +12,7 @@ describe('ListingEventsPublisher', () => {
     title: 'Figurine',
     description: 'Edition 2019',
     condition: ListingCondition.GOOD,
+    category: ListingCategory.FIGURINES,
     kind: ListingKind.EXCHANGE,
     priceCents: null,
     wantedInExchange: null,
@@ -43,6 +44,7 @@ describe('ListingEventsPublisher', () => {
       title: 'Figurine',
       description: 'Edition 2019',
       condition: 'GOOD',
+      category: 'FIGURINES',
       kind: 'EXCHANGE',
       handoverPlace: 'TO_AGREE',
       submittedAt: '2026-11-04T10:00:00.000Z',

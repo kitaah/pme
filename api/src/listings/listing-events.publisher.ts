@@ -33,6 +33,7 @@ export class ListingEventsPublisher {
       title: listing.title,
       description: listing.description,
       condition: listing.condition,
+      category: listing.category,
       kind: listing.kind,
       handoverPlace: listing.handoverPlace,
       submittedAt: listing.createdAt.toISOString(),

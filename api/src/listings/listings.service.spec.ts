@@ -2,7 +2,7 @@ import { Logger, ServiceUnavailableException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { AuthenticatedUser } from '@pme/common';
 import { CreateListingDto } from './create-listing.dto';
-import { HandoverPlace, ListingCondition, ListingKind, ListingStatus } from './listing.enums';
+import { HandoverPlace, ListingCategory, ListingCondition, ListingKind, ListingStatus } from './listing.enums';
 import { PhotoStorageService } from '../storage/photo-storage.service';
 import { Listing } from './listing.entity';
 import { DatabaseCircuitBreaker } from '../common/database-circuit-breaker';
@@ -71,6 +71,7 @@ describe('ListingsService', () => {
 
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({
+          category: ListingCategory.OTHER,
           kind: ListingKind.EXCHANGE,
           priceCents: null,
           wantedInExchange: null,
@@ -80,6 +81,12 @@ describe('ListingsService', () => {
         }),
       );
       expect(photos.store).not.toHaveBeenCalled();
+    });
+
+    it('conserve la categorie choisie', async () => {
+      await service.submit(user, { ...dto, category: ListingCategory.FIGURINES });
+
+      expect(repository.create).toHaveBeenCalledWith(expect.objectContaining({ category: ListingCategory.FIGURINES }));
     });
 
     it('retient le prix pour une vente seulement', async () => {

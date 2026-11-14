@@ -11,7 +11,7 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
-import { HandoverPlace, ListingCondition, ListingKind } from './listing.enums';
+import { HandoverPlace, ListingCategory, ListingCondition, ListingKind } from './listing.enums';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
@@ -46,9 +46,17 @@ export class CreateListingDto {
   description: string;
 
   @IsEnum(ListingCondition, {
-    message: "l'état doit valoir NEW, VERY_GOOD, GOOD, FAIR ou FOR_PARTS",
+    message: "l'état doit valoir NEW, VERY_GOOD, GOOD ou FAIR",
   })
   condition: ListingCondition;
+
+  /** Absente : « autres » est appliquee par defaut (le formulaire envoie toujours une categorie). */
+  @Transform(trimOrUndefined)
+  @IsOptional()
+  @IsEnum(ListingCategory, {
+    message: 'la catégorie doit valoir FIGURINES, FILMS, BOOKS, POSTERS, MUSIC, GAMES, CLOTHING ou OTHER',
+  })
+  category?: ListingCategory;
 
   /** Absent : le formulaire du POC ne propose que l'echange. */
   @IsOptional()

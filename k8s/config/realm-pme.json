@@ -4,7 +4,7 @@
   "loginTheme": "pme",
   "enabled": true,
   "sslRequired": "external",
-  "registrationAllowed": false,
+  "registrationAllowed": true,
   "rememberMe": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
@@ -19,14 +19,6 @@
     "fr"
   ],
   "defaultLocale": "fr",
-  "localizationTexts": {
-    "fr": {
-      "usernameOrEmail": "Nom d'utilisateur ou email",
-      "loginAccountTitle": "Connexion",
-      "doLogIn": "Se connecter",
-      "rememberMe": "Se souvenir de moi"
-    }
-  },
   "roles": {
     "realm": [
       {

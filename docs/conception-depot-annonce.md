@@ -35,11 +35,12 @@ envoyé sur le bus ne transporte que cette clé, jamais le fichier.
 | **Types d'annonce** | Le modèle de données, l'API et le formulaire gèrent Échange, Don et Vente. Échange : contrepartie souhaitée (facultative). Vente : prix obligatoire, de 0,01 à 9 999,99 €. Don : ni prix ni contrepartie | Un seul formulaire pour les trois types ; un prix ne peut accompagner qu'une vente, ce que garantit aussi une contrainte de base |
 | **Lecture des photos** | URL signée de courte durée, générée par l'API | La photo d'une annonce non modérée ne doit pas être publique |
 | **Photo en attente de modération** | Affichée à son auteur dans « Mes annonces », avec le statut « En attente de modération » ; invisible des autres membres | Le membre doit pouvoir vérifier sa photo sans attendre la modération |
-| **États de l'objet** | Cinq états, stockés sous forme de codes anglais (`NEW`, `VERY_GOOD`, `GOOD`, `FAIR`, `FOR_PARTS`) et affichés en français : Neuf, Très bon état, Bon état, État correct, Pour pièces | Grille conventionnelle des places de marché ; les codes anglais suivent ceux du dépôt, et `NEW`, `GOOD`, `FAIR` existent déjà, donc aucune reprise de données |
+| **États de l'objet** | Quatre états, stockés sous forme de codes anglais (`NEW`, `VERY_GOOD`, `GOOD`, `FAIR`) et affichés en français : Neuf, Très bon état, Bon état, Satisfaisant | Grille des grandes places de marché (Vinted, Amazon, eBay : un état neuf puis trois niveaux d'occasion, le dernier étant une usure marquée sur un objet qui fonctionne). Un objet à réparer n'a pas de niveau à part : le défaut se précise dans la description. Les codes anglais suivent ceux du dépôt |
+| **Catégories** | Huit catégories fermées, stockées sous forme de codes anglais (`FIGURINES`, `FILMS`, `BOOKS`, `POSTERS`, `MUSIC`, `GAMES`, `CLOTHING`, `OTHER`) et affichées en français ; « Autres » sert de valeur par défaut | Aide à retrouver une annonce dans un catalogue d'horreur et de pop culture. Une liste fermée suffit : une colonne avec contrainte `CHECK`, sans table de catégories |
 | **Confirmation** | Toast « Annonce soumise pour validation ! » en haut à droite, sous l'en-tête, 8 secondes, puis redirection vers la liste | Demande du porteur du projet |
 | **Langue de Keycloak** | Français seul (`en` retiré de `supportedLocales`), donc plus de sélecteur de langue | Le sélecteur disparaît quand le realm n'a qu'une langue |
 | **Thème de connexion Keycloak** | Création d'un thème `pme` (le dépôt n'en contient aucun), qui reprend la palette « Nuit de festival » | La page de connexion doit suivre le reste de l'application |
-| **Inscription** | Inchangée : `registrationAllowed` reste à `false`, donc le lien « Créer un compte » de la maquette n'apparaît pas dans la page réelle | Le POC n'ouvre pas l'inscription ; la valeur par défaut de Keycloak est conservée sur la maquette |
+| **Inscription** | Ouverte : `registrationAllowed` passe à `true`, donc le lien « Créer un compte » de la maquette apparaît sous le formulaire | La maquette le montre ; un compte créé n'a aucun rôle tant que `membre` n'est pas ajouté aux rôles par défaut du realm |
 | **Nom de la rubrique** | « Espace membre » | La rubrique couvre l'échange, le don et la vente, pas seulement le troc |
 | **Lieu de remise** | Liste fermée : les quatre magasins de l'entreprise, ou « à convenir » | Sans lieu, une annonce d'échange n'est pas exploitable. Une liste fermée ne collecte aucune donnée personnelle, et la remise en magasin prolonge l'activité de l'enseigne. Une adresse précise serait incohérente : les métadonnées EXIF de la photo, position GPS comprise, sont justement retirées |
 
@@ -68,8 +69,8 @@ Deux règles découlent du C4 :
 
 1. **Connexion.** Le membre arrive sur la page de connexion Keycloak, en français, sans sélecteur de langue. Le champ
    s'intitule « Nom d'utilisateur ou email ».
-2. **Formulaire.** Après connexion, la page « Déposer une annonce » s'affiche : titre, description, état, type
-   d'annonce (échange, don ou vente), lieu de remise et photo (facultative). Selon le type, le formulaire montre ce qui
+2. **Formulaire.** Après connexion, la page « Déposer une annonce » s'affiche : type d'annonce (échange, don ou vente),
+   catégorie, état, titre, description, lieu de remise et photo (facultative). Selon le type, le formulaire montre ce qui
    est recherché en échange (facultatif) ou le prix, et n'affiche rien pour un don.
 3. **Envoi.** Le navigateur envoie le formulaire en multipart à `POST /api/v1/listings`, avec le jeton.
 4. **Contrôles à l'entrée.** Traefik limite la taille du corps (6 Mo), le débit et vérifie le jeton.
@@ -99,7 +100,8 @@ Table `listings`, base `pme` :
 |---|---|---|
 | `title` | texte | 3 à 100 caractères, obligatoire (inchangé) |
 | `description` | texte | 1000 caractères maximum, obligatoire (inchangé) |
-| `condition` | énumération | `NEW`, `VERY_GOOD`, `GOOD`, `FAIR`, `FOR_PARTS` (`NEW`, `GOOD`, `FAIR` existent déjà) |
+| `category` | énumération | `FIGURINES`, `FILMS`, `BOOKS`, `POSTERS`, `MUSIC`, `GAMES`, `CLOTHING`, `OTHER` (valeur par défaut) |
+| `condition` | énumération | `NEW`, `VERY_GOOD`, `GOOD`, `FAIR` (`NEW`, `GOOD`, `FAIR` existent déjà) |
 | `kind` | énumération | `EXCHANGE` (valeur par défaut), `GIFT`, `SALE` |
 | `wanted_in_exchange` | texte | Facultatif, 120 caractères maximum, saisi pour un échange |
 | `handover_place` | énumération | `SHOP_ANGOULEME`, `SHOP_AIX`, `SHOP_LYON`, `SHOP_LONDON`, `TO_AGREE` (valeur par défaut) |
@@ -107,10 +109,38 @@ Table `listings`, base `pme` :
 | `photo_key` | texte | Clé de l'objet dans le bucket (`pending/<identifiant>.webp`), vide si pas de photo |
 | `photo_mime` | texte | Type de l'image stockée, vide si pas de photo |
 
-Le statut existant (`PENDING_MODERATION`) reste inchangé. Les migrations initiales ne sont pas modifiées : une nouvelle
-migration TypeORM, dans l'API, ajoute les colonnes et remplace la contrainte `CHECK` de `condition` pour accepter les
-cinq valeurs. Le service de modération reçoit sa propre migration pour les mêmes colonnes dans sa file, et son
-validateur d'événement (`@IsIn`) accepte les nouveaux codes.
+Le statut existant (`PENDING_MODERATION`) reste inchangé. Les migrations initiales ne sont pas modifiées : trois
+nouvelles migrations TypeORM, chacune présente dans l'API et dans le service de modération (deux bases séparées), font
+évoluer les tables.
+
+1. `1763100000000-add-listing-details` ajoute les colonnes du dépôt et remplace la contrainte `CHECK` de `condition`.
+2. `1763200000000-remove-for-parts-condition` retire l'état `FOR_PARTS` : les annonces et les éléments de la file qui
+   l'avaient passent en `FAIR` (« Satisfaisant »), puis la contrainte est remplacée par les quatre valeurs restantes.
+3. `1763300000000-add-listing-category` ajoute la colonne `category`, décrite ci-dessous.
+
+Le validateur de l'événement reçu par le service de modération accepte les nouveaux codes.
+
+La migration `1763300000000-add-listing-category` ajoute la colonne `category` (`VARCHAR(30) NOT NULL DEFAULT 'OTHER'`) avec une contrainte `CHECK` sur les
+huit codes. Les annonces déjà en base passent donc en `OTHER` (« Autres »). La catégorie est facultative dans l'API
+(`OTHER` si elle est absente, ce qui garde compatibles les messages publiés par une ancienne version) ; le formulaire,
+lui, en envoie toujours une.
+
+**Pourquoi une colonne et non une table de catégories ?** La liste est fermée, courte et sans gestion en ligne : une
+colonne avec contrainte `CHECK` et une énumération partagée (`ListingCategory` dans `libs/common`) suffisent, comme pour
+l'état, le type et le lieu de remise. L'API et le service de modération ayant chacun leur base, une table obligerait en
+plus à la dupliquer. Une table ne se justifierait qu'avec une gestion par un administrateur, des sous-catégories ou des
+métadonnées par catégorie.
+
+| Code | Libellé affiché |
+|---|---|
+| `FIGURINES` | Figurines et statues |
+| `FILMS` | Films |
+| `BOOKS` | Livres et fanzines |
+| `POSTERS` | Affiches et goodies |
+| `MUSIC` | Musique |
+| `GAMES` | Jeux |
+| `CLOTHING` | Vêtements |
+| `OTHER` | Autres |
 
 À l'écran, le front traduit les codes par une table de correspondance (comme `CONDITION_LABELS` dans `api.ts`) :
 
@@ -119,8 +149,7 @@ validateur d'événement (`@IsIn`) accepte les nouveaux codes.
 | `NEW` | Neuf |
 | `VERY_GOOD` | Très bon état |
 | `GOOD` | Bon état |
-| `FAIR` | État correct |
-| `FOR_PARTS` | Pour pièces |
+| `FAIR` | Satisfaisant |
 
 Les types d'annonce suivent la même logique : `EXCHANGE` « Échange », `GIFT` « Don », `SALE` « Vente ».
 
@@ -131,7 +160,7 @@ Les types d'annonce suivent la même logique : `EXCHANGE` « Échange », `GIFT`
 | **Dépôt** | `POST /api/v1/listings`, `multipart/form-data` : champs texte et fichier `photo`. L'API accepte les trois types ; `kind` vaut `EXCHANGE` par défaut |
 | **Liste** | `GET /api/v1/listings/mine` : chaque annonce renvoie `photoUrl`, URL signée valable 5 minutes |
 | **Erreurs** | `400` champ invalide, `413` fichier trop gros, `415` type de fichier refusé |
-| **Événement** | `listing.submitted` : `listingId`, `ownerId`, `ownerUsername`, `title`, `description`, `condition`, `kind`, `priceCents`, `wantedInExchange`, `handoverPlace`, `photoKey`, `submittedAt`. Le prix, la contrepartie et la photo ne sont présents que s'ils existent. Les champs ajoutés sont facultatifs à la réception : pendant un déploiement progressif, un pod de l'API encore à l'ancienne version publie un message sans eux |
+| **Événement** | `listing.submitted` : `listingId`, `ownerId`, `ownerUsername`, `title`, `description`, `condition`, `category`, `kind`, `priceCents`, `wantedInExchange`, `handoverPlace`, `photoKey`, `submittedAt`. Le prix, la contrepartie et la photo ne sont présents que s'ils existent. Les champs ajoutés sont facultatifs à la réception : pendant un déploiement progressif, un pod de l'API encore à l'ancienne version publie un message sans eux |
 
 ## Bibliothèques et composants à installer
 
@@ -188,14 +217,14 @@ notification.
 | N° | Écran | Contenu |
 |---|---|---|
 | **1** | Connexion (Keycloak) | Titre « Connexion » centré, champ « Nom d'utilisateur ou email », lien d'inscription, aucun sélecteur de langue |
-| **2** | Dépôt d'annonce | « Déposer une annonce » : titre, description, état, « Je cherche en échange » (facultatif), photo. Le choix du type (échange, don, vente) et le prix n'y figurent pas encore |
+| **2** | Dépôt d'annonce | « Déposer une annonce » : choix du type (échange, don, vente), puis catégorie et état côte à côte, titre, description, « Je cherche en échange » (facultatif), lieu de remise, photo avec son aperçu, encart « Avant de publier ». Le champ « Prix » de la vente n'y est pas dessiné |
 | **3** | Mes annonces | Quatre annonces avec photo et statut (En attente de modération, Publiée, Refusée) |
 | **3b** | Notification de confirmation | Toast « Annonce soumise pour validation ! », en haut à droite sous l'en-tête |
 | **4** | Dépôt sur mobile | Même formulaire en 390 px, bouton d'action en bas |
 | **5** | Connexion sur mobile | Même page de connexion en 390 px |
 | **6** | Mes annonces sur mobile | Une colonne de cartes, en 390 px |
 
-Les maquettes précèdent l'ajout du choix du type d'annonce : elles sont à compléter. Le lien « Annuler » a été retiré : le fil d'ariane « Mes annonces ›
+Les maquettes montrent le type « Échange » ; pour une vente le champ « Prix » remplace la contrepartie, et pour un don aucun des deux ne s'affiche. Le lien « Annuler » a été retiré : le fil d'ariane « Mes annonces ›
 Déposer une annonce » et l'en-tête assurent le retour, et le RGAA n'impose pas de bouton d'annulation pour ce formulaire.
 La grille des annonces passe de trois colonnes à une seule selon la largeur de l'écran, et le bloc du membre reste à
 droite de l'en-tête.
@@ -274,13 +303,23 @@ Le dépôt ne contenait aucun thème : le thème `pme` (type `login`, hérité d
 `k8s/config/keycloak-theme.css`, reprend les jetons de la palette et la police ; elle est montée dans le pod Keycloak par
 une ConfigMap, puis le thème est déclaré dans `realm-pme.json` par `loginTheme`. Le realm n'étant importé qu'une fois, il
 faut le réimporter ou repartir d'une base vide (`make reset`). Les libellés (« Nom d'utilisateur ou email », « Se
-connecter », « Se souvenir de moi ») se règlent dans le realm par `localizationTexts`.
+connecter », « Se souvenir de moi », « Pas encore de compte ? », « Créer un compte ») sont dans le fichier de messages du
+thème, `k8s/config/keycloak-messages-fr.properties`, lu au démarrage de Keycloak sans réimporter le realm. L'apostrophe s'y
+écrit en typographique (`d’utilisateur`, U+2019) : Keycloak formate ces textes comme des messages Java, et une apostrophe
+droite disparaît (« Nom dutilisateur »), même doublée selon le chemin que suit le texte. Un libellé saisi dans la console (Realm settings, Localization) passe devant ce fichier :
+pour le retrouver, il faut supprimer la personnalisation de la console.
+Le bouton « afficher le mot de passe » (l'œil) est masqué avec sa case : la maquette n'en a pas. Sous le champ, « Mot de
+passe oublié ? » est à droite, puis « Se souvenir de moi » à gauche sur la ligne suivante, et les liens sont soulignés
+(un lien ne se distingue pas par sa seule couleur, RGAA 10.6). Keycloak place la case avant le lien dans la page : l'ordre
+d'affichage est inversé par la feuille de style, l'ordre de tabulation reste celui de la page.
+La page ne porte que le logo, le nom de l'enseigne sur une seule ligne et la carte de connexion : la signature et la phrase
+d'accueil ont été retirées pour remonter le formulaire.
 
 ### Typographie
 
 Roboto sert pour tout le site, y compris la page de connexion Keycloak. Les fichiers sont hébergés par le site lui-même
 (`frontend/public/fonts`, mêmes fichiers que la documentation) : aucune requête vers un service tiers. Les maquettes
-utilisent encore Playfair Display et Inter ; elles sont à aligner sur Roboto.
+utilisent aussi Roboto (chargée depuis Google Fonts, car ce ne sont que des pages de présentation).
 
 
 ## Découpage

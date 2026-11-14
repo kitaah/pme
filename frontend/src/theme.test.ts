@@ -52,7 +52,7 @@ const TEXT: Pair[] = [
   ['lien sur une carte', 'blood-text', 'panel'],
   ['lien sur fond creuse', 'blood-text', 'inset'],
   ['rubrique courante et titres du pied de page sur une carte', 'gold', 'panel'],
-  ['signature de l enseigne sur la page', 'gold', 'page'],
+  ['logo de l enseigne sur la page', 'gold', 'page'],
   ['type d annonce choisi sur fond creuse', 'gold', 'inset'],
   ['pastille « publiee » ou « membre » sur une carte', 'success', 'panel'],
   ['pastille « publiee » sur fond creuse', 'success', 'inset'],

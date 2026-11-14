@@ -18,6 +18,7 @@ export interface ListingSubmittedEvent {
   title: string;
   description: string;
   condition: string;
+  category: string;
   kind: string;
   /** Centimes, pour une vente seulement. */
   priceCents?: number;
