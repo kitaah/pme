@@ -36,7 +36,8 @@ function contrast(foreground: string, background: string): number {
 /** [description, premier plan, arriere-plan] */
 type Pair = [string, string, string];
 
-// Chaque association ci-dessous existe reellement dans l'interface.
+// Chaque association ci-dessous existe reellement dans l'interface (page de depot, liste des annonces,
+// en-tete, pied de page, notification) ou dans le theme de connexion de Keycloak (k8s/config/keycloak-theme.css).
 const TEXT: Pair[] = [
   ['texte courant sur la page', 'ink', 'page'],
   ['texte courant sur une carte', 'ink', 'panel'],
@@ -44,25 +45,38 @@ const TEXT: Pair[] = [
   ['texte secondaire sur une carte', 'ink-muted', 'panel'],
   ['texte secondaire sur la page', 'ink-muted', 'page'],
   ['texte secondaire sur fond creuse', 'ink-muted', 'inset'],
+  ['aide de saisie sur une carte', 'ink-faint', 'panel'],
+  ['fil d ariane sur la page', 'ink-faint', 'page'],
   ['texte indicatif des champs', 'ink-faint', 'inset'],
-  ["sous-titre de l'en-tete", 'blood', 'panel'],
-  ['pastille « publiee »', 'moss', 'panel'],
-  ['pastille « en attente »', 'ember', 'panel'],
-  ['pastille « refusee »', 'blood', 'panel'],
-  ['pastille sur fond creuse', 'ember', 'inset'],
-  ['message de confirmation', 'moss', 'panel'],
+  ['lien sur la page', 'blood-text', 'page'],
+  ['lien sur une carte', 'blood-text', 'panel'],
+  ['lien sur fond creuse', 'blood-text', 'inset'],
+  ['rubrique courante et titres du pied de page sur une carte', 'gold', 'panel'],
+  ['signature de l enseigne sur la page', 'gold', 'page'],
+  ['type d annonce choisi sur fond creuse', 'gold', 'inset'],
+  ['pastille « publiee » ou « membre » sur une carte', 'success', 'panel'],
+  ['pastille « publiee » sur fond creuse', 'success', 'inset'],
+  ['pastille « en attente » sur une carte', 'warning', 'panel'],
+  ['pastille « en attente » sur fond creuse', 'warning', 'inset'],
+  ['icone de recherche sur son bouton dore', 'on-gold', 'gold'],
+  ['message de confirmation sur la notification', 'success', 'panel'],
 ];
 
 const NON_TEXT: Pair[] = [
   ['bordure de champ sur une carte', 'control', 'panel'],
   ['bordure de champ sur son propre fond', 'control', 'inset'],
-  ['bordure de champ au focus', 'blood', 'panel'],
+  ['bordure de champ sur la page', 'control', 'page'],
+  ['bordure de champ au focus', 'focus', 'panel'],
   ['aplat du bouton principal sur une carte', 'blood', 'panel'],
-  ['bordure de pastille « publiee »', 'moss', 'panel'],
-  ['bordure de pastille « en attente »', 'ember', 'panel'],
+  ['bordure de pastille « publiee »', 'success', 'panel'],
+  ['bordure de pastille « en attente »', 'warning', 'panel'],
+  ['cadre dore d une annonce en attente', 'gold', 'page'],
+  ['type d annonce choisi', 'gold', 'inset'],
+  ['bordure de la notification de confirmation', 'success', 'panel'],
   ['anneau de focus sur la page', 'focus', 'page'],
   ['anneau de focus sur une carte', 'focus', 'panel'],
   ['anneau de focus sur un champ', 'focus', 'inset'],
+  ['anneau de focus sur un bouton rouge', 'focus', 'blood'],
 ];
 
 describe('Palette : contraste du texte (WCAG 1.4.3, seuil AA 4.5:1)', () => {

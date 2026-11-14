@@ -1,5 +1,5 @@
 import { LogOut, Search, ShoppingCart } from 'lucide-react';
-import { NavLink } from 'react-router';
+import { Link } from 'react-router';
 import { CurrentUser, ROLE_MEMBER, logout } from '../auth';
 
 /**
@@ -111,11 +111,14 @@ export function Header({ user }: Readonly<{ user: CurrentUser }>) {
             </li>
           ))}
           <li>
-            {/* La rubrique courante porte aria-current="page" : l'information n'est pas portee
-                par la seule couleur, le gras et le trait sous le lien l'accompagnent. */}
-            <NavLink to="/" className={({ isActive }) => `lien-nav ${isActive ? 'lien-nav-actif' : ''}`} end={false}>
+            {/* Les deux pages du POC (depot, liste des annonces) font partie de l'espace membre : la
+                rubrique est donc toujours la rubrique courante, et pas seulement sur « / » (un
+                NavLink vers « / » ne serait pas actif sur « /mes-annonces »). Elle porte
+                aria-current="page" : l'information n'est pas portee par la seule couleur, le gras et
+                le trait sous le lien l'accompagnent. */}
+            <Link to="/" className="lien-nav lien-nav-actif" aria-current="page">
               Espace membre
-            </NavLink>
+            </Link>
           </li>
         </ul>
       </nav>

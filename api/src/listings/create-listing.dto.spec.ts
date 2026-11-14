@@ -54,6 +54,93 @@ describe('CreateListingDto', () => {
   it('refuse un etat inconnu', async () => {
     const { messages } = await check({ ...valid, condition: 'CASSE' });
 
-    expect(messages).toEqual(["l'état doit valoir NEW, GOOD ou FAIR"]);
+    expect(messages).toEqual(["l'état doit valoir NEW, VERY_GOOD, GOOD, FAIR ou FOR_PARTS"]);
+  });
+
+  it.each(['NEW', 'VERY_GOOD', 'GOOD', 'FAIR', 'FOR_PARTS'])('accepte l etat %s', async (condition) => {
+    const { messages } = await check({ ...valid, condition });
+
+    expect(messages).toEqual([]);
+  });
+
+  describe('type d annonce', () => {
+    it.each(['EXCHANGE', 'GIFT'])('accepte %s sans prix', async (kind) => {
+      const { messages } = await check({ ...valid, kind });
+
+      expect(messages).toEqual([]);
+    });
+
+    it('refuse un type inconnu', async () => {
+      const { messages } = await check({ ...valid, kind: 'TROC' });
+
+      expect(messages).toEqual(["le type d'annonce doit valoir EXCHANGE, GIFT ou SALE"]);
+    });
+
+    it('accepte une vente avec un prix en centimes envoye en texte (multipart)', async () => {
+      const { dto, messages } = await check({ ...valid, kind: 'SALE', priceCents: '4500' });
+
+      expect(messages).toEqual([]);
+      expect(dto.priceCents).toBe(4500);
+    });
+
+    it.each([
+      ['absent', undefined, 'le prix doit être un nombre entier de centimes'],
+      ['decimal', '12.5', 'le prix doit être un nombre entier de centimes'],
+      ['nul', '0', 'le prix doit être supérieur à zéro'],
+      ['trop grand', '1000000', 'le prix ne doit pas dépasser 999999 centimes'],
+    ])('refuse une vente dont le prix est %s', async (_label, priceCents, message) => {
+      const { messages } = await check({ ...valid, kind: 'SALE', priceCents });
+
+      expect(messages).toContain(message);
+    });
+
+    it('ignore le prix pour un echange : il n est pas valide', async () => {
+      const { messages } = await check({ ...valid, kind: 'EXCHANGE', priceCents: 'abc' });
+
+      expect(messages).toEqual([]);
+    });
+  });
+
+  describe('contrepartie et lieu de remise', () => {
+    it('retire les espaces de la contrepartie souhaitee', async () => {
+      const { dto, messages } = await check({ ...valid, wantedInExchange: '  Un Blu-ray  ' });
+
+      expect(messages).toEqual([]);
+      expect(dto.wantedInExchange).toBe('Un Blu-ray');
+    });
+
+    it.each(['wantedInExchange', 'handoverPlace'])('traite %s vide comme absent (champ multipart)', async (field) => {
+      const { dto, messages } = await check({ ...valid, [field]: '   ' });
+
+      expect(messages).toEqual([]);
+      expect(dto[field as 'wantedInExchange' | 'handoverPlace']).toBeUndefined();
+    });
+
+    it('refuse une contrepartie de plus de 120 caracteres', async () => {
+      const { messages } = await check({ ...valid, wantedInExchange: 'a'.repeat(121) });
+
+      expect(messages).toEqual(['la contrepartie souhaitée ne doit pas dépasser 120 caractères']);
+    });
+
+    it('refuse une contrepartie qui n est pas une chaine', async () => {
+      const { messages } = await check({ ...valid, wantedInExchange: 42 });
+
+      expect(messages).toContain('la contrepartie souhaitée doit être une chaîne de caractères');
+    });
+
+    it.each(['SHOP_ANGOULEME', 'SHOP_AIX', 'SHOP_LYON', 'SHOP_LONDON', 'TO_AGREE'])(
+      'accepte le lieu de remise %s',
+      async (handoverPlace) => {
+        const { messages } = await check({ ...valid, handoverPlace });
+
+        expect(messages).toEqual([]);
+      },
+    );
+
+    it('refuse un lieu de remise inconnu', async () => {
+      const { messages } = await check({ ...valid, handoverPlace: 'PARIS' });
+
+      expect(messages).toEqual(['le lieu de remise doit être un magasin de la liste ou TO_AGREE']);
+    });
   });
 });

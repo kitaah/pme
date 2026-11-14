@@ -29,6 +29,41 @@ describe('ModerationService', () => {
     );
   });
 
+  it('applique les valeurs par defaut a un message publie avant le depot enrichi (deploiement progressif)', async () => {
+    await service.enqueue(event);
+
+    expect(repository.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'EXCHANGE',
+        priceCents: null,
+        wantedInExchange: null,
+        handoverPlace: 'TO_AGREE',
+        photoKey: null,
+      }),
+    );
+  });
+
+  it('conserve le type, le prix, la contrepartie, le lieu et le chemin de la photo recus', async () => {
+    await service.enqueue({
+      ...event,
+      kind: 'SALE',
+      priceCents: 4500,
+      wantedInExchange: 'Un Blu-ray',
+      handoverPlace: 'SHOP_LYON',
+      photoKey: 'pending/abc.webp',
+    });
+
+    expect(repository.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'SALE',
+        priceCents: 4500,
+        wantedInExchange: 'Un Blu-ray',
+        handoverPlace: 'SHOP_LYON',
+        photoKey: 'pending/abc.webp',
+      }),
+    );
+  });
+
   it("est idempotent : une violation d'unicite (message rejoue) renvoie false", async () => {
     repository.insert.mockRejectedValue({ code: '23505' });
 
