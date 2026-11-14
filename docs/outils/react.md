@@ -110,7 +110,7 @@ envoyer au navigateur. L'image obtenue ne contient ni code source ni outil de d�
 
 ## Rôle dans le projet
 
-- Il constitue le front-end de la plateforme : dépôt d'une annonce et consultation de ses annonces.
+- Il constitue le front-end de la plateforme : dépôt d'une annonce (échange, don ou vente, avec une photo facultative) et consultation de ses annonces.
 - Il est séparé du back-end : les deux parties ne communiquent que par l'API REST, ce qui permet de faire évoluer
   l'interface sans toucher au back-end.
 - Il délègue la connexion à [Keycloak](keycloak.md) et ne manipule aucun mot de passe.
@@ -128,10 +128,12 @@ La page se compose des éléments suivants :
 
 | Composant | Rôle |
 |---|---|
-| **`App`** | Attend la fin de la connexion, récupère l'utilisateur, puis assemble la page. |
-| **`Header`** | Affiche le nom de l'utilisateur, ses rôles et le bouton de déconnexion. |
-| **`ListingForm`** | Formulaire de dépôt : titre, description, état de l'objet. Il affiche les erreurs renvoyées par l'API. |
-| **`MyListings`** | Liste les annonces du membre, avec leur statut de modération. |
+| **`App`** | Attend la fin de la connexion, récupère l'utilisateur, puis assemble la page et ses deux routes : le dépôt (`/`) et « Mes annonces » (`/mes-annonces`), grâce à React Router. |
+| **`Header`** | Affiche le logo, la navigation, le nom de l'utilisateur, ses rôles et le bouton de déconnexion. |
+| **`Footer`** | Pied de page : rubriques, mentions légales et lien d'accessibilité. |
+| **`ListingForm`** | Formulaire de dépôt : titre, description, type d'annonce, état, prix ou contrepartie, lieu de remise et photo. Il affiche les erreurs renvoyées par l'API et conserve la saisie. |
+| **`MyListings`** | Liste les annonces du membre, avec leur photo, leur type et leur statut de modération. |
+| **`ConfirmationToast`** | Notification « Annonce soumise pour validation ! », affichée après le dépôt, avant la redirection vers la liste. |
 | **`components/ui/`** | Composants de base issus de shadcn/ui, dont le bouton. |
 
 ## Fichiers et dossiers principaux
@@ -140,12 +142,13 @@ La page se compose des éléments suivants :
 |---|---|
 | **`frontend/src/main.tsx`** | Point d'entrée : lance l'application dans la page. |
 | **`frontend/src/App.tsx`** | Page principale, qui assemble les composants. |
-| **`frontend/src/components/`** | Les composants de la page : bandeau, formulaire, liste des annonces. |
+| **`frontend/src/components/`** | Les composants de la page : en-tête, pied de page, formulaire, liste des annonces, notification. |
 | **`frontend/src/components/ui/`** | Les composants de base de shadcn/ui. |
 | **`frontend/src/api.ts`** | Prépare les appels à l'API et y joint le jeton de l'utilisateur. |
 | **`frontend/src/auth.ts`** | Gère la connexion à Keycloak et le renouvellement du jeton. |
 | **`frontend/src/config.ts`** | Lit la configuration fournie au démarrage, dont l'adresse de Keycloak. |
-| **`frontend/src/styles.css`** | Déclare la palette du projet et les styles communs. |
+| **`frontend/src/styles.css`** | Déclare la palette « Nuit de festival », la police Roboto et les styles communs. |
+| **`frontend/public/fonts/`** | Les fichiers de la police Roboto, servis par le site lui-même. |
 | **`frontend/src/theme.test.ts`** | Vérifie le contraste de chaque association de couleurs utilisée. |
 | **`frontend/nginx.conf`** | Configure le serveur qui envoie l'interface au navigateur. |
 | **`frontend/package.json`** | Liste les dépendances et les commandes de l'interface. |

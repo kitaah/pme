@@ -82,7 +82,23 @@ spec:
     period: 1m
     burst: 50
 ---
-# Chaine de l'API et de la moderation : les traitements de reponse, la limitation de debit, puis la validation du jeton.
+# Taille maximale du corps d'une requete : 6 Mo. Le depot d'une annonce porte une photo de 5 Mo au
+# plus (api/src/listings/listings.controller.ts) ; le million d'octets restant couvre les champs
+# texte et l'encodage multipart. Au-dela, Traefik repond 413 sans solliciter l'API : un envoi
+# manifestement trop gros ne consomme ni memoire ni temps de calcul du service.
+# `memRequestBodyBytes` : au-dela de 1 Mo, Traefik ecrit le corps dans un fichier temporaire
+# plutot que de le garder en memoire.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: body-limit
+spec:
+  buffering:
+    maxRequestBodyBytes: 6291456
+    memRequestBodyBytes: 1048576
+---
+# Chaine de l'API et de la moderation : les traitements de reponse, la taille du corps, la
+# limitation de debit, puis la validation du jeton.
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
@@ -92,5 +108,6 @@ spec:
     middlewares:
       - name: hsts
       - name: compress
+      - name: body-limit
       - name: rate-limit
       - name: jwt

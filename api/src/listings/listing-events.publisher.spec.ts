@@ -1,4 +1,4 @@
-import { ListingCondition, ListingStatus } from './listing.enums';
+import { HandoverPlace, ListingCategory, ListingCondition, ListingKind, ListingStatus } from './listing.enums';
 import { Listing } from './listing.entity';
 import { LISTING_SUBMITTED_SUBJECT } from './listing-events';
 import { ListingEventsPublisher } from './listing-events.publisher';
@@ -12,6 +12,13 @@ describe('ListingEventsPublisher', () => {
     title: 'Figurine',
     description: 'Edition 2019',
     condition: ListingCondition.GOOD,
+    category: ListingCategory.FIGURINES,
+    kind: ListingKind.EXCHANGE,
+    priceCents: null,
+    wantedInExchange: null,
+    handoverPlace: HandoverPlace.TO_AGREE,
+    photoKey: null,
+    photoMime: null,
     status: ListingStatus.PENDING_MODERATION,
     createdAt: new Date('2026-11-04T10:00:00Z'),
   } as Listing;
@@ -37,10 +44,38 @@ describe('ListingEventsPublisher', () => {
       title: 'Figurine',
       description: 'Edition 2019',
       condition: 'GOOD',
+      category: 'FIGURINES',
+      kind: 'EXCHANGE',
+      handoverPlace: 'TO_AGREE',
       submittedAt: '2026-11-04T10:00:00.000Z',
     });
     // msgID = identifiant de l'annonce : NATS ignore un rejeu dans la fenetre de deduplication du flux
     expect(options).toMatchObject({ msgID: listing.id });
+  });
+
+  it('ajoute le prix, la contrepartie et le chemin de la photo quand ils existent, sans jamais publier la photo', async () => {
+    const publish = jest.fn().mockResolvedValue({ seq: 1, duplicate: false });
+    const publisher = new ListingEventsPublisher(fakeNats(publish));
+    const complete = {
+      ...listing,
+      kind: ListingKind.SALE,
+      priceCents: 4500,
+      wantedInExchange: 'Un Blu-ray',
+      handoverPlace: HandoverPlace.SHOP_LYON,
+      photoKey: 'pending/abc.webp',
+      photoMime: 'image/webp',
+    } as Listing;
+
+    await publisher.publishSubmitted(complete);
+
+    expect(JSON.parse(publish.mock.calls[0][1] as string)).toMatchObject({
+      kind: 'SALE',
+      priceCents: 4500,
+      wantedInExchange: 'Un Blu-ray',
+      handoverPlace: 'SHOP_LYON',
+      photoKey: 'pending/abc.webp',
+    });
+    expect(publish.mock.calls[0][1]).not.toContain('photoMime');
   });
 
   it("reessaie deux fois puis propage l'erreur si le broker reste injoignable", async () => {

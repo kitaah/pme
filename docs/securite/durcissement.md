@@ -5,7 +5,7 @@
 | Information | Détail |
 |---|---|
 | **Rôle** | Réduit ce qu'un attaquant pourrait faire s'il parvenait à exécuter du code dans un conteneur |
-| **Portée** | Les onze déploiements du namespace `pme` |
+| **Portée** | Les douze déploiements du namespace `pme` |
 | **Mesures clés** | Aucun droit d'administrateur, capacités retirées, disque en lecture seule, aucun jeton de cluster, politiques réseau |
 | **Contrôles automatiques** | Hadolint, container-structure-test (24 contrôles), Trivy |
 | **Limite connue** | Les connexions sortantes des pods ne sont pas filtrées : seules les entrées le sont |
@@ -133,6 +133,7 @@ deux.
 | **PostgreSQL** | 5432 | API, service de modération, Keycloak, Grafana, Adminer |
 | **NATS** | 4222 | API, service de modération |
 | **Keycloak** | 8080 | Ingress (Traefik : connexion et clés des jetons), API, service de modération, tâche d'administration |
+| **Garage** | 3900 | API (écriture des photos), Ingress (Traefik : lecture par URL signée). Le service de modération n'y a aucun accès, et le port d'administration (3903) n'est ouvert à personne |
 | **API** | 3000 | Ingress (Traefik), Prometheus |
 | **Service de modération** | 3001 | Ingress (Traefik), Prometheus |
 | **Interface** | 8080 | Ingress (Traefik) |
@@ -146,6 +147,10 @@ deux.
 Chaque règle ouvre aussi le port 15008 aux mêmes appelants : c'est celui du tunnel que le maillage utilise entre les
 pods. Le port de supervision de NATS (8222) n'est ouvert à personne. Les sondes de santé de Kubernetes ne sont pas
 bloquées, car le trafic d'un nœud vers ses propres pods est toujours autorisé. `make netpol-check` vérifie ce filtre.
+
+Garage reçoit les mêmes réglages que les autres composants (sans droit d'administrateur, capacités retirées, disque en lecture
+seule, aucun jeton de cluster) et son image est **épinglée par empreinte** (`sha256`) : la version vérifiée par la pipeline est
+exactement celle qui s'exécute, même si l'étiquette de l'image était un jour réécrite.
 
 **Des images qui n'embarquent que le nécessaire**
 Les trois images sont construites en plusieurs étapes : les premières installent et compilent, la dernière ne reçoit que le résultat. Les

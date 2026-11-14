@@ -32,6 +32,7 @@ theme:
 nav:
   - Accueil: index.md
   - Architecture: architecture.md
+  - "Conception : dépôt d'annonce": conception-depot-annonce.md
   - Commandes make: commandes-make.md
   - Outils:
       - Adminer: outils/adminer.md
@@ -39,6 +40,7 @@ nav:
       - Calico: outils/calico.md
       - cert-manager: outils/cert-manager.md
       - container-structure-test: outils/container-structure-test.md
+      - Garage: outils/garage.md
       - GitHub Actions: outils/github-actions.md
       - GitLab CI: outils/gitlab-ci.md
       - Grafana: outils/grafana.md
@@ -60,6 +62,7 @@ nav:
       - React: outils/react.md
       - Sealed Secrets: outils/sealed-secrets.md
       - shadcn/ui: outils/shadcn-ui.md
+      - sharp: outils/sharp.md
       - SonarCloud: outils/sonarcloud.md
       - Supertest: outils/supertest.md
       - Testcontainers: outils/testcontainers.md

@@ -3,13 +3,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { NatsClient, registry } from '@pme/common';
 import { DatabaseCircuitBreaker } from '../common/database-circuit-breaker';
 import { loadConfiguration } from '../config/configuration';
+import { StorageModule } from '../storage/storage.module';
 import { Listing } from './listing.entity';
 import { ListingEventsPublisher } from './listing-events.publisher';
 import { ListingsController } from './listings.controller';
 import { ListingsService } from './listings.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Listing])],
+  imports: [TypeOrmModule.forFeature([Listing]), StorageModule],
   controllers: [ListingsController],
   providers: [
     ListingsService,

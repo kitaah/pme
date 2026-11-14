@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { HandoverPlace, ListingCategory, ListingKind } from '@pme/common';
 import { Repository } from 'typeorm';
 import { ListingSubmittedEvent } from './listing-submitted.event';
 import { ModerationItem, ModerationStatus } from './moderation-item.entity';
@@ -27,6 +28,13 @@ export class ModerationService {
         title: event.title,
         description: event.description,
         condition: event.condition,
+        // Valeurs par defaut d'un message publie avant le depot enrichi (voir ListingSubmittedEvent).
+        category: event.category ?? ListingCategory.OTHER,
+        kind: event.kind ?? ListingKind.EXCHANGE,
+        priceCents: event.priceCents ?? null,
+        wantedInExchange: event.wantedInExchange ?? null,
+        handoverPlace: event.handoverPlace ?? HandoverPlace.TO_AGREE,
+        photoKey: event.photoKey ?? null,
         status: ModerationStatus.PENDING,
         submittedAt: new Date(event.submittedAt),
       });

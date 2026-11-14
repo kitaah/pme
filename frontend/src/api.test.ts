@@ -1,5 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { api, ApiError, CONDITION_LABELS, STATUS_LABELS } from './api';
+import {
+  api,
+  ApiError,
+  CATEGORY_LABELS,
+  CONDITION_LABELS,
+  HANDOVER_PLACE_LABELS,
+  KIND_LABELS,
+  NewListing,
+  STATUS_LABELS,
+  formatPrice,
+  toCents,
+} from './api';
 
 vi.mock('./auth', () => ({
   accessToken: vi.fn().mockResolvedValue('jeton-test'),
@@ -11,6 +22,14 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 describe('api', () => {
   const fetchMock = vi.fn();
+  const base: NewListing = {
+    title: 'Figurine',
+    description: 'Edition 2019',
+    condition: 'GOOD',
+    category: 'FIGURINES',
+    kind: 'EXCHANGE',
+    handoverPlace: 'TO_AGREE',
+  };
 
   beforeEach(() => {
     fetchMock.mockReset();
@@ -21,17 +40,42 @@ describe('api', () => {
     vi.unstubAllGlobals();
   });
 
-  it("depose une annonce en POST avec le jeton d'acces", async () => {
+  it("depose une annonce en POST multipart avec le jeton d'acces, sans en-tete Content-Type ecrit a la main", async () => {
     const created = { id: '1', title: 'Figurine' };
     fetchMock.mockResolvedValue(jsonResponse(created, 201));
-    const body = { title: 'Figurine', description: 'Edition 2019', condition: 'GOOD' as const };
 
-    await expect(api.createListing(body)).resolves.toEqual(created);
+    await expect(api.createListing(base)).resolves.toEqual(created);
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('/api/v1/listings');
     expect(init.method).toBe('POST');
-    expect(init.body).toBe(JSON.stringify(body));
+    expect(init.body).toBeInstanceOf(FormData);
+    expect(init.headers).toEqual({ Authorization: 'Bearer jeton-test' });
+    const form = init.body as FormData;
+    expect([...form.keys()]).toEqual(['title', 'description', 'condition', 'category', 'kind', 'handoverPlace']);
+    expect(form.get('category')).toBe('FIGURINES');
+    expect(form.get('kind')).toBe('EXCHANGE');
+    expect(form.get('handoverPlace')).toBe('TO_AGREE');
+  });
+
+  it('n envoie le prix, la contrepartie et la photo que lorsqu ils sont renseignes', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ id: '1' }, 201));
+    const photo = new File(['contenu'], 'photo.png', { type: 'image/png' });
+
+    await api.createListing({ ...base, kind: 'SALE', priceCents: 4500, wantedInExchange: 'Un Blu-ray', photo });
+
+    const form = (fetchMock.mock.calls[0] as [string, RequestInit])[1].body as FormData;
+    expect(form.get('priceCents')).toBe('4500');
+    expect(form.get('wantedInExchange')).toBe('Un Blu-ray');
+    expect(form.get('photo')).toBeInstanceOf(File);
+  });
+
+  it('ne reecrit pas un en-tete Content-Type fourni par l appelant pour une requete JSON', async () => {
+    fetchMock.mockResolvedValue(jsonResponse([]));
+
+    await api.myListings();
+
+    const init = (fetchMock.mock.calls[0] as [string, RequestInit])[1];
     expect(init.headers).toMatchObject({ Authorization: 'Bearer jeton-test', 'Content-Type': 'application/json' });
   });
 
@@ -62,13 +106,77 @@ describe('api', () => {
     expect(error).toMatchObject({ status: 502, message: 'Erreur 502', errors: [] });
   });
 
+  it.each([
+    [413, 'La photo est trop lourde : 5 Mo au maximum.'],
+    [415, "Le fichier envoyé n'est pas une image exploitable. Formats acceptés : JPEG, PNG ou WebP."],
+  ])('explique l erreur %i renvoyee sans corps JSON (ingress ou limite de taille)', async (status, message) => {
+    fetchMock.mockResolvedValue(new Response('', { status }));
+
+    const error = await api.createListing(base).catch((e: unknown) => e);
+
+    expect(error).toMatchObject({ status, message });
+  });
+
   it("n'a aucune erreur de validation par defaut", () => {
     expect(new ApiError(500, 'oups').errors).toEqual([]);
   });
+});
 
-  it('fournit un libelle francais pour chaque etat et chaque statut', () => {
-    expect(CONDITION_LABELS).toEqual({ NEW: 'Neuf', GOOD: 'Bon état', FAIR: 'État correct' });
+describe('libelles', () => {
+  it('fournit un libelle francais pour chacune des huit categories', () => {
+    expect(CATEGORY_LABELS).toEqual({
+      FIGURINES: 'Figurines et statues',
+      FILMS: 'Films',
+      BOOKS: 'Livres et fanzines',
+      POSTERS: 'Affiches et goodies',
+      MUSIC: 'Musique',
+      GAMES: 'Jeux',
+      CLOTHING: 'Vêtements',
+      OTHER: 'Autres',
+    });
+  });
+
+  it('fournit un libelle francais pour chacun des quatre etats', () => {
+    expect(CONDITION_LABELS).toEqual({
+      NEW: 'Neuf',
+      VERY_GOOD: 'Très bon état',
+      GOOD: 'Bon état',
+      FAIR: 'Satisfaisant',
+    });
+  });
+
+  it('fournit un libelle pour chaque type d annonce, lieu de remise et statut', () => {
+    expect(KIND_LABELS).toEqual({ EXCHANGE: 'Échange', GIFT: 'Don', SALE: 'Vente' });
+    expect(Object.keys(HANDOVER_PLACE_LABELS)).toEqual([
+      'SHOP_ANGOULEME',
+      'SHOP_AIX',
+      'SHOP_LYON',
+      'SHOP_LONDON',
+      'TO_AGREE',
+    ]);
+    expect(HANDOVER_PLACE_LABELS.TO_AGREE).toBe('À convenir avec le membre');
     expect(Object.keys(STATUS_LABELS)).toEqual(['PENDING_MODERATION', 'PUBLISHED', 'REJECTED']);
     expect(STATUS_LABELS.PUBLISHED).toBe('Publiée');
+  });
+});
+
+describe('prix', () => {
+  it('affiche un prix en euros a partir des centimes', () => {
+    expect(formatPrice(4500).replace(/\s/g, ' ')).toBe('45,00 €');
+  });
+
+  it.each([
+    ['45', 4500],
+    ['45,5', 4550],
+    ['45.50', 4550],
+    ['  12,34 ', 1234],
+    ['0,01', 1],
+    ['9999,99', 999999],
+  ])('convertit « %s » en %i centimes', (input, cents) => {
+    expect(toCents(input)).toBe(cents);
+  });
+
+  it.each(['', 'abc', '0', '-5', '10000', '1e9'])('refuse « %s » comme prix', (input) => {
+    expect(toCents(input)).toBeUndefined();
   });
 });

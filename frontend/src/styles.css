@@ -19,41 +19,86 @@
  */
 @import 'tailwindcss';
 
+/*
+ * ---- Police ----
+ * Roboto, servie par le site lui-meme (frontend/public/fonts) : aucune requete vers un service
+ * de polices tiers, ce que la politique de securite du contenu interdit de toute facon
+ * (frontend/nginx.conf). Memes fichiers que la documentation (docs/assets/fonts) et que le theme
+ * de connexion de Keycloak, pour que les trois surfaces s'affichent a l'identique.
+ * `font-display: swap` : le texte s'affiche tout de suite dans une police de secours.
+ */
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/roboto-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/roboto-latin-500-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/roboto-latin-700-normal.woff2') format('woff2');
+}
+
+/*
+ * ---- Palette « Nuit de festival » ----
+ * Theme sombre. Les contrastes indiques sont calcules selon la formule WCAG 2.1 : seuil de 4.5:1
+ * pour le texte, 3:1 pour ce qui identifie un composant (bordure de champ, anneau de focus).
+ */
 @theme {
-  /* ---- Surfaces : theme clair, du fond de page au creux des champs ---- */
-  --color-page: #faf8f5;
-  --color-panel: #ffffff;
-  --color-inset: #f3efe9;
+  /* ---- Surfaces : du fond de page au creux des champs ---- */
+  --color-page: #110c16;
+  --color-panel: #1b1522;
+  --color-inset: #271e30;
 
   /* ---- Bordures : deux roles distincts ----
      WCAG 1.4.11 n'exige 3:1 que pour ce qui est NECESSAIRE a l'identification d'un composant.
-     --color-control borde les champs et les boutons : il doit atteindre ce seuil (4.8:1 ici).
+     --color-control borde les champs et les boutons-icones : il doit atteindre ce seuil
+     (5.0:1 sur le fond de page, 6.0:1 dans un champ).
      --color-line ne sert qu'a separer visuellement des blocs deja identifiables par leur
      fond (cartes, elements de liste) : purement decoratif, hors exigence. */
-  --color-control: #78716c;
-  --color-line: #e7e2db;
+  --color-control: #9a8aa8;
+  --color-line: #3b2f47;
 
   /* ---- Textes ---- */
-  --color-ink: #1c1917;
-  --color-ink-muted: #57534e;
-  --color-ink-faint: #6b6560;
+  --color-ink: #f5f0f7;
+  --color-ink-muted: #d4c9dc;
+  --color-ink-faint: #b8aac5;
 
-  /* ---- Accent : rouge profond, identite du site.
-     Sur fond clair, la meme nuance convient en texte (7.3:1 sur blanc) et en aplat
-     avec du texte blanc (7.3:1) : un seul jeton suffit, contrairement a un theme sombre. */
-  --color-blood: #a4262c;
-  --color-blood-dark: #8c1f24;
+  /* ---- Accent rouge, identite du site ----
+     Sur fond sombre, un aplat et un texte ne peuvent pas partager la meme nuance :
+     --color-blood est un FOND (texte blanc dessus : 5.3:1), --color-blood-text un TEXTE
+     (9.6:1 sur le fond de page). Le rouge sombre ne depasserait jamais 4.5:1 en texte. */
+  --color-blood: #c9303f;
+  --color-blood-dark: #a82533;
+  --color-blood-text: #ff9aa3;
+
+  /* ---- Accent dore : sous-titres, rubrique courante, titres du pied de page ---- */
+  --color-gold: #e6b450;
+  --color-on-gold: #110c16;
 
   /* ---- Etats d'une annonce ---- */
-  --color-moss: #1e6b3f;
-  --color-ember: #8a5300;
+  --color-success: #7fdba5;
+  --color-warning: #f2b866;
 
-  /* ---- Indicateur de focus (WCAG 2.4.7) : bleu, seule teinte qui tranche
-     a la fois sur le fond creme, le blanc des cartes et le rouge des boutons ---- */
-  --color-focus: #1d4ed8;
+  /* ---- Indicateur de focus (WCAG 2.4.7) : jaune chaud, seule teinte qui tranche a la fois
+     sur les trois surfaces sombres (11.4:1 a 13.7:1) ET sur le rouge des boutons (3.8:1) ---- */
+  --color-focus: #ffd479;
 
-  /* Titres en serif : rappel des affiches de films d'epouvante */
-  --font-display: Georgia, 'Times New Roman', serif;
+  /* Une seule police pour tout le site, y compris la page de connexion de Keycloak */
+  --font-sans: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
 }
 
 /*
@@ -109,7 +154,7 @@
 
 @layer base {
   html {
-    color-scheme: light;
+    color-scheme: dark;
   }
 
   body {
@@ -118,10 +163,10 @@
 
   h1,
   h2 {
-    @apply font-display;
+    @apply font-display font-bold;
   }
 
-  /* Anneau de focus unique pour tout le site, au moins 3:1 sur les trois surfaces */
+  /* Anneau de focus unique pour tout le site, au moins 3:1 sur les surfaces comme sur le rouge */
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-focus;
   }
@@ -137,11 +182,16 @@
   }
 
   .label {
-    @apply mt-3 mb-1 block text-sm text-ink-muted;
+    @apply mt-3 mb-1 block text-sm font-medium text-ink;
+  }
+
+  /* Aide de saisie sous un champ : le nombre de caracteres attendus, le format accepte. */
+  .hint {
+    @apply mt-1 text-sm text-ink-faint;
   }
 
   .field {
-    @apply w-full rounded-md border border-control bg-inset px-3 py-2 text-ink transition-colors placeholder:text-ink-faint focus:border-blood;
+    @apply w-full rounded-md border border-control bg-inset px-3 py-2 text-ink transition-colors placeholder:text-ink-faint focus:border-focus;
   }
 
   .btn {
@@ -152,12 +202,59 @@
     @apply rounded-md p-1 text-ink-muted underline transition-colors hover:text-ink;
   }
 
-  /* Pastille : role, statut d'annonce. La couleur vient du composant. */
+  /* Bouton reduit a une icone (deconnexion, panier) : la bordure l'identifie comme un bouton
+     (WCAG 1.4.11), et un nom accessible est obligatoire sur chacun (aria-label). */
+  .btn-icon {
+    @apply inline-flex size-11 items-center justify-center rounded-md border border-control bg-panel text-ink-muted transition-colors hover:bg-inset hover:text-ink;
+  }
+
+  /* Rubrique du menu principal. La rubrique courante ne se distingue pas par la seule couleur :
+     elle porte aussi le gras et un soulignement (RGAA 3.1). */
+  .lien-nav {
+    @apply inline-block border-b-[3px] border-transparent py-3.5 text-[15px] text-ink no-underline transition-colors hover:border-gold hover:text-gold;
+  }
+
+  .lien-nav-actif {
+    @apply border-gold font-semibold text-gold;
+  }
+
+  .lien-pied {
+    @apply text-sm text-ink-muted no-underline underline-offset-4 transition-colors hover:text-gold hover:underline;
+  }
+
+  /* Pastille : role, statut d'annonce, type d'annonce. La couleur vient du composant. */
   .pill {
-    @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium;
   }
 
   .notice {
     @apply mt-4 rounded-md border-l-4 px-3 py-2 text-sm;
+  }
+}
+
+/* Barre de temps restant de la notification : se vide en autant de temps que la notification
+   reste affichee (TOAST_DURATION_MS). Elle ne porte aucune information : le message se suffit. */
+@keyframes toast-progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0;
+  }
+}
+
+.toast-progress {
+  animation: toast-progress 8s linear forwards;
+}
+
+[data-sonner-toast]:hover .toast-progress,
+[data-sonner-toast]:focus-within .toast-progress {
+  animation-play-state: paused;
+}
+
+/* Mouvement reduit : la barre reste pleine, sans animation (WCAG 2.3.3). */
+@media (prefers-reduced-motion: reduce) {
+  .toast-progress {
+    animation: none;
   }
 }

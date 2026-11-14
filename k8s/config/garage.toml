@@ -1,0 +1,28 @@
+# Configuration de Garage (stockage objet compatible S3), montee dans /etc/garage.toml.
+# Les secrets ne sont PAS ici : ils viennent du Secret chiffre, par les variables
+# GARAGE_RPC_SECRET et GARAGE_ADMIN_TOKEN (voir k8s/03-garage.yaml).
+
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "sqlite"
+
+# Un seul exemplaire : aucune copie de secours des objets. Suffisant pour le POC, ou le volume
+# survit au redemarrage du pod ; un hebergeur de production repliquerait sur trois noeuds.
+replication_factor = 1
+
+# Echanges entre processus Garage. Un seul ici : l'adresse publique est donc celle du pod lui-meme,
+# ce qui permet aussi d'utiliser la ligne de commande `garage` depuis le conteneur (make garage-init).
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "127.0.0.1:3901"
+
+# Interface S3 : c'est elle que joignent l'API (en interne) et le navigateur (par l'ingress).
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+# Adressage par chemin (https://garage.localhost/pme-photos/...) : aucun sous-domaine par depot
+# a declarer dans le certificat ni dans /etc/hosts. L'API est configuree de meme (forcePathStyle).
+root_domain = ".s3.garage.localhost"
+
+# API d'administration : creation du depot et de la cle d'acces (make garage-init), et sonde /health.
+[admin]
+api_bind_addr = "[::]:3903"

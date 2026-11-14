@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Rend illisible et infalsifiable tout ce qui circule, du navigateur jusqu'à la base de données |
 | **Outils** | [cert-manager](../outils/cert-manager.md) 1.18.2, autorité de certification locale ; [Istio](../outils/istio.md) 1.30.0, maillage en mode ambient |
-| **Portée externe** | HTTPS sur les six noms d'hôte, HTTP redirigé vers HTTPS, en-tête HSTS de sept jours |
+| **Portée externe** | HTTPS sur les sept noms d'hôte, HTTP redirigé vers HTTPS, en-tête HSTS de sept jours |
 | **Portée interne** | mTLS entre tous les pods du namespace `pme` et de l'ingress par [Istio](../outils/istio.md), autorisation par identité de chaque appel, puis TLS jusqu'à PostgreSQL et jusqu'à NATS, avec vérification du nom du serveur |
 | **Certificats** | Clés ECDSA P-256, valables 90 jours, renouvelées 15 jours avant l'échéance |
 
@@ -105,7 +105,7 @@ chaine: "" {
 
 | Mesure | Détail |
 |---|---|
-| **HTTPS sur tous les noms** | Un certificat unique couvre les six noms d'hôte de l'ingress. |
+| **HTTPS sur tous les noms** | Un certificat unique couvre les sept noms d'hôte de l'ingress. |
 | **Redirection du HTTP** | Une requête en HTTP est redirigée vers HTTPS, elle n'est jamais servie en clair. |
 | **En-tête HSTS** | Pendant sept jours, le navigateur qui a déjà visité un nom n'utilise plus que HTTPS, même si l'adresse saisie commence par `http://`. |
 | **Renouvellement automatique** | cert-manager renouvelle 15 jours avant l'échéance, sans intervention. |
@@ -118,6 +118,7 @@ chaine: "" {
 | **Entre pods** | mTLS par le maillage Istio : chaque connexion est chiffrée et chaque pod porte une identité. Le mode strict refuse toute connexion qui n'arrive pas en mTLS, par exemple celle d'un pod placé hors du maillage. Les politiques d'autorisation refusent ensuite tout appel dont l'identité n'est pas listée pour le composant visé. |
 | **Vers PostgreSQL** | TLS obligatoire côté serveur : les règles d'accès n'acceptent que des connexions chiffrées, et le mot de passe est contrôlé par SCRAM-SHA-256, qui ne le fait jamais circuler. |
 | **Vers NATS** | TLS, avec une version minimale fixée à **1.3**. Sans ce réglage, le serveur accepterait encore TLS 1.2. Le port de supervision (8222) est servi en HTTPS avec le même certificat. |
+| **Vers Garage** | Garage n'a pas de TLS propre : l'écriture des photos par l'API passe dans le tunnel mTLS du maillage, et seuls l'API et l'ingress sont autorisés (identité et étiquette). La lecture par le navigateur, elle, arrive en HTTPS sur `garage.localhost`, par une adresse signée. |
 | **Vérification du nom** | L'API, le service de modération, Keycloak et Grafana vérifient que le certificat présenté a bien été émis pour le serveur qu'ils appellent, et non seulement qu'il est signé par l'autorité. |
 
 Le point important du côté de PostgreSQL est que l'obligation est **posée par le serveur**, et non laissée à la
@@ -195,7 +196,7 @@ depuis un autre pod avec `sslmode=disable` est rejetée par le serveur, avant m�
 | Fichier ou dossier | Description |
 |---|---|
 | **`k8s/cert-manager/issuers.yaml`** | Déclare l'autorité locale et son émetteur. |
-| **`k8s/08-certificate.yaml`** | Certificat unique des six noms d'hôte de l'ingress. |
+| **`k8s/08-certificate.yaml`** | Certificat unique des sept noms d'hôte de l'ingress. |
 | **`k8s/00-internal-tls.yaml`** | Certificats de PostgreSQL et de NATS. |
 | **`k8s/istio/`** | Réglages des quatre charts Helm d'Istio, avec des ressources réduites pour Minikube. |
 | **`k8s/namespace.yaml`** | Porte le label qui enrôle le namespace `pme` dans le maillage. |

@@ -72,8 +72,8 @@ C'est le principe du **GitOps** : le dépôt décrit l'état attendu du cluster,
 
 ## Rôle dans le projet
 
-- Il protège les huit valeurs du secret `pme-secrets` : identifiants et mots de passe de PostgreSQL, NATS, Keycloak et
-  Grafana.
+- Il protège les douze valeurs du secret `pme-secrets` : identifiants et mots de passe de PostgreSQL, NATS, Keycloak et
+  Grafana, et les quatre secrets de [Garage](garage.md).
 - Il permet de versionner le fichier chiffré avec les autres manifestes, et donc de le déployer par la même commande.
 - Il garantit qu'une fuite du dépôt n'expose aucun mot de passe.
 - Il évite de recréer le Secret à la main sur chaque poste, étape oubliée tôt ou tard.
@@ -90,7 +90,7 @@ Le projet applique par ailleurs quelques règles d'hygiène, qui valent indépen
 
 !!! note "À savoir"
     Vault gère des secrets dynamiques, leur rotation et leur audit, au prix d'un service supplémentaire à installer,
-    initialiser, desceller et sauvegarder. Pour huit valeurs fixes de démonstration, Sealed Secrets suffit et tient en
+    initialiser, desceller et sauvegarder. Pour douze valeurs fixes de démonstration, Sealed Secrets suffit et tient en
     deux commandes. Vault deviendrait pertinent si les secrets devaient tourner régulièrement ou être distribués à de
     nombreuses applications.
 
@@ -103,7 +103,7 @@ Le projet applique par ailleurs quelques règles d'hygiène, qui valent indépen
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/14-pme-secrets-sealed.yaml`** | Contient les huit valeurs chiffrées. C'est le fichier versionné. |
+| **`k8s/14-pme-secrets-sealed.yaml`** | Contient les douze valeurs chiffrées. C'est le fichier versionné. |
 | **`.env`** | Contient les identifiants et les mots de passe en clair. Ce fichier est exclu de Git. |
 | **`env.example`** | Sert de modèle pour `.env`. Il est versionné et ne contient aucune vraie valeur. |
 | **`k8s/kustomization.yaml`** | Ajoute le fichier chiffré aux manifestes déployés. |
@@ -127,7 +127,7 @@ La mise en place se fait une fois par poste et par cluster :
 1. Lancer `make kubeseal`, qui installe l'outil `kubeseal` en version 0.41.2 s'il est absent (mot de passe administrateur demandé). Le contrôleur est installé à la même version.
 2. Lancer n'importe quelle commande `make` : le fichier `.env` est créé à partir de `env.example`, sans jamais écraser
    un fichier existant.
-3. Remplacer chaque valeur `CHANGE_ME` par un vrai mot de passe. `make seal` refuse de chiffrer le modèle tel quel.
+3. Remplacer chaque valeur `CHANGE_ME` par un vrai mot de passe, hormis les quatre secrets de Garage que `make seal` génère. `make seal` refuse de chiffrer le modèle tel quel.
 4. Lancer `make deploy`, qui installe le contrôleur et génère le fichier chiffré.
 5. Versionner `k8s/14-pme-secrets-sealed.yaml`.
 

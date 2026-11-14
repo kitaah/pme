@@ -167,8 +167,8 @@ L'interface peut ainsi afficher un message utile sans deviner la structure de la
 - Il applique les règles de gestion et vérifie les droits de chaque utilisateur, à partir du jeton délivré par
   [Keycloak](keycloak.md). L'API ne gère ni compte ni mot de passe.
 - Il assure la fiabilité du dépôt d'une annonce :
-    - **Compensation** : une annonce enregistrée mais jamais annoncée au service de modération est retirée, et le membre
-      reçoit une erreur explicite.
+    - **Compensation** : une annonce enregistrée mais jamais annoncée au service de modération est retirée, avec sa photo,
+      et le membre reçoit une erreur explicite.
     - **Disjoncteur** : lorsque PostgreSQL ne répond plus, l'API cesse d'attendre et répond immédiatement en 503, au
       lieu de laisser les demandes s'accumuler (voir [Opossum](opossum.md)).
     - **Reprise** : si la base n'est pas encore disponible au démarrage, l'API retente la connexion dix fois avant
@@ -183,7 +183,7 @@ Les adresses exposées sont les suivantes :
 
 | Adresse | Qui peut l'appeler | Description |
 |---|---|---|
-| **`POST /api/v1/listings`** | Rôle `membre` | Dépose une annonce et la place en attente de modération. |
+| **`POST /api/v1/listings`** | Rôle `membre` | Dépose une annonce, avec une photo facultative (`multipart/form-data`), et la place en attente de modération. |
 | **`GET /api/v1/listings/mine`** | Rôle `membre` | Renvoie les annonces du membre, les plus récentes d'abord, 50 par défaut et 100 au maximum. |
 | **`GET /api/v1/moderation/queue`** | Rôle `moderateur` | Renvoie la file des annonces à relire. Cette adresse appartient au service de modération. |
 | **`GET /api/health/liveness`** | Kubernetes | Indique que l'application est vivante. |
@@ -201,6 +201,11 @@ La configuration est lue dans des variables d'environnement, fournies par Kubern
 | **`NATS_TLS_CA`** | absente | Même principe pour la connexion à NATS. |
 | **`KEYCLOAK_ISSUER`** | obligatoire | Émetteur attendu dans le jeton. |
 | **`KEYCLOAK_JWKS_URI`** | obligatoire | Adresse à laquelle l'API récupère les clés publiques de Keycloak. |
+| **`S3_ENDPOINT`** | `http://localhost:3900` | Adresse du stockage des photos, utilisée par l'API pour écrire (voir [Garage](garage.md)). |
+| **`S3_PUBLIC_ENDPOINT`** | celle de `S3_ENDPOINT` | Adresse que voit le navigateur : l'URL signée est calculée pour elle. |
+| **`S3_BUCKET`**, **`S3_REGION`** | `pme-photos`, `garage` | Bucket et région du stockage. |
+| **`S3_ACCESS_KEY`**, **`S3_SECRET_KEY`** | absentes | Clé d'accès de l'API. Sans elles, le dépôt avec photo répond 503. |
+| **`S3_URL_TTL`** | 300 | Durée de validité d'une URL signée, en secondes. |
 
 !!! note "À savoir"
     Le schéma de la base n'est jamais déduit du code : il est décrit par des migrations, jouées au démarrage. Une
@@ -213,7 +218,8 @@ La configuration est lue dans des variables d'environnement, fournies par Kubern
 |---|---|
 | **`api/src/main.ts`** | Point d'entrée de l'API : démarre l'application et règle sa sécurité. |
 | **`api/src/app.module.ts`** | Module principal : assemble les autres modules, la connexion à la base et les contrôles d'entrée. |
-| **`api/src/listings/`** | Module des annonces : réception, contrôle, enregistrement et publication de l'événement. |
+| **`api/src/listings/`** | Module des annonces : réception (JSON ou multipart), contrôle, enregistrement et publication de l'événement. |
+| **`api/src/storage/`** | Stockage des photos : ré-encodage, enregistrement dans Garage, suppression et URL signées. |
 | **`api/src/auth/`** | Module d'authentification : il branche les gardes du module commun. |
 | **`api/src/common/`** | Disjoncteur de la base. |
 | **`libs/common/`** | Module commun `@pme/common`, partagé avec la modération : vérification du jeton et des rôles, mise en forme des erreurs (RFC 9457), mesures, client NATS et lecture de la configuration. |

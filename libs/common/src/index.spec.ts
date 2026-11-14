@@ -6,9 +6,13 @@ describe('API publique de @pme/common', () => {
       expect.arrayContaining([
         'APP_CONFIG',
         'CurrentUser',
+        'HandoverPlace',
         'IS_PUBLIC_KEY',
         'JwtAuthGuard',
         'JwtStrategy',
+        'ListingCategory',
+        'ListingCondition',
+        'ListingKind',
         'NatsClient',
         'ProblemDetailsFilter',
         'Public',

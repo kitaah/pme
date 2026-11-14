@@ -2,7 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { AuthenticatedUser } from '@pme/common';
 import { CreateListingDto } from './create-listing.dto';
 import { ListingCondition } from './listing.enums';
-import { ListingsController } from './listings.controller';
+import { ListingsController, MAX_PHOTO_BYTES } from './listings.controller';
 import { ListingsService } from './listings.service';
 
 describe('ListingsController', () => {
@@ -20,7 +20,21 @@ describe('ListingsController', () => {
     service.submit.mockResolvedValue({ id: 'l1' });
 
     await expect(controller.create(user, dto)).resolves.toEqual({ id: 'l1' });
-    expect(service.submit).toHaveBeenCalledWith(user, dto);
+    expect(service.submit).toHaveBeenCalledWith(user, dto, undefined);
+  });
+
+  it('transmet au service le contenu de la photo jointe, et lui seul', async () => {
+    const dto: CreateListingDto = { title: 'Figurine', description: 'Edition 2019', condition: ListingCondition.GOOD };
+    const photo = { buffer: Buffer.from('contenu'), size: 7, mimetype: 'image/png' };
+    service.submit.mockResolvedValue({ id: 'l2' });
+
+    await controller.create(user, dto, photo);
+
+    expect(service.submit).toHaveBeenCalledWith(user, dto, photo.buffer);
+  });
+
+  it('limite la photo a 5 Mo, en dessous du plafond de 6 Mo de Traefik', () => {
+    expect(MAX_PHOTO_BYTES).toBe(5 * 1024 * 1024);
   });
 
   it.each([

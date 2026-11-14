@@ -6,9 +6,10 @@
 |---|---|
 | **Style** | Deux services applicatifs séparés, qui communiquent par messages plutôt qu'en s'appelant directement |
 | **Périmètre** | Le parcours d'un membre : connexion, dépôt d'une annonce, prise en charge par le service de modération |
-| **Composants déployés** | Onze dans le namespace `pme`, plus Traefik dans son propre namespace, sur un cluster Minikube |
+| **Composants déployés** | Douze dans le namespace `pme`, plus Traefik dans son propre namespace, sur un cluster Minikube |
 | **Point d'entrée unique** | Traefik, qui termine le HTTPS, limite le débit et contrôle les jetons sous `/api/v1`, puis répartit selon le nom d'hôte et le chemin |
 | **Bases de données** | Une seule instance PostgreSQL, quatre bases : `pme`, `moderation`, `keycloak`, `grafana` |
+| **Stockage des fichiers** | Garage (compatible S3), bucket `pme-photos` : une photo par annonce, jamais dans la base |
 | **Messagerie** | NATS JetStream, flux `LISTINGS`, sujet `listing.submitted` |
 | **Déploiement** | `kubectl apply -k k8s/` (Kustomize), ordre imposé par les préfixes numériques des manifestes |
 
@@ -33,7 +34,7 @@ fonctionner, et les messages publiés pendant son absence l'attendent dans le fl
 **La contrepartie : il faut garantir que l'événement part.**
 Une annonce enregistrée dont l'événement n'aurait pas été publié resterait invisible pour toujours : aucun modérateur
 ne la verrait. L'API traite donc ce cas explicitement. Si la publication échoue malgré ses tentatives, elle efface
-l'annonce qu'elle venait d'écrire et répond `503` au membre, avec un message qui l'invite à réessayer. Mieux vaut un
+l'annonce qu'elle venait d'écrire, ainsi que sa photo, et répond `503` au membre, avec un message qui l'invite à réessayer. Mieux vaut un
 dépôt refusé qu'une annonce fantôme.
 
 ### Le périmètre du POC
@@ -44,7 +45,7 @@ s'appuie sur des briques précises :
 | Étape | Ce que l'on montre | Briques |
 |---|---|---|
 | **Connexion** | Le membre est redirigé vers la page de connexion de Keycloak, s'authentifie, puis revient sur l'interface où son nom d'utilisateur et son rôle « Membre » s'affichent. | Keycloak, React |
-| **Dépôt de l'annonce** | Le membre remplit le formulaire (titre, description, état). Traefik limite le débit et vérifie le jeton, puis l'API revérifie le jeton, le rôle et les données, et l'annonce s'affiche dans « Mes annonces » au statut « En attente de modération ». | Traefik, React, NestJS |
+| **Dépôt de l'annonce** | Le membre remplit le formulaire : titre, description, type d'annonce (échange, don ou vente), contrepartie souhaitée ou prix selon le type, état, lieu de remise et une photo facultative. Traefik limite le débit et la taille du corps de la requête, et vérifie le jeton. L'API revérifie le jeton, le rôle et les données, contrôle et ré-encode la photo, l'enregistre dans le stockage objet, puis écrit l'annonce. Une notification confirme la soumission et le membre est redirigé vers « Mes annonces », où l'annonce apparaît au statut « En attente de modération », photo comprise. | Traefik, React, NestJS, Garage |
 | **Prise en charge par la modération** | L'API répond sans attendre la modération. L'événement « annonce soumise » est conservé dans le flux JetStream, et le service de modération, séparé de l'API, le consomme (visible dans ses logs). | NATS, NestJS |
 | **Tout le parcours** | Les composants tournent ensemble sur Minikube. | Minikube |
 
@@ -104,11 +105,13 @@ cluster: "Cluster Minikube" {
       keycloak: "Keycloak\nidentités et jetons" {class: boite}
       nats: "NATS JetStream\nflux LISTINGS" {class: boite}
       postgres: "PostgreSQL\nbases pme, moderation,\nkeycloak, grafana" {class: donnee}
+      garage: "Garage\nstockage objet S3\nphotos des annonces" {class: donnee}
     }
 
     applicatif.api -> socle.nats: publie listing.submitted
     socle.nats -> applicatif.moderation: consomme
     applicatif.api -> socle.postgres
+    applicatif.api -> socle.garage: enregistre la photo
     applicatif.moderation -> socle.postgres
     socle.keycloak -> socle.postgres
   }
@@ -117,6 +120,7 @@ cluster: "Cluster Minikube" {
   entree.traefik -> pme.applicatif.api
   entree.traefik -> pme.applicatif.moderation
   entree.traefik -> pme.socle.keycloak: connexion et clés\nde vérification
+  entree.traefik -> pme.socle.garage: lecture des photos\n(URL signée)
 }
 
 navigateur -> cluster.entree.traefik: HTTPS
@@ -124,6 +128,16 @@ navigateur -> cluster.entree.traefik: HTTPS
 
 Traefik, l'API et le service de modération lisent chacun les clés publiques de Keycloak pour vérifier les jetons : le schéma ne
 trace que la flèche de Traefik, qui est la seule à traverser un namespace.
+
+**Les photos ne sont pas dans la base.** Une image de plusieurs méga-octets dans une colonne alourdirait chaque
+sauvegarde et chasserait les données utiles du cache de PostgreSQL. Elles vont donc dans un stockage objet, le
+conteneur « Stockage de fichiers » que prévoyait déjà le niveau 2 du C4 : **Garage**, compatible S3, tient ici le rôle
+que jouera un hébergeur européen en production. Seule l'API y écrit ; la base ne garde que le chemin de l'objet.
+Le navigateur lit l'image directement, par une URL signée valable cinq minutes que l'API calcule : la photo d'une
+annonce en attente de modération n'est donc jamais publique. Dans le POC, cette lecture passe par l'ingress Traefik
+(`garage.localhost`), faute de S3 externe ; en production, le navigateur lira directement chez l'hébergeur S3, comme le
+montre le C4. Le service de modération n'a aucun accès au stockage,
+et les politiques d'Istio comme celles de Calico le lui refusent.
 
 Cinq composants d'exploitation, dans le namespace `pme`, complètent le tableau : **Prometheus** collecte les mesures de l'API et de la
 modération, **Grafana** les affiche, **Alloy** ramasse les logs que **Loki** conserve, et **Adminer** donne un
@@ -153,19 +167,22 @@ classes: {
 }
 
 connexion: "1. Le membre se connecte sur Keycloak\net revient avec un jeton signé" {class: boite}
-depot: "2. Le membre remplit le formulaire\net valide" {class: boite}
-entree: "3. POST /api/v1/listings arrive à Traefik\nqui limite le débit (429 sinon)\net vérifie le jeton (401 sinon)" {class: boite}
+depot: "2. Le membre remplit le formulaire\n(type, prix ou contrepartie, photo) et valide" {class: boite}
+entree: "3. POST /api/v1/listings arrive à Traefik\nqui limite le débit (429 sinon),\nla taille du corps (413 sinon)\net vérifie le jeton (401 sinon)" {class: boite}
 controle: "4. L'API revérifie le jeton, le rôle « membre »\net valide chaque champ" {class: boite}
-ecriture: "5. L'annonce est écrite en base\nstatut « en attente de modération »" {class: boite}
-publication: "6. L'API publie listing.submitted\ndans le flux LISTINGS" {class: boite}
-reponse: "7. L'API répond 201 au membre\nsans attendre la modération" {class: boite}
-consommation: "8. Le service de modération consomme\nle message et le range dans sa file" {class: boite}
-file: "9. La file se consulte\nGET /api/v1/moderation/queue" {class: boite}
-compensation: "L'annonce est effacée,\nle membre reçoit un 503" {class: boite}
+photo: "5. La photo est contrôlée, ré-encodée\net enregistrée dans Garage" {class: boite}
+ecriture: "6. L'annonce est écrite en base\nstatut « en attente de modération »" {class: boite}
+publication: "7. L'API publie listing.submitted\ndans le flux LISTINGS" {class: boite}
+reponse: "8. L'API répond 201 au membre\nsans attendre la modération" {class: boite}
+redirection: "9. L'interface affiche une notification\net ouvre « Mes annonces »" {class: boite}
+consommation: "10. Le service de modération consomme\nle message et le range dans sa file" {class: boite}
+file: "11. La file se consulte\nGET /api/v1/moderation/queue" {class: boite}
+compensation: "L'annonce et sa photo sont effacées,\nle membre reçoit un 503" {class: boite}
 
-connexion -> depot -> entree -> controle -> ecriture -> publication
+connexion -> depot -> entree -> controle -> photo -> ecriture -> publication
 publication -> reponse: publication réussie
 publication -> compensation: broker injoignable
+reponse -> redirection
 reponse -> consommation -> file
 ```
 
@@ -189,6 +206,9 @@ reponse -> consommation -> file
 | **Identités déléguées à Keycloak** | L'API ne stocke aucun mot de passe ; elle ne garde que le `sub` du membre. | Keycloak devient indispensable au démarrage de la plateforme. |
 | **Jeton contrôlé à l'entrée, puis dans chaque service** | Traefik refuse tôt toute requête sans jeton valide. Chaque service revérifie le jeton et décide des rôles. | Traefik open source n'a pas ce contrôle en natif : un plugin communautaire est téléchargé à son démarrage, en version épinglée. |
 | **Débit limité à l'entrée** | Traefik plafonne à 200 requêtes par minute et par adresse, avant même l'API. | Le plafond de l'API, par exemplaire, reste en seconde barrière. |
+| **Photos dans un stockage objet, pas dans la base** | Garder PostgreSQL léger et lisible, et reproduire le conteneur « Stockage de fichiers » du C4. | Un composant de plus (Garage) à sécuriser et à sauvegarder ; la photo et l'annonce ne sont pas dans la même transaction. |
+| **Lecture des photos par URL signée de cinq minutes** | La photo d'une annonce non modérée n'est jamais publique, et l'API n'a pas à relayer les octets. | L'adresse expire : l'interface la redemande à chaque affichage de la liste. |
+| **Photo enregistrée avant l'annonce, supprimée en cas d'échec** | Si le stockage refuse le fichier, rien n'est écrit en base ; si la publication échoue, ni annonce ni fichier orphelin ne restent. | Une panne simultanée du stockage et de la base peut laisser un fichier orphelin, tracé dans les logs. |
 | **Statut porté par l'annonce, pas par un workflow** | Un simple champ `status` suffit à l'usage du POC. | Le circuit d'approbation ou de rejet est hors périmètre : la file se consulte, elle ne se traite pas. |
 | **Un seul namespace `pme`** | Toutes les règles de sécurité s'appliquent au même endroit. | Le namespace est écrit en dur dans `k8s/kustomization.yaml` : il ne se change pas par une variable. |
 
@@ -196,17 +216,20 @@ reponse -> consommation -> file
     Les manifestes de `k8s/` sont numérotés dans leur ordre de dépendance : PostgreSQL (`01`) avant Keycloak (`03`),
     qui attend sa base, avant l'API (`04`), qui attend Keycloak et NATS. Kustomize applique l'ensemble en une fois,
     sans garantir cet ordre, mais chaque composant attend ce dont il dépend : l'ordre des préfixes sert d'abord à la
-    lecture.
+    lecture. Garage (`03`) démarre vide : `make deploy` le met en service juste après l'application des manifestes
+    (`make garage-init`), et tant que ce n'est pas fait, le dépôt d'une annonce avec photo répond `503`.
 
 !!! warning "Attention"
     Le service de modération est joignable depuis le navigateur, sur `pme.localhost/api/v1/moderation`, mais il n'est
     pas appelé par l'API : les deux ne se parlent que par NATS. Une annonce absente de la file vient donc d'un
-    problème de messagerie, jamais d'un appel manqué entre les deux services.
+    problème de messagerie, jamais d'un appel manqué entre les deux services. De même, l'adresse d'une photo expire au
+    bout de cinq minutes : une image copiée dans un autre onglet répond `403` ensuite, ce qui est voulu.
 
 !!! tip "Astuce"
     Pour suivre une annonce de bout en bout, ouvrir le tableau de bord « Services » de Grafana et déposer une annonce :
     la requête apparaît dans les mesures de l'API, puis le message dans celles du service de modération quelques
-    instants plus tard. Un écart durable entre les deux signale un consommateur arrêté.
+    instants plus tard. Un écart durable entre les deux signale un consommateur arrêté. Pour vérifier la photo, la
+    commande `kubectl -n pme exec deploy/garage -- /garage bucket info pme-photos` donne le nombre d'objets du stockage.
 
 ## Pour aller plus loin
 

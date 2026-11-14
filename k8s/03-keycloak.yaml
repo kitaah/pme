@@ -1,6 +1,11 @@
 # Keycloak 26 en mode dev, joint par l'ingress (k8s/08-ingress.yaml) sur https://keycloak.localhost (TLS termine a l'ingress, HTTP en interne).
 # Le realm `pme` (roles membre / moderateur, clients pme-web et pme-cli, utilisateurs de demonstration)
 # est importe au demarrage depuis le ConfigMap `keycloak-realm` (config/realm-pme.json).
+# Le theme de connexion `pme` (palette et police du site) vient du ConfigMap `keycloak-theme`
+# (config/keycloak-theme-properties, config/keycloak-theme.css) et est declare par `loginTheme`
+# dans le realm. Le realm n'etant importe qu'une fois, un realm deja importe doit etre supprime
+# (console d'administration) ou la base repartie de zero (`make reset`) pour que la declaration
+# du theme et la langue unique soient prises en compte.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -92,6 +97,12 @@ spec:
             - name: realm
               mountPath: /opt/keycloak/data/import
               readOnly: true
+            # Theme de connexion « pme » : chaque cle du ConfigMap est ecrite au chemin que Keycloak
+            # attend sous le dossier du theme. En mode `start-dev`, les themes ne sont pas mis en
+            # cache : une modification du ConfigMap est visible au redemarrage du pod.
+            - name: theme
+              mountPath: /opt/keycloak/themes/pme/login
+              readOnly: true
             - name: ca
               mountPath: /etc/ssl/pme
               readOnly: true
@@ -112,6 +123,16 @@ spec:
         - name: realm
           configMap:
             name: keycloak-realm
+        - name: theme
+          configMap:
+            name: keycloak-theme
+            items:
+              - { key: theme.properties, path: theme.properties }
+              - { key: pme.css, path: resources/css/pme.css }
+              - { key: messages_fr.properties, path: messages/messages_fr.properties }
+              - { key: roboto-400.woff2, path: resources/fonts/roboto-latin-400-normal.woff2 }
+              - { key: roboto-500.woff2, path: resources/fonts/roboto-latin-500-normal.woff2 }
+              - { key: roboto-700.woff2, path: resources/fonts/roboto-latin-700-normal.woff2 }
         # Autorite locale, copiee depuis le namespace cert-manager par `make ca-configmap` : sert a verifier
         # le certificat de PostgreSQL. En entreprise, trust-manager produit et maintient cette meme ConfigMap.
         - name: ca
