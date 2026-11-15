@@ -206,7 +206,7 @@ Pour vérifier le refus par défaut, trois appels suffisent :
 | **`libs/common/src/auth/`**<br>**`jwt-auth.guard.ts`** | Garde globale : exige un jeton sauf sur les routes marquées publiques. |
 | **`libs/common/src/auth/`**<br>**`roles.guard.ts`** | Contrôle des rôles, erreur 403 en cas de refus. |
 | **`moderation-service/src/moderation/`**<br>**`moderation.controller.ts`** | Pose les gardes sur le contrôleur, pas sur le service entier. |
-| **`frontend/src/auth.ts`** | Connexion par PKCE et renouvellement du jeton côté navigateur. |
+| **`frontend/src/auth.ts`** | Connexion par PKCE et renouvellement du jeton côté navigateur. Adresse de retour : « Mes annonces » depuis l'accueil, sinon l'adresse d'origine. |
 
 ## Pour aller plus loin
 

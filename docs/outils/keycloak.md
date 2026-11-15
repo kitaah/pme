@@ -123,7 +123,7 @@ Ces comptes sont conservés tant que la base de Keycloak n'est pas réinitialis�
 | **`k8s/config/keycloak-messages-fr.properties`** | Libellés français de la page de connexion (apostrophe typographique `’`). |
 | **`k8s/config/keycloak-theme.css`** | Feuille de style du thème de connexion `pme`, montée dans le pod par une ConfigMap. |
 | **`libs/common/src/auth/`**<br>**`jwt.strategy.ts`** | Vérifie la signature, l'émetteur et l'application du jeton, dans l'API comme dans la modération. |
-| **`frontend/src/auth.ts`** | Redirige vers la page de connexion et renouvelle le jeton. |
+| **`frontend/src/auth.ts`** | Redirige vers la page de connexion et renouvelle le jeton. L'adresse de retour est « Mes annonces » quand la personne arrive sur l'accueil (une fois par onglet), sinon l'adresse ouverte au départ ; elle reste couverte par `https://pme.localhost/*`. |
 | **`.env`** | Contient l'identifiant et le mot de passe de l'administrateur. Ce fichier est exclu de Git. |
 
 ## Commandes essentielles

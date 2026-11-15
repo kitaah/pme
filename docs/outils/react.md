@@ -145,7 +145,7 @@ La page se compose des éléments suivants :
 | **`frontend/src/components/`** | Les composants de la page : en-tête, pied de page, formulaire, liste des annonces, notification. |
 | **`frontend/src/components/ui/`** | Les composants de base de shadcn/ui. |
 | **`frontend/src/api.ts`** | Prépare les appels à l'API et y joint le jeton de l'utilisateur. |
-| **`frontend/src/auth.ts`** | Gère la connexion à Keycloak et le renouvellement du jeton. |
+| **`frontend/src/auth.ts`** | Gère la connexion à Keycloak et le renouvellement du jeton. Après la connexion, la personne arrivée sur l'accueil est envoyée sur « Mes annonces » (une seule fois par onglet) ; une adresse précise ouverte au départ est conservée. |
 | **`frontend/src/config.ts`** | Lit la configuration fournie au démarrage, dont l'adresse de Keycloak. |
 | **`frontend/src/styles.css`** | Déclare la palette « Nuit de festival », la police Roboto et les styles communs. |
 | **`frontend/public/fonts/`** | Les fichiers de la police Roboto, servis par le site lui-même. |
