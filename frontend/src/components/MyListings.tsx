@@ -29,11 +29,11 @@ const STATUS_ICONS: Record<ListingStatus, typeof Clock> = {
   REJECTED: CircleX,
 };
 
-/** « 4 annonces · 1 en attente de modération » : le compte, puis ce qui attend une decision. */
+/** « 4 annonces · 1 en attente de validation » : le compte, puis ce qui attend une decision. */
 function summary(listings: Listing[]): string {
   const pending = listings.filter((listing) => listing.status === 'PENDING_MODERATION').length;
   const total = `${listings.length} ${listings.length > 1 ? 'annonces' : 'annonce'}`;
-  return pending > 0 ? `${total} · ${pending} en attente de modération` : total;
+  return pending > 0 ? `${total} · ${pending} en attente de validation` : total;
 }
 
 /**
@@ -41,7 +41,7 @@ function summary(listings: Listing[]): string {
  * centree dans un cadre de hauteur fixe, le statut, le titre, un extrait, puis le type, l'etat et
  * le lieu de remise.
  *
- * La photo d'une annonce en attente de moderation est affichee a son auteur : il doit pouvoir
+ * La photo d'une annonce en attente de validation est affichee a son auteur : il doit pouvoir
  * verifier ce qu'il a envoye sans attendre la decision. Elle est servie par une URL signee de
  * courte duree, fournie par l'API : elle n'est donc pas publique. Elle est affichee en entier
  * (object-contain), jamais recadree ni agrandie : le cadre garde sa taille quelle que soit l'image.

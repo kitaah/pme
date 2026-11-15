@@ -1,8 +1,9 @@
-import { Logger, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { AuthenticatedUser } from '@pme/common';
 import { CreateListingDto } from './create-listing.dto';
-import { HandoverPlace, ListingCategory, ListingCondition, ListingKind, ListingStatus } from './listing.enums';
+import { HandoverPlace, ListingCondition, ListingKind, ListingStatus } from './listing.enums';
+import { CategoriesService } from './categories.service';
 import { PhotoStorageService } from '../storage/photo-storage.service';
 import { Listing } from './listing.entity';
 import { DatabaseCircuitBreaker } from '../common/database-circuit-breaker';
@@ -20,6 +21,7 @@ describe('ListingsService', () => {
   let repository: { create: jest.Mock; save: jest.Mock; delete: jest.Mock; find: jest.Mock };
   let publisher: { publishSubmitted: jest.Mock };
   let photos: { store: jest.Mock; remove: jest.Mock; signedUrl: jest.Mock };
+  let categories: { findActive: jest.Mock };
   let database: DatabaseCircuitBreaker;
   let service: ListingsService;
 
@@ -29,6 +31,9 @@ describe('ListingsService', () => {
       save: jest.fn(async (entity: Partial<Listing>) => ({ ...entity, id: 'listing-1', createdAt: new Date() })),
       delete: jest.fn().mockResolvedValue(undefined),
       find: jest.fn(),
+    };
+    categories = {
+      findActive: jest.fn(async (code: string) => ({ id: 1, code, label: code, sortOrder: 1, active: true })),
     };
     database = new DatabaseCircuitBreaker();
     publisher = { publishSubmitted: jest.fn().mockResolvedValue(undefined) };
@@ -42,6 +47,7 @@ describe('ListingsService', () => {
       publisher as unknown as ListingEventsPublisher,
       database,
       photos as unknown as PhotoStorageService,
+      categories as unknown as CategoriesService,
     );
   });
 
@@ -71,7 +77,7 @@ describe('ListingsService', () => {
 
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          category: ListingCategory.OTHER,
+          category: expect.objectContaining({ code: 'OTHER' }),
           kind: ListingKind.EXCHANGE,
           priceCents: null,
           wantedInExchange: null,
@@ -83,10 +89,32 @@ describe('ListingsService', () => {
       expect(photos.store).not.toHaveBeenCalled();
     });
 
-    it('conserve la categorie choisie', async () => {
-      await service.submit(user, { ...dto, category: ListingCategory.FIGURINES });
+    it('rattache l annonce a la categorie choisie et renvoie son code', async () => {
+      const view = await service.submit(user, { ...dto, category: 'FIGURINES' });
 
-      expect(repository.create).toHaveBeenCalledWith(expect.objectContaining({ category: ListingCategory.FIGURINES }));
+      expect(categories.findActive).toHaveBeenCalledWith('FIGURINES');
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ category: expect.objectContaining({ id: 1, code: 'FIGURINES' }) }),
+      );
+      expect(view.category).toBe('FIGURINES');
+    });
+
+    it('cherche « autres » quand aucune categorie n est precisee', async () => {
+      await service.submit(user, dto);
+
+      expect(categories.findActive).toHaveBeenCalledWith('OTHER');
+    });
+
+    it('refuse une categorie inconnue ou retiree (400) avant d enregistrer la photo ou l annonce', async () => {
+      categories.findActive.mockResolvedValue(null);
+
+      await expect(service.submit(user, { ...dto, category: 'MEUBLES' }, Buffer.from('image'))).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+
+      expect(photos.store).not.toHaveBeenCalled();
+      expect(repository.create).not.toHaveBeenCalled();
+      expect(publisher.publishSubmitted).not.toHaveBeenCalled();
     });
 
     it('retient le prix pour une vente seulement', async () => {
@@ -180,7 +208,7 @@ describe('ListingsService', () => {
     });
 
     it('renvoie des annonces dont le chemin de la photo ne sort pas, avec une URL signee ou null', async () => {
-      const base = { ownerId: user.id, title: 'Figurine', createdAt: new Date() };
+      const base = { ownerId: user.id, title: 'Figurine', createdAt: new Date(), category: { code: 'FILMS' } };
       repository.find.mockResolvedValue([
         { ...base, id: 'a', photoKey: 'pending/a.webp', photoMime: 'image/webp' },
         { ...base, id: 'b', photoKey: null, photoMime: null },
@@ -188,6 +216,7 @@ describe('ListingsService', () => {
 
       const views = await service.findByOwner(user, 10);
 
+      expect(views.map((v) => v.category)).toEqual(['FILMS', 'FILMS']);
       expect(views.map((v) => [v.id, v.photoUrl])).toEqual([
         ['a', 'https://garage.localhost/signed'],
         ['b', null],
@@ -208,6 +237,7 @@ describe('ListingsService', () => {
 
       expect(repository.find).toHaveBeenCalledWith({
         where: { ownerId: user.id },
+        relations: { category: true },
         order: { createdAt: 'DESC' },
         take: 50,
       });

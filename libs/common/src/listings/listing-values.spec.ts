@@ -1,4 +1,4 @@
-import { HandoverPlace, ListingCategory, ListingCondition, ListingKind } from './listing-values';
+import { HandoverPlace, ListingCondition, ListingKind } from './listing-values';
 
 /**
  * Ces valeurs sont des codes ECHANGES entre l'API, le service de moderation et la base : en
@@ -7,19 +7,6 @@ import { HandoverPlace, ListingCategory, ListingCondition, ListingKind } from '.
 describe('valeurs partagees d une annonce', () => {
   it('fixe les quatre etats de l objet', () => {
     expect(Object.values(ListingCondition)).toEqual(['NEW', 'VERY_GOOD', 'GOOD', 'FAIR']);
-  });
-
-  it('fixe les huit categories, « autres » en dernier', () => {
-    expect(Object.values(ListingCategory)).toEqual([
-      'FIGURINES',
-      'FILMS',
-      'BOOKS',
-      'POSTERS',
-      'MUSIC',
-      'GAMES',
-      'CLOTHING',
-      'OTHER',
-    ]);
   });
 
   it('fixe les trois natures d annonce', () => {

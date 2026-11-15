@@ -1,5 +1,15 @@
-import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
-import { HandoverPlace, ListingCategory, ListingCondition, ListingKind, ListingStatus } from './listing.enums';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { Category } from './category.entity';
+import { HandoverPlace, ListingCondition, ListingKind, ListingStatus } from './listing.enums';
 
 @Entity({ name: 'listings' })
 @Index('idx_listings_owner', ['ownerId', 'createdAt'])
@@ -23,8 +33,10 @@ export class Listing {
   @Column({ type: 'varchar', length: 20 })
   condition: ListingCondition;
 
-  @Column({ type: 'varchar', length: 30, default: ListingCategory.OTHER })
-  category: ListingCategory;
+  /** Cle etrangere vers la table de reference `categories` (colonne `category_id`). Chargee a la demande (`relations`). */
+  @ManyToOne(() => Category, { nullable: false })
+  @JoinColumn({ name: 'category_id' })
+  category: Category;
 
   @Column({ type: 'varchar', length: 20, default: ListingKind.EXCHANGE })
   kind: ListingKind;

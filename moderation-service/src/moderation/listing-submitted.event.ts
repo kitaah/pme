@@ -1,5 +1,16 @@
-import { HandoverPlace, ListingCategory, ListingCondition, ListingKind } from '@pme/common';
-import { IsDateString, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { HandoverPlace, ListingCondition, ListingKind } from '@pme/common';
+import {
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 /** Sujets : doivent rester identiques a ceux de l'API (api/src/listings/listing-events.ts). */
 export const LISTING_SUBMITTED_SUBJECT = 'listing.submitted';
@@ -35,7 +46,11 @@ export class ListingSubmittedEvent {
    * enverrait ces messages vers le flux des messages en echec alors qu'ils sont exploitables ;
    * les valeurs par defaut sont appliquees a la mise en file.
    */
-  @IsOptional() @IsEnum(ListingCategory) category?: string;
+  /**
+   * Code d'une categorie de la table de l'API : seule la forme est controlee ici. La liste vit dans la base de l'API
+   * et change sans deploiement ; la figer dans ce service ferait rejeter les annonces d'une categorie ajoutee.
+   */
+  @IsOptional() @Matches(/^[A-Z][A-Z_]{0,29}$/) category?: string;
   @IsOptional() @IsEnum(ListingKind) kind?: string;
   @IsOptional() @IsInt() @Min(1) priceCents?: number;
   @IsOptional() @IsString() @MaxLength(120) wantedInExchange?: string;

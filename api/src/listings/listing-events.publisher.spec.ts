@@ -1,4 +1,4 @@
-import { HandoverPlace, ListingCategory, ListingCondition, ListingKind, ListingStatus } from './listing.enums';
+import { HandoverPlace, ListingCondition, ListingKind, ListingStatus } from './listing.enums';
 import { Listing } from './listing.entity';
 import { LISTING_SUBMITTED_SUBJECT } from './listing-events';
 import { ListingEventsPublisher } from './listing-events.publisher';
@@ -12,7 +12,7 @@ describe('ListingEventsPublisher', () => {
     title: 'Figurine',
     description: 'Edition 2019',
     condition: ListingCondition.GOOD,
-    category: ListingCategory.FIGURINES,
+    category: { id: 1, code: 'FIGURINES', label: 'Figurines et statues', sortOrder: 1, active: true },
     kind: ListingKind.EXCHANGE,
     priceCents: null,
     wantedInExchange: null,

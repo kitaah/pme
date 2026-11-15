@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { HandoverPlace, ListingCategory, ListingKind } from '@pme/common';
+import { HandoverPlace, ListingKind } from '@pme/common';
 import { Repository } from 'typeorm';
 import { ListingSubmittedEvent } from './listing-submitted.event';
-import { ModerationItem, ModerationStatus } from './moderation-item.entity';
+import { DEFAULT_CATEGORY_CODE, ModerationItem, ModerationStatus } from './moderation-item.entity';
 
 const UNIQUE_VIOLATION = '23505';
 
@@ -29,7 +29,7 @@ export class ModerationService {
         description: event.description,
         condition: event.condition,
         // Valeurs par defaut d'un message publie avant le depot enrichi (voir ListingSubmittedEvent).
-        category: event.category ?? ListingCategory.OTHER,
+        category: event.category ?? DEFAULT_CATEGORY_CODE,
         kind: event.kind ?? ListingKind.EXCHANGE,
         priceCents: event.priceCents ?? null,
         wantedInExchange: event.wantedInExchange ?? null,

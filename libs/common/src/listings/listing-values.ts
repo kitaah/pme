@@ -3,6 +3,7 @@
  * valide a la reception de l'evenement). Les definir ici, une seule fois, evite que les deux
  * listes divergent : un etat ajoute d'un seul cote ferait rejeter les messages vers le flux des
  * messages en echec. Les libelles francais, eux, sont dans le front (frontend/src/api.ts).
+ * La categorie n'est pas ici : c'est une table de reference de l'API (categories), geree sans deploiement.
  */
 
 /**
@@ -15,24 +16,6 @@ export enum ListingCondition {
   VERY_GOOD = 'VERY_GOOD',
   GOOD = 'GOOD',
   FAIR = 'FAIR',
-}
-
-/**
- * Categorie de l'objet : une liste fermee de huit rubriques, dans l'univers de la boutique (horreur
- * et collection). Une liste fixe, validee par le code et par la base, suffit tant que personne ne
- * doit creer ou renommer une categorie depuis l'application ; sinon, une table prendrait le relais.
- * OTHER est la valeur par defaut : une annonce sans categorie (message d'une ancienne version de
- * l'API, ligne deja en base) reste valide.
- */
-export enum ListingCategory {
-  FIGURINES = 'FIGURINES',
-  FILMS = 'FILMS',
-  BOOKS = 'BOOKS',
-  POSTERS = 'POSTERS',
-  MUSIC = 'MUSIC',
-  GAMES = 'GAMES',
-  CLOTHING = 'CLOTHING',
-  OTHER = 'OTHER',
 }
 
 /**

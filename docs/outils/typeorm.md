@@ -103,7 +103,7 @@ schema -> base
 | Fichier ou dossier | Description |
 |---|---|
 | **`api/src/listings/listing.entity.ts`** | L'entité `Listing` : colonnes, index, statut par défaut. |
-| **`api/src/migrations/`** | La migration qui crée la table `listings` et son index. |
+| **`api/src/migrations/`** | Les migrations qui créent la table `listings` et son index, puis la font évoluer, dont la table de référence `categories`. |
 | **`moderation-service/src/moderation/moderation-item.entity.ts`** | L'entité de la file de modération. |
 | **`moderation-service/src/migrations/`** | La migration qui crée la table de la file. |
 | **`api/src/app.module.ts`** | La configuration : TLS, entités, migrations, pool, tentatives de reconnexion. |

@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   api,
   ApiError,
-  CATEGORY_LABELS,
   CONDITION_LABELS,
   HANDOVER_PLACE_LABELS,
   KIND_LABELS,
@@ -79,6 +78,26 @@ describe('api', () => {
     expect(init.headers).toMatchObject({ Authorization: 'Bearer jeton-test', 'Content-Type': 'application/json' });
   });
 
+  it('liste les categories proposees en GET', async () => {
+    const categories = [{ code: 'FILMS', label: 'Films' }];
+    fetchMock.mockResolvedValue(jsonResponse(categories));
+
+    await expect(api.listCategories()).resolves.toEqual(categories);
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/v1/categories');
+    expect(init.method).toBeUndefined();
+  });
+
+  it('n envoie pas de categorie quand aucune n est choisie : l API applique « Autres »', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ id: '1' }, 201));
+
+    await api.createListing({ ...base, category: undefined });
+
+    const form = (fetchMock.mock.calls[0] as [string, RequestInit])[1].body as FormData;
+    expect(form.has('category')).toBe(false);
+  });
+
   it('liste mes annonces en GET', async () => {
     fetchMock.mockResolvedValue(jsonResponse([{ id: '1' }]));
 
@@ -123,19 +142,6 @@ describe('api', () => {
 });
 
 describe('libelles', () => {
-  it('fournit un libelle francais pour chacune des huit categories', () => {
-    expect(CATEGORY_LABELS).toEqual({
-      FIGURINES: 'Figurines et statues',
-      FILMS: 'Films',
-      BOOKS: 'Livres et fanzines',
-      POSTERS: 'Affiches et goodies',
-      MUSIC: 'Musique',
-      GAMES: 'Jeux',
-      CLOTHING: 'Vêtements',
-      OTHER: 'Autres',
-    });
-  });
-
   it('fournit un libelle francais pour chacun des quatre etats', () => {
     expect(CONDITION_LABELS).toEqual({
       NEW: 'Neuf',

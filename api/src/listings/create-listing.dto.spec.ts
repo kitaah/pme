@@ -125,13 +125,20 @@ describe('CreateListingDto', () => {
       expect(dto.category).toBeUndefined();
     });
 
-    it('refuse une categorie inconnue', async () => {
-      const { messages } = await check({ ...valid, category: 'MEUBLES' });
+    it('accepte le code d une categorie ajoutee depuis : le format seul est controle, l existence l est par le service', async () => {
+      const { messages } = await check({ ...valid, category: 'GOODIES_RARES' });
 
-      expect(messages).toEqual([
-        'la catégorie doit valoir FIGURINES, FILMS, BOOKS, POSTERS, MUSIC, GAMES, CLOTHING ou OTHER',
-      ]);
+      expect(messages).toEqual([]);
     });
+
+    it.each(['figurines', 'FIGURINES 2', 'MEUBLES!', '1FILMS', 'A'.repeat(31)])(
+      'refuse le code mal forme %s',
+      async (category) => {
+        const { messages } = await check({ ...valid, category });
+
+        expect(messages).toEqual(['la catégorie doit être un code en majuscules, par exemple FIGURINES']);
+      },
+    );
   });
 
   describe('contrepartie et lieu de remise', () => {

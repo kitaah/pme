@@ -40,6 +40,7 @@ const submit = () => userEvent.click(screen.getByRole('button', { name: "Dépose
 
 describe('ListingForm', () => {
   const createListing = vi.spyOn(api, 'createListing');
+  const listCategories = vi.spyOn(api, 'listCategories');
 
   // jsdom n'implemente pas les adresses temporaires de fichier : l'apercu de la photo en a besoin.
   const createObjectURL = vi.fn(() => 'blob:apercu');
@@ -50,6 +51,11 @@ describe('ListingForm', () => {
     revokeObjectURL.mockClear();
     Object.assign(URL, { createObjectURL, revokeObjectURL });
     createListing.mockReset();
+    listCategories.mockReset();
+    listCategories.mockResolvedValue([
+      { code: 'FIGURINES', label: 'Figurines et statues' },
+      { code: 'FILMS', label: 'Films' },
+    ]);
     vi.mocked(notifyListingSubmitted).mockReset();
   });
 
@@ -66,11 +72,12 @@ describe('ListingForm', () => {
       expect(screen.getByRole('link', { name: 'mes annonces' })).toHaveAttribute('href', '/mes-annonces');
     });
 
-    it('propose les huit categories, les quatre etats et les cinq lieux de remise, a convenir par defaut', () => {
+    it('propose les categories de l API, les quatre etats et les cinq lieux de remise, a convenir par defaut', async () => {
       renderForm();
 
+      await waitFor(() => expect(screen.getByLabelText('Catégorie').querySelectorAll('option')).toHaveLength(2));
       expect(screen.getByLabelText('Catégorie')).toHaveValue('FIGURINES');
-      expect(screen.getByLabelText('Catégorie').querySelectorAll('option')).toHaveLength(8);
+      expect(screen.getByRole('option', { name: 'Films' })).toHaveValue('FILMS');
       expect(screen.getByLabelText("État de l'objet")).toHaveValue('GOOD');
       expect(screen.getByLabelText("État de l'objet").querySelectorAll('option')).toHaveLength(4);
       expect(screen.getByLabelText('Lieu de remise')).toHaveValue('TO_AGREE');
@@ -115,6 +122,7 @@ describe('ListingForm', () => {
       await userEvent.type(screen.getByLabelText("Titre de l'annonce"), 'Figurine Pyramid Head');
       await userEvent.type(screen.getByLabelText('Description'), 'Édition 2019');
       await userEvent.type(screen.getByLabelText(/Je cherche en échange/), 'Un Blu-ray');
+      await screen.findByRole('option', { name: 'Films' });
       await userEvent.selectOptions(screen.getByLabelText('Catégorie'), 'FILMS');
       await userEvent.selectOptions(screen.getByLabelText("État de l'objet"), 'FAIR');
       await userEvent.selectOptions(screen.getByLabelText('Lieu de remise'), 'SHOP_LYON');
@@ -133,6 +141,32 @@ describe('ListingForm', () => {
         photo: undefined,
       });
       expect(notifyListingSubmitted).toHaveBeenCalledTimes(1);
+    });
+
+    it('depose l annonce sans categorie quand la liste est indisponible : l API la range dans Autres', async () => {
+      listCategories.mockRejectedValue(new ApiError(502, 'indisponible'));
+      createListing.mockResolvedValue(created);
+      renderForm();
+
+      await userEvent.type(screen.getByLabelText("Titre de l'annonce"), 'Figurine');
+      await userEvent.type(screen.getByLabelText('Description'), 'Édition 2019');
+      expect(screen.getByLabelText('Catégorie').querySelectorAll('option')).toHaveLength(0);
+      await submit();
+
+      await waitFor(() => expect(createListing).toHaveBeenCalledTimes(1));
+      expect(createListing).toHaveBeenCalledWith(expect.objectContaining({ category: undefined }));
+    });
+
+    it('depose l annonce sans categorie quand l API ne propose aucune categorie', async () => {
+      listCategories.mockResolvedValue([]);
+      createListing.mockResolvedValue(created);
+      renderForm();
+
+      await userEvent.type(screen.getByLabelText("Titre de l'annonce"), 'Figurine');
+      await userEvent.type(screen.getByLabelText('Description'), 'Édition 2019');
+      await submit();
+
+      await waitFor(() => expect(createListing).toHaveBeenCalledWith(expect.objectContaining({ category: undefined })));
     });
 
     it('envoie une vente avec son prix en centimes, sans contrepartie meme saisie avant le changement de type', async () => {
