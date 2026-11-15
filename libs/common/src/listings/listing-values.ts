@@ -3,7 +3,8 @@
  * valide a la reception de l'evenement). Les definir ici, une seule fois, evite que les deux
  * listes divergent : un etat ajoute d'un seul cote ferait rejeter les messages vers le flux des
  * messages en echec. Les libelles francais, eux, sont dans le front (frontend/src/api.ts).
- * La categorie n'est pas ici : c'est une table de reference de l'API (categories), geree sans deploiement.
+ * La categorie et le lieu de remise ne sont pas ici : ce sont des tables de reference de l'API (categories,
+ * handover_places), gerees sans deploiement.
  */
 
 /**
@@ -26,16 +27,4 @@ export enum ListingKind {
   EXCHANGE = 'EXCHANGE',
   GIFT = 'GIFT',
   SALE = 'SALE',
-}
-
-/**
- * Lieu de remise de l'objet : les quatre magasins de l'entreprise, ou un lieu a convenir entre les
- * deux membres. Liste fermee volontairement : aucune adresse ni ville n'est collectee.
- */
-export enum HandoverPlace {
-  SHOP_ANGOULEME = 'SHOP_ANGOULEME',
-  SHOP_AIX = 'SHOP_AIX',
-  SHOP_LYON = 'SHOP_LYON',
-  SHOP_LONDON = 'SHOP_LONDON',
-  TO_AGREE = 'TO_AGREE',
 }

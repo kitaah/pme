@@ -19,7 +19,7 @@ const created: Listing = {
   kind: 'EXCHANGE',
   priceCents: null,
   wantedInExchange: null,
-  handoverPlace: 'TO_AGREE',
+  handoverPlace: { code: 'TO_AGREE', label: 'À convenir avec le membre' },
   photoUrl: null,
   status: 'PENDING_MODERATION',
   createdAt: '2026-11-14T15:00:00.000Z',
@@ -41,6 +41,7 @@ const submit = () => userEvent.click(screen.getByRole('button', { name: "Dépose
 describe('ListingForm', () => {
   const createListing = vi.spyOn(api, 'createListing');
   const listCategories = vi.spyOn(api, 'listCategories');
+  const listHandoverPlaces = vi.spyOn(api, 'listHandoverPlaces');
 
   // jsdom n'implemente pas les adresses temporaires de fichier : l'apercu de la photo en a besoin.
   const createObjectURL = vi.fn(() => 'blob:apercu');
@@ -51,6 +52,11 @@ describe('ListingForm', () => {
     revokeObjectURL.mockClear();
     Object.assign(URL, { createObjectURL, revokeObjectURL });
     createListing.mockReset();
+    listHandoverPlaces.mockReset();
+    listHandoverPlaces.mockResolvedValue([
+      { code: 'SHOP_LYON', label: 'Magasin de Lyon' },
+      { code: 'TO_AGREE', label: 'À convenir avec le membre' },
+    ]);
     listCategories.mockReset();
     listCategories.mockResolvedValue([
       { code: 'FIGURINES', label: 'Figurines et statues' },
@@ -72,7 +78,7 @@ describe('ListingForm', () => {
       expect(screen.getByRole('link', { name: 'mes annonces' })).toHaveAttribute('href', '/mes-annonces');
     });
 
-    it('propose les categories de l API, les quatre etats et les cinq lieux de remise, a convenir par defaut', async () => {
+    it('propose les categories de l API, les quatre etats et les lieux de remise de l API, a convenir par defaut', async () => {
       renderForm();
 
       await waitFor(() => expect(screen.getByLabelText('Catégorie').querySelectorAll('option')).toHaveLength(2));
@@ -80,8 +86,15 @@ describe('ListingForm', () => {
       expect(screen.getByRole('option', { name: 'Films' })).toHaveValue('FILMS');
       expect(screen.getByLabelText("État de l'objet")).toHaveValue('GOOD');
       expect(screen.getByLabelText("État de l'objet").querySelectorAll('option')).toHaveLength(4);
+      await waitFor(() => expect(screen.getByLabelText('Lieu de remise').querySelectorAll('option')).toHaveLength(2));
       expect(screen.getByLabelText('Lieu de remise')).toHaveValue('TO_AGREE');
-      expect(screen.getByLabelText('Lieu de remise').querySelectorAll('option')).toHaveLength(5);
+    });
+
+    it('preselectionne le premier lieu quand « a convenir » n est pas propose', async () => {
+      listHandoverPlaces.mockResolvedValue([{ code: 'SHOP_LYON', label: 'Magasin de Lyon' }]);
+      renderForm();
+
+      await waitFor(() => expect(screen.getByLabelText('Lieu de remise')).toHaveValue('SHOP_LYON'));
     });
   });
 
@@ -123,6 +136,7 @@ describe('ListingForm', () => {
       await userEvent.type(screen.getByLabelText('Description'), 'Édition 2019');
       await userEvent.type(screen.getByLabelText(/Je cherche en échange/), 'Un Blu-ray');
       await screen.findByRole('option', { name: 'Films' });
+      await screen.findByRole('option', { name: 'Magasin de Lyon' });
       await userEvent.selectOptions(screen.getByLabelText('Catégorie'), 'FILMS');
       await userEvent.selectOptions(screen.getByLabelText("État de l'objet"), 'FAIR');
       await userEvent.selectOptions(screen.getByLabelText('Lieu de remise'), 'SHOP_LYON');
@@ -155,6 +169,33 @@ describe('ListingForm', () => {
 
       await waitFor(() => expect(createListing).toHaveBeenCalledTimes(1));
       expect(createListing).toHaveBeenCalledWith(expect.objectContaining({ category: undefined }));
+    });
+
+    it('depose l annonce sans lieu de remise quand la liste est indisponible ou vide : l API applique « a convenir »', async () => {
+      listHandoverPlaces.mockRejectedValueOnce(new ApiError(502, 'indisponible'));
+      createListing.mockResolvedValue(created);
+      renderForm();
+
+      await userEvent.type(screen.getByLabelText("Titre de l'annonce"), 'Figurine');
+      await userEvent.type(screen.getByLabelText('Description'), 'Édition 2019');
+      await submit();
+      await waitFor(() =>
+        expect(createListing).toHaveBeenCalledWith(expect.objectContaining({ handoverPlace: undefined })),
+      );
+    });
+
+    it('depose l annonce sans lieu de remise quand l API n en propose aucun', async () => {
+      listHandoverPlaces.mockResolvedValue([]);
+      createListing.mockResolvedValue(created);
+      renderForm();
+
+      await userEvent.type(screen.getByLabelText("Titre de l'annonce"), 'Figurine');
+      await userEvent.type(screen.getByLabelText('Description'), 'Édition 2019');
+      await submit();
+
+      await waitFor(() =>
+        expect(createListing).toHaveBeenCalledWith(expect.objectContaining({ handoverPlace: undefined })),
+      );
     });
 
     it('depose l annonce sans categorie quand l API ne propose aucune categorie', async () => {

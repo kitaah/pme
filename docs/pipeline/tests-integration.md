@@ -15,7 +15,7 @@ unitaires utilisent des doublures. Ces tests-ci prouvent que les vrais composant
 
 ## Ce qui est vérifié
 
-La pipeline lance **31 tests d'intégration** dans un seul job : 21 pour l'API et 10 pour le service de modération.
+La pipeline lance **35 tests d'intégration** dans un seul job : 25 pour l'API et 10 pour le service de modération.
 
 | Élément réel | Version | Rôle dans les tests |
 |---|---|---|
@@ -23,11 +23,11 @@ La pipeline lance **31 tests d'intégration** dans un seul job : 21 pour l'API e
 | **NATS avec JetStream** | 2.14 (image Alpine) | Transmet les événements entre l'API et la modération. |
 | **Faux Keycloak** | Serveur local | Signe les jetons, ce qui évite de démarrer le vrai Keycloak. |
 
-### API (21 tests)
+### API (25 tests)
 
 | Fichier | Tests | Ce qui est vérifié |
 |---|---|---|
-| **`api/test/integration/`**<br>**`listings.integration-spec.ts`** | 18 | Authentification, dépôt d'annonce, catégories, validation, lecture des annonces, sondes de santé. |
+| **`api/test/integration/`**<br>**`listings.integration-spec.ts`** | 22 | Authentification, dépôt d'annonce, catégories, lieux de remise, validation, lecture des annonces, sondes de santé. |
 | **`api/test/integration/`**<br>**`listings-broker.integration-spec.ts`** | 3 | Publication dans le vrai flux NATS, rejeu ignoré, erreur 503 si NATS tombe |
 
 Dans le premier fichier, NATS est remplacé par une doublure pour tester l'API seule. Le second fichier utilise le vrai NATS.
@@ -35,7 +35,7 @@ Dans le premier fichier, NATS est remplacé par une doublure pour tester l'API s
 Ces tests envoient le dépôt en JSON, sans photo : le stockage des photos n'est pas démarré. L'envoi multipart, le ré-encodage et
 l'enregistrement dans [Garage](../outils/garage.md) sont couverts par les [tests unitaires](tests-unitaires.md).
 
-Détail des 14 tests du premier fichier :
+Détail des 22 tests du premier fichier :
 
 - Une requête sans jeton est refusée (401).
 - Un jeton d'un autre émetteur est refusé (401).
@@ -43,6 +43,9 @@ Détail des 14 tests du premier fichier :
 - Un jeton expiré est refusé (401).
 - Un utilisateur sans le rôle membre est refusé (403).
 - Un dépôt valide est enregistré en attente de validation, et l'événement est publié (201).
+- Une annonce est rangée dans la catégorie choisie (clé étrangère vérifiée en base) ; sans catégorie elle prend « Autres », et un code inconnu est refusé (400) sans rien enregistrer.
+- Une annonce est rangée dans le lieu de remise choisi, renvoyé avec son libellé ; un lieu inconnu est refusé (400), et sans lieu l'annonce prend « à convenir ».
+- `GET /api/v1/categories` renvoie les huit catégories de départ dans l'ordre d'affichage, et `GET /api/v1/handover-places` les cinq lieux ; chacune est refusée sans jeton (401).
 - Cinq annonces invalides sont refusées (400) : titre vide, titre trop court, description trop longue, état inconnu, champ inattendu.
 - Si NATS est injoignable, l'annonce est retirée et l'API répond 503.
 - Un membre ne voit que ses propres annonces.

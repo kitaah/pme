@@ -7,7 +7,11 @@ export interface Category {
   label: string;
 }
 export type ListingKind = 'EXCHANGE' | 'GIFT' | 'SALE';
-export type HandoverPlace = 'SHOP_ANGOULEME' | 'SHOP_AIX' | 'SHOP_LYON' | 'SHOP_LONDON' | 'TO_AGREE';
+/** Lieu de remise de la table de reference de l'API : un magasin, ou « a convenir ». La liste vient de l'API. */
+export interface HandoverPlace {
+  code: string;
+  label: string;
+}
 export type ListingStatus = 'PENDING_MODERATION' | 'PUBLISHED' | 'REJECTED';
 
 export interface Listing {
@@ -21,6 +25,7 @@ export interface Listing {
   /** Centimes, pour une vente seulement. */
   priceCents: number | null;
   wantedInExchange: string | null;
+  /** Le libelle accompagne le code : un lieu ferme depuis reste lisible sur les annonces qui l'ont. */
   handoverPlace: HandoverPlace;
   /** URL signee de courte duree, ou null si l'annonce n'a pas de photo. */
   photoUrl: string | null;
@@ -41,7 +46,8 @@ export interface NewListing {
   kind: ListingKind;
   priceCents?: number;
   wantedInExchange?: string;
-  handoverPlace: HandoverPlace;
+  /** Code d'un lieu propose par l'API ; absent, l'API choisit « a convenir ». */
+  handoverPlace?: string;
   photo?: File;
 }
 
@@ -92,7 +98,7 @@ function toFormData(input: NewListing): FormData {
   if (input.category) form.append('category', input.category);
   form.append('kind', input.kind);
   if (input.priceCents !== undefined) form.append('priceCents', String(input.priceCents));
-  form.append('handoverPlace', input.handoverPlace);
+  if (input.handoverPlace) form.append('handoverPlace', input.handoverPlace);
   if (input.wantedInExchange) form.append('wantedInExchange', input.wantedInExchange);
   if (input.photo) form.append('photo', input.photo);
   return form;
@@ -102,6 +108,7 @@ export const api = {
   createListing: (input: NewListing) => call<Listing>('/api/v1/listings', { method: 'POST', body: toFormData(input) }),
   myListings: () => call<Listing[]>('/api/v1/listings/mine'),
   listCategories: () => call<Category[]>('/api/v1/categories'),
+  listHandoverPlaces: () => call<HandoverPlace[]>('/api/v1/handover-places'),
 };
 
 export const CONDITION_LABELS: Record<Condition, string> = {
@@ -115,14 +122,6 @@ export const KIND_LABELS: Record<ListingKind, string> = {
   EXCHANGE: 'Échange',
   GIFT: 'Don',
   SALE: 'Vente',
-};
-
-export const HANDOVER_PLACE_LABELS: Record<HandoverPlace, string> = {
-  SHOP_ANGOULEME: 'Magasin d’Angoulême',
-  SHOP_AIX: 'Magasin d’Aix-en-Provence',
-  SHOP_LYON: 'Magasin de Lyon',
-  SHOP_LONDON: 'Magasin de Londres',
-  TO_AGREE: 'À convenir avec le membre',
 };
 
 export const STATUS_LABELS: Record<ListingStatus, string> = {

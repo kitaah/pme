@@ -84,7 +84,7 @@ filtres: "" {
 |---|---|
 | **Liste blanche des champs** | Les champs non déclarés sont retirés, et leur présence fait échouer la requête avec une erreur 400. |
 | **Tailles bornées** | Titre de 3 à 100 caractères, description de 1000 au plus. Les mêmes bornes sont posées sur les colonnes de la base. |
-| **Valeurs énumérées** | L'état d'un objet ne peut valoir que `NEW`, `VERY_GOOD`, `GOOD` ou `FAIR`, sa catégorie qu'un code de la table `categories` (vérifié par l'API, et garanti par une clé étrangère en base), le type d'annonce que `EXCHANGE`, `GIFT` ou `SALE`, et le lieu de remise que l'un des quatre magasins ou « à convenir ». |
+| **Valeurs énumérées** | L'état d'un objet ne peut valoir que `NEW`, `VERY_GOOD`, `GOOD` ou `FAIR`, sa catégorie qu'un code de la table `categories` (vérifié par l'API, et garanti par une clé étrangère en base), le type d'annonce que `EXCHANGE`, `GIFT` ou `SALE`, et le lieu de remise qu'un code de la table `handover_places` (les quatre magasins ou « à convenir »), vérifié de la même façon. |
 | **Prix cohérent** | Un prix n'est accepté que pour une vente (de 1 à 999 999 centimes) et il y est obligatoire. Une contrainte de la base refuse aussi un prix sur un échange ou un don. |
 | **Nombre de résultats plafonné** | Le paramètre de pagination est ramené entre 1 et 100, et une valeur non entière est refusée. |
 | **Messages explicites** | Chaque règle a son message en français, ce qui évite à l'interface de les réécrire. |
@@ -156,7 +156,7 @@ autre site ou glissé dans un champ de saisie, est donc refusé, même si la pag
 
 **Données personnelles réduites au minimum**
 La base ne conserve, pour chaque annonce, que l'identifiant Keycloak de son propriétaire et son nom d'affichage. Aucune
-adresse électronique, aucun mot de passe, aucune trace de connexion. Le lieu de remise est une liste fermée de magasins,
+adresse électronique, aucun mot de passe, aucune trace de connexion. Le lieu de remise est une liste de magasins gérée par l'entreprise,
 et la position GPS des photos est effacée : aucune adresse personnelle n'est collectée. Une demande de suppression de compte se traite donc
 dans Keycloak, sans toucher aux données métier.
 

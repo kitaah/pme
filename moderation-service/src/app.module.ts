@@ -13,6 +13,7 @@ import { AddListingDetails1763100000000 } from './migrations/1763100000000-add-l
 import { RemoveForPartsCondition1763200000000 } from './migrations/1763200000000-remove-for-parts-condition';
 import { AddListingCategory1763300000000 } from './migrations/1763300000000-add-listing-category';
 import { OpenCategoryCode1763400000000 } from './migrations/1763400000000-open-category-code';
+import { OpenHandoverPlaceCode1763500000000 } from './migrations/1763500000000-open-handover-place-code';
 import { ModerationItem } from './moderation/moderation-item.entity';
 import { ModerationModule } from './moderation/moderation.module';
 
@@ -39,6 +40,7 @@ import { ModerationModule } from './moderation/moderation.module';
             RemoveForPartsCondition1763200000000,
             AddListingCategory1763300000000,
             OpenCategoryCode1763400000000,
+            OpenHandoverPlaceCode1763500000000,
           ],
           migrationsRun: true,
           synchronize: false,

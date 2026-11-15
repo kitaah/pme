@@ -35,7 +35,7 @@ export class ListingEventsPublisher {
       condition: listing.condition,
       category: listing.category.code,
       kind: listing.kind,
-      handoverPlace: listing.handoverPlace,
+      handoverPlace: listing.handoverPlace.code,
       submittedAt: listing.createdAt.toISOString(),
     };
 

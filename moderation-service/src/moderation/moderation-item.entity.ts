@@ -1,8 +1,11 @@
-import { HandoverPlace, ListingKind } from '@pme/common';
+import { ListingKind } from '@pme/common';
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 /** Categorie par defaut d'un message qui n'en porte pas (ancienne version de l'API). Meme code que dans la base de l'API. */
 export const DEFAULT_CATEGORY_CODE = 'OTHER';
+
+/** Lieu de remise par defaut d'un message qui n'en porte pas (ancienne version de l'API). Meme code que dans la base de l'API. */
+export const DEFAULT_HANDOVER_PLACE_CODE = 'TO_AGREE';
 
 export enum ModerationStatus {
   PENDING = 'PENDING',
@@ -48,7 +51,8 @@ export class ModerationItem {
   @Column({ name: 'wanted_in_exchange', type: 'varchar', length: 120, nullable: true })
   wantedInExchange: string | null;
 
-  @Column({ name: 'handover_place', type: 'varchar', length: 20, default: HandoverPlace.TO_AGREE })
+  /** Code du lieu de remise, recopie de l'evenement : la table des lieux est dans la base de l'API, pas ici. */
+  @Column({ name: 'handover_place', type: 'varchar', length: 30, default: DEFAULT_HANDOVER_PLACE_CODE })
   handoverPlace: string;
 
   /** Chemin de la photo dans le stockage objet, jamais le fichier : le moderateur la lira plus tard. */

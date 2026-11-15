@@ -16,7 +16,7 @@ const listing = (id: string, status: Listing['status'], extra: Partial<Listing> 
   kind: 'EXCHANGE',
   priceCents: null,
   wantedInExchange: null,
-  handoverPlace: 'TO_AGREE',
+  handoverPlace: { code: 'TO_AGREE', label: 'À convenir avec le membre' },
   photoUrl: null,
   status,
   createdAt: '2026-11-04T10:12:00.000Z',
@@ -94,8 +94,17 @@ describe('MyListings', () => {
 
   it('affiche le type, le prix d une vente, l etat et le lieu de remise', async () => {
     myListings.mockResolvedValue([
-      listing('1', 'PUBLISHED', { kind: 'SALE', priceCents: 4500, condition: 'NEW', handoverPlace: 'SHOP_LYON' }),
-      listing('2', 'PUBLISHED', { kind: 'GIFT', condition: 'FAIR', handoverPlace: 'SHOP_AIX' }),
+      listing('1', 'PUBLISHED', {
+        kind: 'SALE',
+        priceCents: 4500,
+        condition: 'NEW',
+        handoverPlace: { code: 'SHOP_LYON', label: 'Magasin de Lyon' },
+      }),
+      listing('2', 'PUBLISHED', {
+        kind: 'GIFT',
+        condition: 'FAIR',
+        handoverPlace: { code: 'SHOP_AIX', label: 'Magasin d’Aix-en-Provence' },
+      }),
     ]);
 
     renderList();

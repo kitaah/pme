@@ -1,9 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { HandoverPlace, ListingKind } from '@pme/common';
+import { ListingKind } from '@pme/common';
 import { Repository } from 'typeorm';
 import { ListingSubmittedEvent } from './listing-submitted.event';
-import { DEFAULT_CATEGORY_CODE, ModerationItem, ModerationStatus } from './moderation-item.entity';
+import {
+  DEFAULT_CATEGORY_CODE,
+  DEFAULT_HANDOVER_PLACE_CODE,
+  ModerationItem,
+  ModerationStatus,
+} from './moderation-item.entity';
 
 const UNIQUE_VIOLATION = '23505';
 
@@ -33,7 +38,7 @@ export class ModerationService {
         kind: event.kind ?? ListingKind.EXCHANGE,
         priceCents: event.priceCents ?? null,
         wantedInExchange: event.wantedInExchange ?? null,
-        handoverPlace: event.handoverPlace ?? HandoverPlace.TO_AGREE,
+        handoverPlace: event.handoverPlace ?? DEFAULT_HANDOVER_PLACE_CODE,
         photoKey: event.photoKey ?? null,
         status: ModerationStatus.PENDING,
         submittedAt: new Date(event.submittedAt),

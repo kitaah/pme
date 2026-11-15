@@ -67,7 +67,7 @@ docker -> env
 
 ## Rôle dans le projet
 
-- Il démarre PostgreSQL et NATS pour les 31 tests d'intégration : 21 pour l'API et 10 pour le service de modération.
+- Il démarre PostgreSQL et NATS pour les 35 tests d'intégration : 25 pour l'API et 10 pour le service de modération.
 - Il utilise les mêmes versions que le cluster, ce qui évite les différences entre les tests et la production.
 - Il permet de vérifier des scénarios réels : un message conservé pendant l'arrêt du service de modération, un rejeu sans
   doublon, une panne du broker.

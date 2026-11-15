@@ -156,6 +156,34 @@ describe('API annonces (integration)', () => {
       expect(await dataSource.query('SELECT 1 FROM listings')).toHaveLength(1);
     });
 
+    it('range l annonce au lieu de remise choisi, avec la cle etrangere en base, et refuse un lieu inconnu (400)', async () => {
+      const ok = await request(app.getHttpServer())
+        .post('/api/v1/listings')
+        .set('Authorization', member())
+        .send({ ...validBody, handoverPlace: 'SHOP_LYON' });
+      const inconnu = await request(app.getHttpServer())
+        .post('/api/v1/listings')
+        .set('Authorization', member())
+        .send({ ...validBody, handoverPlace: 'SHOP_PARIS' });
+
+      expect(ok.status).toBe(201);
+      expect(ok.body.handoverPlace).toEqual({ code: 'SHOP_LYON', label: 'Magasin de Lyon' });
+      expect(inconnu.status).toBe(400);
+      const rows = await dataSource.query(
+        'SELECT h.code FROM listings l JOIN handover_places h ON h.id = l.handover_place_id',
+      );
+      expect(rows).toEqual([{ code: 'SHOP_LYON' }]);
+    });
+
+    it('utilise « a convenir » quand aucun lieu de remise n est precise', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/listings')
+        .set('Authorization', member())
+        .send(validBody);
+
+      expect(res.body.handoverPlace.code).toBe('TO_AGREE');
+    });
+
     it.each([
       ['titre vide', { ...validBody, title: '   ' }],
       ['titre trop court', { ...validBody, title: 'ab' }],
@@ -197,6 +225,23 @@ describe('API annonces (integration)', () => {
 
     it('refuse une requete sans jeton (401)', async () => {
       const res = await request(app.getHttpServer()).get('/api/v1/categories');
+
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe('GET /api/v1/handover-places', () => {
+    it('renvoie les cinq lieux de depart dans l ordre d affichage', async () => {
+      const res = await request(app.getHttpServer()).get('/api/v1/handover-places').set('Authorization', member());
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(5);
+      expect(res.body[0]).toEqual({ code: 'SHOP_ANGOULEME', label: 'Magasin d’Angoulême' });
+      expect(res.body[4]).toEqual({ code: 'TO_AGREE', label: 'À convenir avec le membre' });
+    });
+
+    it('refuse une requete sans jeton (401)', async () => {
+      const res = await request(app.getHttpServer()).get('/api/v1/handover-places');
 
       expect(res.status).toBe(401);
     });

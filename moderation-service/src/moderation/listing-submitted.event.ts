@@ -1,4 +1,4 @@
-import { HandoverPlace, ListingCondition, ListingKind } from '@pme/common';
+import { ListingCondition, ListingKind } from '@pme/common';
 import {
   IsDateString,
   IsEnum,
@@ -54,7 +54,8 @@ export class ListingSubmittedEvent {
   @IsOptional() @IsEnum(ListingKind) kind?: string;
   @IsOptional() @IsInt() @Min(1) priceCents?: number;
   @IsOptional() @IsString() @MaxLength(120) wantedInExchange?: string;
-  @IsOptional() @IsEnum(HandoverPlace) handoverPlace?: string;
+  /** Code d'un lieu de la table de l'API : seule la forme est controlee ici, comme pour la categorie. */
+  @IsOptional() @Matches(/^[A-Z][A-Z_]{0,29}$/) handoverPlace?: string;
   /** Chemin de la photo dans le stockage objet : le service de moderation ne la lit pas dans le POC. */
   @IsOptional() @IsString() @MaxLength(200) photoKey?: string;
 
