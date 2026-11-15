@@ -6,13 +6,13 @@
 |---|---|
 | **Rôle** | Permet de versionner les mots de passe du projet dans Git sans les exposer |
 | **Outil** | [Sealed Secrets](../outils/sealed-secrets.md) 0.41.2, de Bitnami |
-| **Secrets gérés** | 12 valeurs : accès à PostgreSQL, à NATS, à l'administration de Keycloak et de Grafana, et les quatre secrets du stockage des photos (Garage) |
+| **Secrets gérés** | 16 valeurs : accès d'administration à PostgreSQL, à NATS, à l'administration de Keycloak et de Grafana, les quatre mots de passe des comptes PostgreSQL de service, et les quatre secrets du stockage des photos (Garage) |
 | **Source locale** | Le fichier `.env`, jamais versionné |
 | **Contrôle automatique** | gitleaks, par `make secrets-scan` |
 
 ## Description
 
-Un **secret** est une valeur qui donne un accès : un mot de passe, une clé, un jeton. Le projet en compte douze, et tous
+Un **secret** est une valeur qui donne un accès : un mot de passe, une clé, un jeton. Le projet en compte seize, et tous
 posent la même question : où les écrire ? Les laisser dans le code revient à les publier. Les garder sur l'ordinateur
 d'une seule personne revient à bloquer l'équipe le jour où cette personne est absente.
 
@@ -78,7 +78,7 @@ etapes: "" {
 **Le parcours d'un secret**
 
 1. `make env` crée `.env` depuis son modèle, avec un masque de permissions strict. Le fichier est ignoré par Git.
-2. La personne remplace les valeurs `CHANGE_ME` par de vrais mots de passe. Les quatre secrets de Garage font exception : `make seal` les génère lui-même, au hasard, s'ils manquent.
+2. La personne remplace les valeurs `CHANGE_ME` par de vrais mots de passe. Les quatre secrets de Garage et les quatre mots de passe des comptes PostgreSQL de service font exception : `make seal` les génère lui-même, au hasard, s'ils manquent.
 3. `make seal` chiffre ces valeurs et écrit `k8s/14-pme-secrets-sealed.yaml`, qui est versionné.
 4. `make deploy` applique ce fichier. Le contrôleur le déchiffre et crée le Secret dans le cluster.
 5. Les pods lisent les valeurs par référence au Secret, jamais en clair dans un manifeste.
@@ -90,6 +90,7 @@ etapes: "" {
 | **`.env` ignoré par Git** | Les mots de passe réels ne peuvent pas être poussés par mégarde. |
 | **Permissions strictes à la création** | Le fichier n'est lisible que par son propriétaire. |
 | **Secrets de Garage générés, jamais modifiés** | Les clés du stockage sont tirées au hasard dans `.env` par `make garage-secrets` (appelé par `make seal`). Une valeur déjà présente n'est jamais changée : elle désynchroniserait `.env`, le fichier scellé et la clé déjà importée dans Garage. |
+| **Mots de passe PostgreSQL de service générés, jamais modifiés** | Chaque service a son compte et son mot de passe, tirés au hasard dans `.env` par `make db-secrets` (appelé par `make seal`). Ils ne sont lus qu'à l'initialisation du volume : en changer un après coup demande de refaire ce volume. |
 | **Refus des valeurs `CHANGE_ME`** | `make seal` s'arrête si une valeur du modèle n'a pas été remplacée : on ne scelle pas un mot de passe d'exemple en croyant sécuriser le cluster. |
 | **Refus d'une variable absente** | Un secret oublié est signalé, plutôt que scellé à vide. |
 | **Fichier temporaire supprimé** | Les valeurs transitent par un fichier temporaire à permissions restreintes, effacé même si la commande échoue. |
@@ -122,13 +123,13 @@ du job. Côté images, un contrôle de structure vérifie qu'aucun fichier `.env
 - **La clé privée du contrôleur n'est pas sauvegardée** : c'est sans conséquence ici, puisque `.env` permet de tout
   resceller, mais ce serait un point critique dans un environnement durable.
 - **Les valeurs du POC sont faibles et connues.** Le modèle `env.example` impose de remplacer `CHANGE_ME`, mais les
-  mots de passe retenus en local (`pme`) sont courts. Seuls les secrets de Garage sont générés au hasard. Une mise en service exigerait des valeurs générées et propres à
+  mots de passe retenus en local (`pme`) sont courts. Seuls les secrets de Garage et les mots de passe des comptes PostgreSQL de service sont générés au hasard. Une mise en service exigerait des valeurs générées et propres à
   chaque environnement.
 - **Un seul jeu de secrets** : les mêmes valeurs servent à toutes les bases et à tous les services. Le chapitre
   [Durcissement](durcissement.md) revient sur ce point pour PostgreSQL.
 
 Un gestionnaire comme HashiCorp Vault répondrait à la rotation et à l'audit, au prix d'un service supplémentaire à
-installer, initialiser, desceller et sauvegarder. Pour douze valeurs fixes de démonstration, Sealed Secrets suffit.
+installer, initialiser, desceller et sauvegarder. Pour seize valeurs fixes de démonstration, Sealed Secrets suffit.
 
 ## Commandes de vérification
 
@@ -155,7 +156,7 @@ installer, initialiser, desceller et sauvegarder. Pour douze valeurs fixes de d�
 |---|---|
 | **`env.example`** | Modèle des variables attendues, avec des valeurs de démonstration. |
 | **`.env`** | Les vraies valeurs, sur l'ordinateur, jamais versionnées. |
-| **`k8s/14-pme-secrets-sealed.yaml`** | Les douze secrets chiffrés, versionnés dans Git. |
+| **`k8s/14-pme-secrets-sealed.yaml`** | Les seize secrets chiffrés, versionnés dans Git. |
 | **`Makefile`**<br>(cible **`sealed-secrets`**) | Installe le contrôleur, à une version épinglée. |
 | **`.gitleaks.toml`** | Règles de recherche de secrets et exceptions assumées. |
 | **`Makefile`**<br>(cibles **`env`**, **`seal`**<br>et **`secrets-scan`**) | Création de `.env`, scellement et recherche de secrets. |

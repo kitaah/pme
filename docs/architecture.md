@@ -105,7 +105,7 @@ cluster: "Cluster\nMinikube" {
     moderation: "Service de modération\n/api/v1/moderation" {class: boite}
     keycloak: "Keycloak\nidentités et jetons" {class: boite}
     nats: "NATS JetStream\nflux LISTINGS" {class: boite}
-    postgres: "PostgreSQL\nbases pme, moderation,\nkeycloak, grafana" {class: donnee}
+    postgres: "PostgreSQL\nune instance, quatre bases,\nun compte par base" {class: donnee}
     garage: "Garage\nstockage objet S3\nphotos des annonces" {
       class: donnee
       width: 520
@@ -183,10 +183,11 @@ file: "11. La file se consulte\nGET /api/v1/moderation/queue" {class: boite}
 compensation: "L'annonce et sa photo sont effacées,\nle membre reçoit un 503" {class: boite}
 
 connexion -> depot -> entree -> controle -> photo -> ecriture -> publication
-publication -> reponse: publication réussie
-publication -> compensation: broker injoignable
+publication -> reponse: succès
+publication -> compensation: échec
+publication -> consommation: message distribué
 reponse -> redirection
-reponse -> consommation -> file
+consommation -> file
 ```
 
 **Définitions**
@@ -205,7 +206,7 @@ reponse -> consommation -> file
 |---|---|---|
 | **Deux services séparés plutôt qu'une seule application** | Montrer une communication asynchrone réelle entre deux déploiements indépendants. | Deux images, deux bases, deux jeux de tests : plus de code pour un POC de cette taille. |
 | **Messages plutôt qu'appel direct** | Le dépôt d'annonce survit à une modération arrêtée ou lente. | Il faut gérer le rejeu, les doublons et les messages invalides (flux d'échec). |
-| **Une instance PostgreSQL, quatre bases** | Économiser la mémoire d'un cluster local. | Un seul compte partagé : aucune séparation des droits, limite connue de la [sécurité](securite/durcissement.md). |
+| **Une instance PostgreSQL, quatre bases, un compte par base** | Économiser la mémoire d'un cluster local, tout en gardant la séparation du C4 : le Cœur et la modération ont chacun leur base et leur compte, sans accès à celle de l'autre. | L'isolation est logique, pas physique : une panne de l'instance touche les quatre bases. En production, chaque service aurait sa propre instance. |
 | **Identités déléguées à Keycloak** | L'API ne stocke aucun mot de passe ; elle ne garde que le `sub` du membre. | Keycloak devient indispensable au démarrage de la plateforme. |
 | **Jeton contrôlé à l'entrée, puis dans chaque service** | Traefik refuse tôt toute requête sans jeton valide. Chaque service revérifie le jeton et décide des rôles. | Traefik open source n'a pas ce contrôle en natif : un plugin communautaire est téléchargé à son démarrage, en version épinglée. |
 | **Débit limité à l'entrée** | Traefik plafonne à 200 requêtes par minute et par adresse, avant même l'API, et à 600 pour la lecture des photos. | Le plafond de l'API, par exemplaire, reste en seconde barrière. |

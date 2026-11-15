@@ -133,7 +133,7 @@ Ses sources de données sont les suivantes :
 | **`k8s/config/grafana-dashboards.yml`** | Indique à Grafana où lire les tableaux de bord. |
 | **`k8s/config/grafana-dashboard-pme.json`** | Décrit le tableau de bord « Services ». |
 | **`k8s/config/grafana-dashboard-logs.json`** | Décrit le tableau de bord « Logs ». |
-| **`k8s/config/postgres-init.sh`** | Crée la base de Grafana à la première initialisation du volume. |
+| **`k8s/config/postgres-init.sh`** | Crée à la première initialisation du volume la base de Grafana et son compte `pme_grafana`. |
 | **`.env`** | Contient l'identifiant et le mot de passe de connexion. Ce fichier est exclu de Git. |
 
 ## Commandes essentielles
@@ -144,7 +144,6 @@ Ses sources de données sont les suivantes :
 |---|---|
 | **`make deploy`** | Installe Grafana avec le reste de la plateforme. |
 | **`make grafana`** | Ouvre Grafana dans le navigateur. |
-| **`make create-grafana-db`** | Crée la base de Grafana sur un cluster déjà installé. |
 | **`make pods`** | Indique si Grafana est prêt. |
 
 !!! warning "Attention"

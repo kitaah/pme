@@ -1,4 +1,4 @@
-# PostgreSQL 18 : une instance, trois bases (pme, moderation, keycloak) creees par postgres-init.sh.
+# PostgreSQL 18 : une instance, quatre bases (pme, moderation, keycloak, grafana), chacune avec son compte, creees par postgres-init.sh.
 # Connexions chiffrees : certificat signe par l'autorite locale (k8s/00-internal-tls.yaml) et TLS obligatoire
 # pour tout ce qui vient du reseau (k8s/config/postgres-hba.conf). Les clients verifient le certificat du
 # serveur (`verify-full`) grace a la ConfigMap `pme-ca` (make ca-configmap).
@@ -87,6 +87,19 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef: { name: pme-secrets, key: db-password }
+            # Mots de passe des quatre comptes de service, lus UNE fois par postgres-init.sh pour les creer.
+            - name: DB_API_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: db-api-password }
+            - name: DB_MODERATION_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: db-moderation-password }
+            - name: DB_KEYCLOAK_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: db-keycloak-password }
+            - name: DB_GRAFANA_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: db-grafana-password }
           resources:
             requests: { cpu: 100m, memory: 128Mi }
             limits: { cpu: 300m, memory: 256Mi }

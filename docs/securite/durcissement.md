@@ -172,6 +172,15 @@ Cela n'est pas seulement déclaré, c'est vérifié à chaque passage de la pipe
     abandonnent elles-mêmes ces droits pour leur propre compte. C'est le fonctionnement prévu par leurs éditeurs ; les
     autres réglages, eux, leur sont bien appliqués.
 
+**Un compte PostgreSQL par service**
+
+L'API, le service de modération, Keycloak et Grafana ne partagent plus de compte : chacun a le sien (`pme_api`,
+`pme_moderation`, `pme_keycloak`, `pme_grafana`), propriétaire de sa seule base. Un composant compromis ne peut donc ni
+lire ni modifier les données d'un autre, comptes de Keycloak compris. La règle est posée deux fois : le fichier
+`pg_hba.conf` refuse toute connexion d'un compte vers une autre base, et le droit `CONNECT`, retiré à tout le monde sauf
+au propriétaire, la refuserait même si cette règle était fausse. Les mots de passe sont distincts, générés dans `.env`
+par `make seal`, puis chiffrés dans le fichier de secrets. Le détail est dans la page [PostgreSQL](../outils/postgresql.md).
+
 ## Ce qui n'est pas couvert
 
 - **Les connexions sortantes ne sont pas filtrées.** Les politiques réseau ne contrôlent que ce qui entre dans un pod.
@@ -183,10 +192,6 @@ Cela n'est pas seulement déclaré, c'est vérifié à chaque passage de la pipe
 - **Les politiques réseau lisent des étiquettes, pas des identités.** Elles s'appuient sur les étiquettes des pods, qu'un
   administrateur du namespace peut modifier. L'identité cryptographique des pods, vérifiée par le maillage
   [Istio](../outils/istio.md), complète ce filtre.
-- **Un seul compte PostgreSQL pour quatre bases.** L'API, le service de modération, Keycloak et Grafana se connectent
-  avec le même compte, créé à l'initialisation du serveur. Chacun peut donc lire et modifier les données des autres, y
-  compris les comptes de Keycloak. Un compte par base, avec les seuls droits nécessaires, est le premier correctif à
-  apporter.
 - **Le disque reste modifiable pour la plupart des composants.** Seuls l'API, la modération et l'interface l'ont en
   lecture seule. PostgreSQL, Keycloak, Grafana, Adminer, NATS, Prometheus, Loki et Alloy écrivent à plusieurs endroits
   (données, fichiers de travail, extensions) qu'il faudrait recenser et monter un à un, avec un essai composant par

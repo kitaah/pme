@@ -58,7 +58,7 @@ navigateur, `make seal` (nouveau cluster, donc nouvelle clé ; génère aussi le
     Le `Makefile` crée aussi deux fichiers qui ne sont pas des commandes : `.env`, produit à la demande depuis
     `env.example`, et `k8s/14-pme-secrets-sealed.yaml`, généré par `make deploy` s'il manque. Une fois présents, ils ne
     sont jamais réécrits tout seuls : après un changement de mot de passe, c'est `make seal` qui les met à jour. Les
-    quatre secrets de Garage, eux, sont générés dans `.env` par `make seal` s'ils manquent, puis jamais modifiés.
+    quatre secrets de Garage et les quatre mots de passe des comptes PostgreSQL de service, eux, sont générés dans `.env` par `make seal` s'ils manquent, puis jamais modifiés.
 
 ## Toutes les commandes
 
@@ -106,7 +106,7 @@ navigateur, `make seal` (nouveau cluster, donc nouvelle clé ; génère aussi le
 |---|---|
 | **`make kubeseal`** | Installe l'outil `kubeseal` à la bonne version s'il est absent (Linux, `sudo` demandé). Requis par `seal`. |
 | **`make sealed-secrets`** | Installe le contrôleur Sealed Secrets dans `kube-system`, une fois par cluster, à la même version que `kubeseal`. |
-| **`make sealed-prereqs`** | Contrôle préalable de `seal` : `kubeseal` à la bonne version, les douze variables de `.env` renseignées (aucun `CHANGE_ME` : base, NATS, Keycloak, Grafana et les quatre secrets de Garage), contrôleur installé (il l'installe sinon). |
+| **`make sealed-prereqs`** | Contrôle préalable de `seal` : `kubeseal` à la bonne version, les seize variables de `.env` renseignées (aucun `CHANGE_ME` : administration de la base, NATS, Keycloak, Grafana, les quatre mots de passe des comptes PostgreSQL de service et les quatre secrets de Garage), contrôleur installé (il l'installe sinon). |
 | **`make seal`** | Génère les secrets de Garage s'ils manquent (`garage-secrets`), puis chiffre `.env` dans `k8s/14-pme-secrets-sealed.yaml` (`seal-now`), à versionner dans Git. Les deux étapes sont des appels séparés : `make` ne lit `.env` qu'une fois, au démarrage. À relancer après un changement de secret ou sur un nouveau cluster. |
 
 ### Images et déploiement
@@ -119,12 +119,12 @@ navigateur, `make seal` (nouveau cluster, donc nouvelle clé ; génère aussi le
 | **`make image-frontend`** | Construit `pme-frontend:dev` directement dans Minikube. |
 | **`make deploy`** | Génère le fichier de secrets chiffrés s'il manque, copie l'autorité locale, vérifie la présence de Sealed Secrets, cert-manager et Traefik, lance `kubectl apply -k k8s/`, puis `garage-init`. |
 | **`make garage-secrets`** | Génère dans `.env` les quatre secrets de [Garage](outils/garage.md) (clé d'accès, secret, secret RPC, jeton d'administration) s'ils manquent ou valent `CHANGE_ME`. Appelé par `make seal`. Une valeur déjà présente n'est jamais modifiée. |
+| **`make db-secrets`** | Génère dans `.env` les mots de passe des quatre comptes PostgreSQL de service (API, modération, Keycloak, Grafana) s'ils manquent ou valent `CHANGE_ME`. Appelé par `make seal`. Une valeur déjà présente n'est jamais modifiée. |
 | **`make garage-init`** | Mise en service du [stockage des photos](outils/garage.md) : disposition des données, bucket `pme-photos` et clé d'accès de l'API. Lancé par `make deploy` (donc aussi par `make reset`, dont le volume repart vide) ; peut se lancer seul. Sans effet si tout est déjà en place. |
 | **`make redeploy`** | `image`, puis redémarrage des trois déploiements applicatifs et attente de leur disponibilité. À lancer après une modification du code. |
 | **`make restart`** | Redémarre les trois déploiements applicatifs sans reconstruire les images. |
-| **`make undeploy`** | Supprime le namespace applicatif, données comprises, et attend que la suppression soit terminée. |
+| **`make undeploy`** | Supprime le namespace applicatif, données comprises, puis attend ses volumes. Ceux que Minikube laisse en état `Released`, avec leurs données, sont supprimés, ainsi que leur dossier dans la machine Minikube. |
 | **`make reset`** | `undeploy`, puis `deploy` : repart d'un namespace vide. |
-| **`make create-grafana-db`** | Crée la base `grafana` dans un PostgreSQL déjà initialisé. Sans effet si elle existe. |
 
 ### Observation
 
@@ -210,6 +210,9 @@ Si aucun navigateur ne peut être lancé, chaque commande affiche l'adresse à o
 !!! warning "Attention"
     `make undeploy` et `make reset` suppriment le namespace applicatif, donc les données de PostgreSQL, les messages de
     NATS et les photos de Garage. Il n'y a aucune confirmation. Les secrets chiffrés, eux, sont conservés dans Git.
+    Les volumes sont des dossiers de la machine Minikube : Minikube peut les laisser en état `Released` après la suppression
+    du namespace, et PostgreSQL redémarrerait alors sur ses anciennes données, sans recréer ses comptes. `make undeploy`
+    supprime ces volumes restants et leur dossier avant de rendre la main.
 
 !!! tip "Astuce"
     Pour voir ce qu'une commande exécuterait sans la lancer, ajouter `-n` : `make -n deploy` affiche les commandes

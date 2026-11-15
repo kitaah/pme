@@ -112,7 +112,7 @@ rendu -> lint: validation hors ligne
 | **`make lint-k8s`** | Valide le rendu contre les schémas officiels de Kubernetes. |
 | **`kustomize build k8s`** | Affiche le rendu sans rien déployer. |
 | **`kubectl apply -k k8s/`** | Ce que `make deploy` lance, sans ses vérifications préalables. |
-| **`make undeploy`** | Supprime le namespace `pme` et attend la fin de la suppression. |
+| **`make undeploy`** | Supprime le namespace `pme` et ses volumes, et attend la fin de la suppression. |
 
 !!! warning "Attention"
     Le namespace est écrit en dur dans `k8s/kustomization.yaml`. La variable `NS` du `Makefile` ne sert qu'aux

@@ -238,7 +238,7 @@ Le cluster est créé avec les paramètres suivants :
 | **`make deploy`** | Applique les manifestes et déploie toute la plateforme. |
 | **`make pods`** | Affiche l'état de chaque pod. |
 | **`make redeploy`** | Reconstruit et recharge les images, puis redémarre progressivement l'API, la modération et l'interface pour appliquer une modification du code. |
-| **`make undeploy`** | Supprime le namespace `pme`, donc la plateforme et ses données. |
+| **`make undeploy`** | Supprime le namespace `pme`, donc la plateforme et ses données, volumes compris. |
 | **`make minikube-down`** | Arrête le cluster sans le supprimer. |
 
 Lors du premier démarrage, l'enchaînement est le suivant :
@@ -262,7 +262,7 @@ Lors du premier démarrage, l'enchaînement est le suivant :
     `minikube image build`.
 
 !!! warning "Attention"
-    `make undeploy` supprime aussi les données (annonces, comptes, messages en attente dans NATS, mesures et logs). À réserver au cas où l'on souhaite repartir de zéro.
+    `make undeploy` supprime aussi les données (annonces, comptes, messages en attente dans NATS, mesures et logs). À réserver au cas où l'on souhaite repartir de zéro. Les volumes sont des dossiers de la machine Minikube : la commande supprime ceux que Minikube laisse en état `Released`, sans quoi PostgreSQL redémarrerait sur ses anciennes données.
 
 !!! tip "Astuce"
     Les options `--ports` et `--cni` ne sont prises en compte qu'à la création du cluster. Pour les appliquer à un cluster existant, il

@@ -63,11 +63,10 @@ spec:
             - name: DB_NAME
               value: moderation
             - name: DB_USER
-              valueFrom:
-                secretKeyRef: { name: pme-secrets, key: db-username }
+              value: pme_moderation
             - name: DB_PASSWORD
               valueFrom:
-                secretKeyRef: { name: pme-secrets, key: db-password }
+                secretKeyRef: { name: pme-secrets, key: db-moderation-password }
             # Chemin de l'autorite locale : sa presence active le TLS vers PostgreSQL, avec verification du nom du
             # serveur (equivalent de sslmode=verify-full). Absente en local et dans les tests : connexion en clair.
             - name: DB_SSL_CA

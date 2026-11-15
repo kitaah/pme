@@ -61,6 +61,22 @@ Deux règles découlent du C4 :
   ne lit ni n'écrit aucun fichier. Dans le C4 complet, c'est le Cœur qui déplacerait la photo à la réception de la décision
   de modération ; ce circuit est hors périmètre du POC.
 
+Une troisième règle découle aussi du C4 : **la modération a sa propre base**. Elle n'a aucun accès à la base `pme` du
+Cœur, et l'API n'en a aucun à la sienne. Chaque base a son compte PostgreSQL (`pme_api`, `pme_moderation`), propriétaire de
+cette seule base ; les deux partagent la même instance, par économie de mémoire (voir [PostgreSQL](outils/postgresql.md)).
+
+**Écarts assumés du POC.** Deux écarts avec le niveau 2 sont des simplifications, et aucun n'altère la chaîne démontrée :
+
+- **Pas de Back-office séparé.** Le C4 prévoit un Back-office où le modérateur passe par la Passerelle et le Cœur. Le POC
+  n'a qu'une interface React pour tous les rôles, et Traefik expose directement `/api/v1/moderation` : la décision du
+  modérateur étant hors périmètre, seule la consultation de la file existe.
+- **Une instance PostgreSQL unique.** Les deux bases du C4 sont séparées par leurs comptes et leurs droits, pas par deux
+  serveurs. En production, chaque service aurait sa propre instance : seule l'adresse du serveur changerait.
+
+La lecture des photos par le navigateur (relation 13) passe, dans le POC, par l'ingress Traefik : il relaie la requête
+sans valider de jeton ni exécuter de code applicatif, comme le ferait l'adresse publique d'un hébergeur S3
+(voir [Architecture](architecture.md)).
+
 !!! note "À savoir"
     Dans le POC, la photo reste sous le préfixe `pending/` du bucket : la décision du modérateur n'étant pas
     traitée, rien ne la déplace vers `published/`. Le membre voit sa propre photo par une URL signée fournie par l'API.
@@ -120,7 +136,7 @@ classes: {
   }
 }
 
-pme: "Base pme (API)" {
+pme: "Base pme\n(compte pme_api, propriétaire)" {
   style.font-size: 22
 
   categories: "categories" {
@@ -168,7 +184,7 @@ pme: "Base pme (API)" {
   listings.handover_place_id -> handover_places.id: "lieu" {class: lien}
 }
 
-moderation: "Base moderation (service de modération)" {
+moderation: "Base moderation\n(compte pme_moderation, propriétaire)" {
   style.font-size: 22
 
   moderation_queue: "moderation_queue" {
@@ -485,6 +501,7 @@ tests d'intégration existants passent sans changement.
 ## Hors périmètre
 
 - Décision du modérateur, déplacement de la photo vers `published/` et publication de l'annonce.
+- Back-office séparé et interface dédiée au modérateur.
 - Test d'intégration du dépôt avec photo et test de charge avec photo : les scénarios actuels envoient du JSON sans photo.
 - Déplacement automatique du focus vers le titre après la redirection.
 - Plusieurs photos par annonce.
