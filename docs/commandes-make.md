@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Point d'entrée unique de toutes les opérations du projet : cluster, secrets, déploiement, observation, développement, qualité, tests et documentation |
 | **Fichier** | `Makefile`, à la racine du dépôt |
-| **Nombre de commandes** | 84 cibles, regroupées en douze thèmes ci-dessous (plus `seal-now`, étape interne de `make seal`) |
+| **Nombre de commandes** | 86 cibles, regroupées en douze thèmes ci-dessous (plus `seal-now`, étape interne de `make seal`) |
 | **Aide intégrée** | `make help`, qui n'en liste qu'une partie : cette page est la liste complète |
 | **Configuration** | Variables en tête du `Makefile` (voir la dernière section) et fichier `.env` pour les mots de passe |
 
@@ -147,6 +147,8 @@ navigateur, `make seal` (nouveau cluster, donc nouvelle clé ; génère aussi le
 | **`make demo-stop-moderation`** | Arrête le service de modération. Les messages publiés restent dans NATS. |
 | **`make demo-start-moderation`** | Le relance : la file d'attente se vide. |
 | **`make demo-kill-api`** | Supprime le pod de l'API et suit sa recréation par Kubernetes. |
+| **`make seed-listings SEED_USER=<identifiant>`** | Crée des annonces de démonstration **publiées** pour un utilisateur Keycloak (`scripts/seed-listings.sh`) : `COUNT` annonces (6 par défaut), chacune avec une **image aléatoire** générée dans le pod de l'API et envoyée dans Garage. L'API ne sait créer que des annonces en attente (la décision de modération est hors périmètre du POC) : les annonces sont donc insérées directement en base avec le statut `PUBLISHED`. Rien ne les distingue à l'écran : `seed-listings-clean` les retrouve par leur photo, rangée sous `published/` (l'API ne range les photos que sous `pending/`). L'identifiant doit exister dans le realm `pme`, sinon la commande liste les utilisateurs existants. |
+| **`make seed-listings-clean SEED_USER=<identifiant>`** | Supprime les annonces de démonstration de cet utilisateur (les annonces publiées dont la photo est sous `published/`) et leurs images dans Garage. |
 
 ### Développement local
 
@@ -239,6 +241,7 @@ valeurs ci-dessous sont prévues pour cela.
 | **`INOTIFY_INSTANCES`** | `1024` | Limite `inotify` visée par `make inotify`. |
 | **`CA_FILE`** | `pme-ca.crt` | Fichier où `make ca-cert` écrit l'autorité locale. |
 | **`APP_HOST`**, **`KEYCLOAK_HOST`**, **`ADMINER_HOST`**, **`GRAFANA_HOST`**, **`PROMETHEUS_HOST`**, **`ALLOY_HOST`**, **`GARAGE_HOST`** | `pme`, `keycloak`, `adminer`, `grafana`, `prometheus`, `alloy`, `garage`, suivis de `.localhost` | Noms d'hôte des interfaces. Ils sont aussi écrits dans les manifestes : les changer ici ne suffit pas. |
+| **`SEED_USER`**, **`COUNT`** | aucune, `6` | Utilisateur propriétaire et nombre d'annonces pour `make seed-listings`. |
 | **`NATS_MONITOR_PORT`** | `8222` | Port local de la supervision de NATS. |
 | **`DOCS_PORT`** | `8005` | Port de `make docs-serve`. |
 | **`DOCS_IMAGE_PORT`** | `8083` | Port de `make docs-run`. |

@@ -4,7 +4,7 @@
 
 .PHONY: help install test test-integration test-perf image-test \
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
-        minikube-up minikube-down helm ingress ingress-restart mesh-renew inotify istio istio-scan mesh-check authz-check netpol-check jwt-check smoke cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
+        minikube-up minikube-down helm ingress ingress-restart mesh-renew inotify istio istio-scan mesh-check authz-check netpol-check jwt-check smoke seed-listings seed-listings-clean cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
         env kubeseal sealed-secrets sealed-prereqs seal image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         garage-secrets db-secrets seal-now garage-init \
         pods logs logs-api logs-moderation logs-keycloak \
@@ -126,6 +126,8 @@ help:
 	@echo ""
 	@echo "  Demonstration"
 	@echo "    make scripts-perms            - Rend les scripts .sh executables (a lancer apres un clonage ou une extraction)"
+	@echo "    make seed-listings            - Annonces publiees de demonstration pour un utilisateur : SEED_USER=<identifiant> [COUNT=6], chacune avec une image aleatoire"
+	@echo "    make seed-listings-clean      - Supprime les annonces de demonstration de cet utilisateur : SEED_USER=<identifiant>"
 	@echo "    make demo-stop-moderation     - Arrete le service de moderation (les messages restent dans NATS)"
 	@echo "    make demo-start-moderation    - Le relance : la file se vide"
 	@echo "    make demo-kill-api            - Supprime le pod de l'API : Kubernetes le recree"
@@ -347,6 +349,16 @@ jwt-check:
 # puis relue et supprimee (scripts/smoke-photo.js). Aucune donnee conservee, aucune connexion Keycloak requise. Code de sortie 1 si un controle echoue.
 smoke:
 	@NS=$(NS) TRAEFIK_NS=$(TRAEFIK_NS) APP_HOST=$(APP_HOST) KEYCLOAK_HOST=$(KEYCLOAK_HOST) sh scripts/smoke.sh
+
+# Annonces publiees de demonstration (scripts/seed-listings.sh) : COUNT annonces, une image aleatoire chacune.
+# Elles sont inserees en base : l'API ne cree que des annonces en attente (moderation hors perimetre).
+SEED_USER ?=
+COUNT ?= 6
+seed-listings:
+	@NS=$(NS) sh scripts/seed-listings.sh seed "$(SEED_USER)" "$(COUNT)"
+
+seed-listings-clean:
+	@NS=$(NS) sh scripts/seed-listings.sh clean "$(SEED_USER)"
 
 # metrics-server (addon Minikube) : fournit la charge des pods a l'autoscaler (k8s/11-autoscaling.yaml). Sans lui, la cible
 # de chaque autoscaler reste <unknown> et le nombre de pods ne change jamais. Les premieres mesures arrivent apres ~1 minute.
