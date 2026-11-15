@@ -95,6 +95,110 @@ ouvert avec un message d'erreur, et la photo éventuellement déjà enregistrée
 
 ## Modèle de données
 
+Le schéma montre les quatre tables et leurs deux bases. Dans la base `pme`, `listings` pointe vers les tables de référence `categories` et `handover_places` par des clés étrangères. Le service de modération a sa propre base : il ne garde que le code de la catégorie et du lieu, reçu dans l'événement, et rien ne le relie par une clé étrangère à la base `pme`.
+
+```d2
+vars: {
+  d2-config: {
+    layout-engine: elk
+    theme-id: 5
+    pad: 16
+  }
+}
+direction: right
+
+classes: {
+  table: {
+    style: {
+      font-size: 20
+    }
+  }
+  lien: {
+    style: {
+      font-size: 18
+    }
+  }
+}
+
+pme: "Base pme (API)" {
+  style.font-size: 22
+
+  categories: "categories" {
+    class: table
+    shape: sql_table
+    id: smallint {constraint: primary_key}
+    code: "varchar(30)" {constraint: unique}
+    "label": "varchar(60)"
+    sort_order: smallint
+    active: boolean
+  }
+
+  handover_places: "handover_places" {
+    class: table
+    shape: sql_table
+    id: smallint {constraint: primary_key}
+    code: "varchar(30)" {constraint: unique}
+    "label": "varchar(60)"
+    sort_order: smallint
+    active: boolean
+  }
+
+  listings: "listings" {
+    class: table
+    shape: sql_table
+    id: uuid {constraint: primary_key}
+    owner_id: uuid
+    owner_username: "varchar(100)"
+    title: "varchar(100)"
+    description: "varchar(1000)"
+    condition: "varchar(20)"
+    category_id: smallint {constraint: foreign_key}
+    kind: "varchar(20)"
+    price_cents: "integer"
+    wanted_in_exchange: "varchar(120)"
+    handover_place_id: smallint {constraint: foreign_key}
+    photo_key: "varchar(200)"
+    photo_mime: "varchar(40)"
+    status: "varchar(30)"
+    created_at: timestamptz
+    updated_at: timestamptz
+  }
+
+  listings.category_id -> categories.id: "catégorie" {class: lien}
+  listings.handover_place_id -> handover_places.id: "lieu" {class: lien}
+}
+
+moderation: "Base moderation (service de modération)" {
+  style.font-size: 22
+
+  moderation_queue: "moderation_queue" {
+    class: table
+    shape: sql_table
+    id: uuid {constraint: primary_key}
+    listing_id: uuid {constraint: unique}
+    owner_id: uuid
+    owner_username: "varchar(100)"
+    title: "varchar(100)"
+    description: "varchar(1000)"
+    condition: "varchar(20)"
+    category: "varchar(30)"
+    kind: "varchar(20)"
+    price_cents: "integer"
+    wanted_in_exchange: "varchar(120)"
+    handover_place: "varchar(30)"
+    photo_key: "varchar(200)"
+    status: "varchar(20)"
+    submitted_at: timestamptz
+    received_at: timestamptz
+  }
+}
+
+moderation.moderation_queue.listing_id -> pme.listings.id: "même annonce, par l'événement\n(aucune clé étrangère entre deux bases)" {
+  class: lien
+  style.stroke-dash: 4
+}
+```
+
 Table `listings`, base `pme` :
 
 | Colonne | Type | Règle |
