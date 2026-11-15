@@ -1,5 +1,8 @@
-import { HandoverPlace, ListingCategory, ListingKind } from '@pme/common';
+import { HandoverPlace, ListingKind } from '@pme/common';
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+
+/** Categorie par defaut d'un message qui n'en porte pas (ancienne version de l'API). Meme code que dans la base de l'API. */
+export const DEFAULT_CATEGORY_CODE = 'OTHER';
 
 export enum ModerationStatus {
   PENDING = 'PENDING',
@@ -31,7 +34,8 @@ export class ModerationItem {
   @Column({ type: 'varchar', length: 20 })
   condition: string;
 
-  @Column({ type: 'varchar', length: 30, default: ListingCategory.OTHER })
+  /** Code de la categorie, recopie de l'evenement : la table des categories est dans la base de l'API, pas ici. */
+  @Column({ type: 'varchar', length: 30, default: DEFAULT_CATEGORY_CODE })
   category: string;
 
   @Column({ type: 'varchar', length: 20, default: ListingKind.EXCHANGE })

@@ -121,7 +121,7 @@ Pour se connecter :
 
 !!! tip "Astuce"
     La table `listings` de la base `pme` est celle à ouvrir pour suivre une annonce. Sa colonne de statut montre le
-    passage de « en attente de modération » à l'état suivant.
+    passage de « en attente de validation » à l'état suivant.
 
 ## Pour aller plus loin
 

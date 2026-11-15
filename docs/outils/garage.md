@@ -7,7 +7,7 @@
 | **Rôle** | Stocke les photos des annonces, en dehors de la base de données |
 | **Version** | Garage 1.1, image `dxflrs/garage` |
 | **Interface** | S3, celle d'Amazon : le même code fonctionne devant Garage en local et devant un hébergeur européen en production |
-| **Bucket** | `pme-photos`, préfixe `pending/` pour les annonces en attente de modération |
+| **Bucket** | `pme-photos`, préfixe `pending/` pour les annonces en attente de validation |
 | **Licence** | AGPLv3, projet français (Deuxfleurs) |
 | **Adresse en local** | <https://garage.localhost>, par l'ingress, en lecture seule et par URL signée |
 

@@ -25,7 +25,7 @@ l'image ni l'envoi vers [Garage](../outils/garage.md), qui seront plus coûteux.
 
 | Contrôle | Attendu |
 |---|---|
-| **Dépôt d'une annonce** | Réponse 201, avec le statut « en attente de modération ». |
+| **Dépôt d'une annonce** | Réponse 201, avec le statut « en attente de validation ». |
 | **Lecture de mes annonces** | Réponse 200. |
 
 **Seuils**

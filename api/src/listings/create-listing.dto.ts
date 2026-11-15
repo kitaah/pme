@@ -6,12 +6,13 @@ import {
   IsOptional,
   IsString,
   Length,
+  Matches,
   Max,
   MaxLength,
   Min,
   ValidateIf,
 } from 'class-validator';
-import { HandoverPlace, ListingCategory, ListingCondition, ListingKind } from './listing.enums';
+import { HandoverPlace, ListingCondition, ListingKind } from './listing.enums';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
@@ -50,13 +51,14 @@ export class CreateListingDto {
   })
   condition: ListingCondition;
 
-  /** Absente : « autres » est appliquee par defaut (le formulaire envoie toujours une categorie). */
+  /**
+   * Code d'une categorie de la table `categories`. Le format est controle ici ; l'existence (et le fait
+   * d'etre encore proposee) l'est par le service, qui interroge la table. Absente : « autres » par defaut.
+   */
   @Transform(trimOrUndefined)
   @IsOptional()
-  @IsEnum(ListingCategory, {
-    message: 'la catégorie doit valoir FIGURINES, FILMS, BOOKS, POSTERS, MUSIC, GAMES, CLOTHING ou OTHER',
-  })
-  category?: ListingCategory;
+  @Matches(/^[A-Z][A-Z_]{0,29}$/, { message: 'la catégorie doit être un code en majuscules, par exemple FIGURINES' })
+  category?: string;
 
   /** Absent : le formulaire du POC ne propose que l'echange. */
   @IsOptional()

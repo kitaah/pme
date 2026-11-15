@@ -10,7 +10,6 @@ describe('API publique de @pme/common', () => {
         'IS_PUBLIC_KEY',
         'JwtAuthGuard',
         'JwtStrategy',
-        'ListingCategory',
         'ListingCondition',
         'ListingKind',
         'NatsClient',

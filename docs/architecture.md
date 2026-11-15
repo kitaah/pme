@@ -26,7 +26,7 @@ serait lent, redémarré ou saturé. Le membre attendrait pour rien, et une anno
 appels.
 
 **La réponse : un événement, pas un appel.**
-L'API enregistre l'annonce en base avec le statut « en attente de modération », publie un événement dans NATS, puis
+L'API enregistre l'annonce en base avec le statut « en attente de validation », publie un événement dans NATS, puis
 répond au membre. Le service de modération consomme cet événement à son rythme. Les deux services ne se connaissent
 pas : ils ne partagent qu'un nom de sujet et la forme du message. L'un peut être arrêté sans empêcher l'autre de
 fonctionner, et les messages publiés pendant son absence l'attendent dans le flux.
@@ -45,7 +45,7 @@ s'appuie sur des briques précises :
 | Étape | Ce que l'on montre | Briques |
 |---|---|---|
 | **Connexion** | Le membre est redirigé vers la page de connexion de Keycloak, s'authentifie, puis revient sur l'interface où son nom d'utilisateur et son rôle « Membre » s'affichent. | Keycloak, React |
-| **Dépôt de l'annonce** | Le membre remplit le formulaire : titre, description, type d'annonce (échange, don ou vente), contrepartie souhaitée ou prix selon le type, état, lieu de remise et une photo facultative. Traefik limite le débit et la taille du corps de la requête, et vérifie le jeton. L'API revérifie le jeton, le rôle et les données, contrôle et ré-encode la photo, l'enregistre dans le stockage objet, puis écrit l'annonce. Une notification confirme la soumission et le membre est redirigé vers « Mes annonces », où l'annonce apparaît au statut « En attente de modération », photo comprise. | Traefik, React, NestJS, Garage |
+| **Dépôt de l'annonce** | Le membre remplit le formulaire : titre, description, type d'annonce (échange, don ou vente), contrepartie souhaitée ou prix selon le type, état, lieu de remise et une photo facultative. Traefik limite le débit et la taille du corps de la requête, et vérifie le jeton. L'API revérifie le jeton, le rôle et les données, contrôle et ré-encode la photo, l'enregistre dans le stockage objet, puis écrit l'annonce. Une notification confirme la soumission et le membre est redirigé vers « Mes annonces », où l'annonce apparaît au statut « En attente de validation », photo comprise. | Traefik, React, NestJS, Garage |
 | **Prise en charge par la modération** | L'API répond sans attendre la modération. L'événement « annonce soumise » est conservé dans le flux JetStream, et le service de modération, séparé de l'API, le consomme (visible dans ses logs). | NATS, NestJS |
 | **Tout le parcours** | Les composants tournent ensemble sur Minikube. | Minikube |
 
@@ -134,7 +134,7 @@ sauvegarde et chasserait les données utiles du cache de PostgreSQL. Elles vont 
 conteneur « Stockage de fichiers » que prévoyait déjà le niveau 2 du C4 : **Garage**, compatible S3, tient ici le rôle
 que jouera un hébergeur européen en production. Seule l'API y écrit ; la base ne garde que le chemin de l'objet.
 Le navigateur lit l'image directement, par une URL signée valable cinq minutes que l'API calcule : la photo d'une
-annonce en attente de modération n'est donc jamais publique. Dans le POC, cette lecture passe par l'ingress Traefik
+annonce en attente de validation n'est donc jamais publique. Dans le POC, cette lecture passe par l'ingress Traefik
 (`garage.localhost`, avec sa propre limite de débit), faute de S3 externe ; en production, le navigateur lira directement chez l'hébergeur S3, comme le
 montre le C4. Le service de modération n'a aucun accès au stockage,
 et les politiques d'Istio comme celles de Calico le lui refusent.
@@ -171,7 +171,7 @@ depot: "2. Le membre remplit le formulaire\n(type, prix ou contrepartie, photo) 
 entree: "3. POST /api/v1/listings arrive à Traefik\nqui limite le débit (429 sinon),\nla taille du corps (413 sinon)\net vérifie le jeton (401 sinon)" {class: boite}
 controle: "4. L'API revérifie le jeton, le rôle « membre »\net valide chaque champ" {class: boite}
 photo: "5. La photo est contrôlée, ré-encodée\net enregistrée dans Garage" {class: boite}
-ecriture: "6. L'annonce est écrite en base\nstatut « en attente de modération »" {class: boite}
+ecriture: "6. L'annonce est écrite en base\nstatut « en attente de validation »" {class: boite}
 publication: "7. L'API publie listing.submitted\ndans le flux LISTINGS" {class: boite}
 reponse: "8. L'API répond 201 au membre\nsans attendre la modération" {class: boite}
 redirection: "9. L'interface affiche une notification\net ouvre « Mes annonces »" {class: boite}

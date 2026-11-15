@@ -43,17 +43,17 @@ describe('MyListings', () => {
 
     renderList();
 
-    expect(await screen.findByText('En attente de modération', { selector: 'span' })).toBeInTheDocument();
+    expect(await screen.findByText('En attente de validation', { selector: 'span' })).toBeInTheDocument();
     expect(screen.getByText('Publiée')).toBeInTheDocument();
     expect(screen.getByText('Refusée')).toBeInTheDocument();
   });
 
-  it('resume le nombre d annonces et celles en attente de moderation', async () => {
+  it('resume le nombre d annonces et celles en attente de validation', async () => {
     myListings.mockResolvedValue([listing('1', 'PENDING_MODERATION'), listing('2', 'PUBLISHED')]);
 
     renderList();
 
-    expect(await screen.findByText('2 annonces · 1 en attente de modération')).toBeInTheDocument();
+    expect(await screen.findByText('2 annonces · 1 en attente de validation')).toBeInTheDocument();
   });
 
   it('accorde « annonce » au singulier et ne parle pas de moderation quand rien n attend', async () => {
@@ -64,7 +64,7 @@ describe('MyListings', () => {
     expect(await screen.findByText('1 annonce')).toBeInTheDocument();
   });
 
-  it('met en evidence par un cadre dore les annonces en attente de moderation', async () => {
+  it('met en evidence par un cadre dore les annonces en attente de validation', async () => {
     myListings.mockResolvedValue([listing('1', 'PENDING_MODERATION'), listing('2', 'PUBLISHED')]);
 
     renderList();

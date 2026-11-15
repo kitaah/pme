@@ -1,11 +1,13 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthenticatedUser } from '@pme/common';
 import { DatabaseCircuitBreaker } from '../common/database-circuit-breaker';
 import { PhotoStorageService, StoredPhoto } from '../storage/photo-storage.service';
 import { CreateListingDto } from './create-listing.dto';
-import { HandoverPlace, ListingCategory, ListingKind, ListingStatus } from './listing.enums';
+import { CategoriesService } from './categories.service';
+import { Category, DEFAULT_CATEGORY_CODE } from './category.entity';
+import { HandoverPlace, ListingKind, ListingStatus } from './listing.enums';
 import { Listing } from './listing.entity';
 import { ListingEventsPublisher } from './listing-events.publisher';
 
@@ -13,7 +15,11 @@ import { ListingEventsPublisher } from './listing-events.publisher';
  * Annonce telle qu'elle est renvoyee au navigateur : le chemin de la photo dans le stockage
  * (`photoKey`) reste interne, le front ne recoit qu'une URL signee de courte duree.
  */
-export type ListingView = Omit<Listing, 'photoKey' | 'photoMime'> & { photoUrl: string | null };
+export type ListingView = Omit<Listing, 'photoKey' | 'photoMime' | 'category'> & {
+  /** Code de la categorie (`FIGURINES`...) : le libelle vient de GET /api/v1/categories. */
+  category: string;
+  photoUrl: string | null;
+};
 
 @Injectable()
 export class ListingsService {
@@ -24,6 +30,7 @@ export class ListingsService {
     private readonly publisher: ListingEventsPublisher,
     private readonly database: DatabaseCircuitBreaker,
     private readonly photos: PhotoStorageService,
+    private readonly categories: CategoriesService,
   ) {}
 
   /**
@@ -36,8 +43,10 @@ export class ListingsService {
    * orphelin dans le stockage.
    */
   async submit(user: AuthenticatedUser, dto: CreateListingDto, photo?: Buffer): Promise<ListingView> {
+    // La categorie est verifiee avant tout enregistrement : une photo n'est stockee que pour une demande recevable.
+    const category = await this.requireCategory(dto.category ?? DEFAULT_CATEGORY_CODE);
     const stored = photo ? await this.photos.store(photo) : undefined;
-    const listing = await this.save(user, dto, stored);
+    const listing = await this.save(user, dto, category, stored);
 
     try {
       await this.publisher.publishSubmitted(listing);
@@ -54,14 +63,31 @@ export class ListingsService {
   /** Les annonces les plus recentes du membre (pagination simple : jamais plus de `limit` lignes). */
   async findByOwner(user: AuthenticatedUser, limit = 50): Promise<ListingView[]> {
     const listings = await this.database.run(() =>
-      this.repository.find({ where: { ownerId: user.id }, order: { createdAt: 'DESC' }, take: limit }),
+      this.repository.find({
+        where: { ownerId: user.id },
+        relations: { category: true },
+        order: { createdAt: 'DESC' },
+        take: limit,
+      }),
     );
     // Les URL signees sont calculees localement (aucun appel au stockage) : les demander en
     // parallele evite malgre tout d'additionner les calculs de signature ligne apres ligne.
     return Promise.all(listings.map((listing) => this.toView(listing)));
   }
 
-  private save(user: AuthenticatedUser, dto: CreateListingDto, photo?: StoredPhoto): Promise<Listing> {
+  /** La categorie active portant ce code ; sinon 400, comme tout champ invalide. */
+  private async requireCategory(code: string): Promise<Category> {
+    const category = await this.categories.findActive(code);
+    if (!category) throw new BadRequestException("la catégorie est inconnue ou n'est plus proposée");
+    return category;
+  }
+
+  private save(
+    user: AuthenticatedUser,
+    dto: CreateListingDto,
+    category: Category,
+    photo?: StoredPhoto,
+  ): Promise<Listing> {
     const kind = dto.kind ?? ListingKind.EXCHANGE;
     return this.database
       .run(() =>
@@ -72,7 +98,7 @@ export class ListingsService {
             title: dto.title,
             description: dto.description,
             condition: dto.condition,
-            category: dto.category ?? ListingCategory.OTHER,
+            category,
             kind,
             // Le prix n'est retenu que pour une vente : la contrainte chk_listings_price
             // refuserait un prix accompagnant un echange ou un don.
@@ -106,13 +132,15 @@ export class ListingsService {
   }
 
   private async toView(listing: Listing): Promise<ListingView> {
-    const view: ListingView = {
-      ...listing,
+    const { category, ...rest } = listing;
+    const view = {
+      ...rest,
+      category: category.code,
       photoUrl: listing.photoKey ? await this.photos.signedUrl(listing.photoKey) : null,
     };
     // Le chemin dans le stockage ne sort pas de l'API : seule l'URL signee est utile au navigateur.
-    delete (view as Partial<Listing>).photoKey;
-    delete (view as Partial<Listing>).photoMime;
+    delete (view as Partial<Pick<Listing, 'photoKey' | 'photoMime'>>).photoKey;
+    delete (view as Partial<Pick<Listing, 'photoKey' | 'photoMime'>>).photoMime;
     return view;
   }
 }

@@ -41,8 +41,8 @@ Du contrôle le plus rapide au plus coûteux :
 
 | Type de test | Outil | Ce qu'il prouve | Nombre |
 |---|---|---|---|
-| **Unitaire** | Jest, Vitest | Chaque brique fonctionne seule, avec des doublures. | 355 tests |
-| **Intégration** | Jest, Testcontainers | Les briques fonctionnent avec une vraie base et un vrai broker. | 27 tests |
+| **Unitaire** | Jest, Vitest | Chaque brique fonctionne seule, avec des doublures. | 370 tests |
+| **Intégration** | Jest, Testcontainers | Les briques fonctionnent avec une vraie base et un vrai broker. | 31 tests |
 | **Image Docker** | container-structure-test, Trivy | L'image livrée est conforme et sans faille grave. | 24 contrôles |
 | **Performance** | k6 | L'API tient la charge et respecte ses temps de réponse. | 1 scénario en CI |
 | **Lint YAML** | yamllint | Les fichiers de configuration sont bien écrits. | 1 job |

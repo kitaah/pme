@@ -15,7 +15,7 @@ unitaires utilisent des doublures. Ces tests-ci prouvent que les vrais composant
 
 ## Ce qui est vérifié
 
-La pipeline lance **27 tests d'intégration** dans un seul job : 17 pour l'API et 10 pour le service de modération.
+La pipeline lance **31 tests d'intégration** dans un seul job : 21 pour l'API et 10 pour le service de modération.
 
 | Élément réel | Version | Rôle dans les tests |
 |---|---|---|
@@ -23,11 +23,11 @@ La pipeline lance **27 tests d'intégration** dans un seul job : 17 pour l'API e
 | **NATS avec JetStream** | 2.14 (image Alpine) | Transmet les événements entre l'API et la modération. |
 | **Faux Keycloak** | Serveur local | Signe les jetons, ce qui évite de démarrer le vrai Keycloak. |
 
-### API (17 tests)
+### API (21 tests)
 
 | Fichier | Tests | Ce qui est vérifié |
 |---|---|---|
-| **`api/test/integration/`**<br>**`listings.integration-spec.ts`** | 14 | Authentification, dépôt d'annonce, validation, lecture des annonces, sondes de santé. |
+| **`api/test/integration/`**<br>**`listings.integration-spec.ts`** | 18 | Authentification, dépôt d'annonce, catégories, validation, lecture des annonces, sondes de santé. |
 | **`api/test/integration/`**<br>**`listings-broker.integration-spec.ts`** | 3 | Publication dans le vrai flux NATS, rejeu ignoré, erreur 503 si NATS tombe |
 
 Dans le premier fichier, NATS est remplacé par une doublure pour tester l'API seule. Le second fichier utilise le vrai NATS.
@@ -42,7 +42,7 @@ Détail des 14 tests du premier fichier :
 - Un jeton d'un autre client est refusé (401).
 - Un jeton expiré est refusé (401).
 - Un utilisateur sans le rôle membre est refusé (403).
-- Un dépôt valide est enregistré en attente de modération, et l'événement est publié (201).
+- Un dépôt valide est enregistré en attente de validation, et l'événement est publié (201).
 - Cinq annonces invalides sont refusées (400) : titre vide, titre trop court, description trop longue, état inconnu, champ inattendu.
 - Si NATS est injoignable, l'annonce est retirée et l'API répond 503.
 - Un membre ne voit que ses propres annonces.

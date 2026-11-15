@@ -125,7 +125,7 @@ interrompt le traitement et renvoie une erreur :
 
 **Le dépôt d'une annonce, étape par étape.**
 Cette opération illustre la principale règle de fiabilité du projet. L'API enregistre d'abord l'annonce avec le statut
-« en attente de modération », puis publie un événement dans NATS pour prévenir le service de modération. Elle répond
+« en attente de validation », puis publie un événement dans NATS pour prévenir le service de modération. Elle répond
 alors au membre sans attendre que la modération soit faite.
 
 Le risque est connu : l'annonce peut être enregistrée alors que la publication de l'événement échoue, parce que NATS
@@ -183,7 +183,8 @@ Les adresses exposées sont les suivantes :
 
 | Adresse | Qui peut l'appeler | Description |
 |---|---|---|
-| **`POST /api/v1/listings`** | Rôle `membre` | Dépose une annonce, avec une photo facultative (`multipart/form-data`), et la place en attente de modération. |
+| **`POST /api/v1/listings`** | Rôle `membre` | Dépose une annonce, avec une photo facultative (`multipart/form-data`), et la place en attente de validation. |
+| **`GET /api/v1/categories`** | Rôle `membre` | Renvoie les catégories proposées pour une annonce (code et libellé), dans l'ordre d'affichage. |
 | **`GET /api/v1/listings/mine`** | Rôle `membre` | Renvoie les annonces du membre, les plus récentes d'abord, 50 par défaut et 100 au maximum. |
 | **`GET /api/v1/moderation/queue`** | Rôle `moderateur` | Renvoie la file des annonces à relire. Cette adresse appartient au service de modération. |
 | **`GET /api/health/liveness`** | Kubernetes | Indique que l'application est vivante. |

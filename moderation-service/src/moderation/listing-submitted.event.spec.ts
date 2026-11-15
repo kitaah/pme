@@ -37,7 +37,8 @@ describe('ListingSubmittedEvent', () => {
   });
 
   it.each([
-    ['category', 'MEUBLES'],
+    ['category', 'meubles'],
+    ['category', 'MEUBLES!'],
     ['kind', 'TROC'],
     ['priceCents', 0],
     ['priceCents', 12.5],

@@ -73,7 +73,7 @@ v8 -> rapport
 
 ## Rôle dans le projet
 
-- Il exécute les 133 tests unitaires de l'interface dans la pipeline.
+- Il exécute les 136 tests unitaires de l'interface dans la pipeline.
 - Il vérifie notamment les contrastes de la palette de couleurs, selon les exigences du RGAA.
 - Il mesure la couverture avec V8 et fait échouer le job si elle passe sous le seuil.
 - Il produit un rapport JUnit, affiché dans l'onglet « Tests » de GitLab.

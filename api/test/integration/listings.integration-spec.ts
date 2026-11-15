@@ -129,6 +129,33 @@ describe('API annonces (integration)', () => {
       });
     });
 
+    it('range l annonce dans la categorie choisie et la renvoie sous la forme de son code, avec la cle etrangere en base', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/listings')
+        .set('Authorization', member())
+        .send({ ...validBody, category: 'FILMS' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.category).toBe('FILMS');
+      const rows = await dataSource.query('SELECT c.code FROM listings l JOIN categories c ON c.id = l.category_id');
+      expect(rows).toEqual([{ code: 'FILMS' }]);
+    });
+
+    it('utilise Autres sans categorie, et refuse un code inconnu (400) sans rien enregistrer', async () => {
+      const sans = await request(app.getHttpServer())
+        .post('/api/v1/listings')
+        .set('Authorization', member())
+        .send(validBody);
+      const inconnue = await request(app.getHttpServer())
+        .post('/api/v1/listings')
+        .set('Authorization', member())
+        .send({ ...validBody, category: 'MEUBLES' });
+
+      expect(sans.body.category).toBe('OTHER');
+      expect(inconnue.status).toBe(400);
+      expect(await dataSource.query('SELECT 1 FROM listings')).toHaveLength(1);
+    });
+
     it.each([
       ['titre vide', { ...validBody, title: '   ' }],
       ['titre trop court', { ...validBody, title: 'ab' }],
@@ -155,6 +182,23 @@ describe('API annonces (integration)', () => {
 
       expect(res.status).toBe(503);
       expect(await dataSource.query('SELECT 1 FROM listings')).toHaveLength(0);
+    });
+  });
+
+  describe('GET /api/v1/categories', () => {
+    it('renvoie les huit categories de depart dans l ordre d affichage', async () => {
+      const res = await request(app.getHttpServer()).get('/api/v1/categories').set('Authorization', member());
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(8);
+      expect(res.body[0]).toEqual({ code: 'FIGURINES', label: 'Figurines et statues' });
+      expect(res.body[7]).toEqual({ code: 'OTHER', label: 'Autres' });
+    });
+
+    it('refuse une requete sans jeton (401)', async () => {
+      const res = await request(app.getHttpServer()).get('/api/v1/categories');
+
+      expect(res.status).toBe(401);
     });
   });
 

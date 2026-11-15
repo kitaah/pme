@@ -34,9 +34,9 @@ envoyé sur le bus ne transporte que cette clé, jamais le fichier.
 | **Nombre de photos** | Une seule | Suffit à démontrer le parcours ; plusieurs photos ajoutent une table sans rien démontrer de plus |
 | **Types d'annonce** | Le modèle de données, l'API et le formulaire gèrent Échange, Don et Vente. Échange : contrepartie souhaitée (facultative). Vente : prix obligatoire, de 0,01 à 9 999,99 €. Don : ni prix ni contrepartie | Un seul formulaire pour les trois types ; un prix ne peut accompagner qu'une vente, ce que garantit aussi une contrainte de base |
 | **Lecture des photos** | URL signée de courte durée, générée par l'API | La photo d'une annonce non modérée ne doit pas être publique |
-| **Photo en attente de modération** | Affichée à son auteur dans « Mes annonces », avec le statut « En attente de modération » ; invisible des autres membres | Le membre doit pouvoir vérifier sa photo sans attendre la modération |
+| **Photo en attente de validation** | Affichée à son auteur dans « Mes annonces », avec le statut « En attente de validation » ; invisible des autres membres | Le membre doit pouvoir vérifier sa photo sans attendre la modération |
 | **États de l'objet** | Quatre états, stockés sous forme de codes anglais (`NEW`, `VERY_GOOD`, `GOOD`, `FAIR`) et affichés en français : Neuf, Très bon état, Bon état, Satisfaisant | Grille des grandes places de marché (Vinted, Amazon, eBay : un état neuf puis trois niveaux d'occasion, le dernier étant une usure marquée sur un objet qui fonctionne). Un objet à réparer n'a pas de niveau à part : le défaut se précise dans la description. Les codes anglais suivent ceux du dépôt |
-| **Catégories** | Huit catégories fermées, stockées sous forme de codes anglais (`FIGURINES`, `FILMS`, `BOOKS`, `POSTERS`, `MUSIC`, `GAMES`, `CLOTHING`, `OTHER`) et affichées en français ; « Autres » sert de valeur par défaut | Aide à retrouver une annonce dans un catalogue d'horreur et de pop culture. Une liste fermée suffit : une colonne avec contrainte `CHECK`, sans table de catégories |
+| **Catégories** | Table de référence `categories` (huit catégories au départ : `FIGURINES`, `FILMS`, `BOOKS`, `POSTERS`, `MUSIC`, `GAMES`, `CLOTHING`, `OTHER`), référencée par une clé étrangère ; « Autres » sert de valeur par défaut | Aide à retrouver une annonce dans un catalogue d'horreur et de pop culture. Les catégories se gèrent comme des données (ajout, retrait, ordre) sans déploiement, et la base garantit qu'une annonce a une catégorie existante |
 | **Confirmation** | Toast « Annonce soumise pour validation ! » en haut à droite, sous l'en-tête, 8 secondes, puis redirection vers la liste | Demande du porteur du projet |
 | **Langue de Keycloak** | Français seul (`en` retiré de `supportedLocales`), donc plus de sélecteur de langue | Le sélecteur disparaît quand le realm n'a qu'une langue |
 | **Thème de connexion Keycloak** | Création d'un thème `pme` (le dépôt n'en contient aucun), qui reprend la palette « Nuit de festival » | La page de connexion doit suivre le reste de l'application |
@@ -77,7 +77,7 @@ Deux règles découlent du C4 :
 5. **Traitement par l'API.** L'API valide les champs, puis traite la photo : le ré-encodage en WebP est lui-même le
    contrôle, car seul un fichier que la bibliothèque d'images sait décoder passe, et il supprime au passage les
    métadonnées EXIF, dont la position GPS. L'image réduite est enregistrée sous `pending/<identifiant>.webp`, puis
-   l'annonce est écrite en base avec le statut « en attente de modération ». Si la base refuse l'annonce, la photo
+   l'annonce est écrite en base avec le statut « en attente de validation ». Si la base refuse l'annonce, la photo
    déjà enregistrée est supprimée.
 6. **Événement.** L'API publie `listing.submitted` dans NATS avec la clé de la photo, puis répond `201`.
 7. **Confirmation.** Le navigateur redirige vers la page des annonces et affiche le toast « Annonce soumise pour
@@ -100,7 +100,7 @@ Table `listings`, base `pme` :
 |---|---|---|
 | `title` | texte | 3 à 100 caractères, obligatoire (inchangé) |
 | `description` | texte | 1000 caractères maximum, obligatoire (inchangé) |
-| `category` | énumération | `FIGURINES`, `FILMS`, `BOOKS`, `POSTERS`, `MUSIC`, `GAMES`, `CLOTHING`, `OTHER` (valeur par défaut) |
+| `category_id` | clé étrangère | Référence `categories.id`, obligatoire. L'API reçoit et renvoie le code (`FIGURINES`…, `OTHER` par défaut) |
 | `condition` | énumération | `NEW`, `VERY_GOOD`, `GOOD`, `FAIR` (`NEW`, `GOOD`, `FAIR` existent déjà) |
 | `kind` | énumération | `EXCHANGE` (valeur par défaut), `GIFT`, `SALE` |
 | `wanted_in_exchange` | texte | Facultatif, 120 caractères maximum, saisi pour un échange |
@@ -109,27 +109,41 @@ Table `listings`, base `pme` :
 | `photo_key` | texte | Clé de l'objet dans le bucket (`pending/<identifiant>.webp`), vide si pas de photo |
 | `photo_mime` | texte | Type de l'image stockée, vide si pas de photo |
 
-Le statut existant (`PENDING_MODERATION`) reste inchangé. Les migrations initiales ne sont pas modifiées : trois
-nouvelles migrations TypeORM, chacune présente dans l'API et dans le service de modération (deux bases séparées), font
+Le statut existant (`PENDING_MODERATION`) reste inchangé. Les migrations initiales ne sont pas modifiées : quatre
+nouvelles migrations TypeORM, présentes dans l'API ou dans le service de modération (deux bases séparées), font
 évoluer les tables.
 
 1. `1763100000000-add-listing-details` ajoute les colonnes du dépôt et remplace la contrainte `CHECK` de `condition`.
 2. `1763200000000-remove-for-parts-condition` retire l'état `FOR_PARTS` : les annonces et les éléments de la file qui
    l'avaient passent en `FAIR` (« Satisfaisant »), puis la contrainte est remplacée par les quatre valeurs restantes.
 3. `1763300000000-add-listing-category` ajoute la colonne `category`, décrite ci-dessous.
+4. `1763400000000-create-categories-table` (API) remplace cette colonne par la table `categories` ; `1763400000000-open-category-code` (modération) en retire la contrainte `CHECK`.
 
 Le validateur de l'événement reçu par le service de modération accepte les nouveaux codes.
 
 La migration `1763300000000-add-listing-category` ajoute la colonne `category` (`VARCHAR(30) NOT NULL DEFAULT 'OTHER'`) avec une contrainte `CHECK` sur les
-huit codes. Les annonces déjà en base passent donc en `OTHER` (« Autres »). La catégorie est facultative dans l'API
-(`OTHER` si elle est absente, ce qui garde compatibles les messages publiés par une ancienne version) ; le formulaire,
-lui, en envoie toujours une.
+huit codes. Elle a ensuite été remplacée par une table de référence, décrite ci-dessous.
 
-**Pourquoi une colonne et non une table de catégories ?** La liste est fermée, courte et sans gestion en ligne : une
-colonne avec contrainte `CHECK` et une énumération partagée (`ListingCategory` dans `libs/common`) suffisent, comme pour
-l'état, le type et le lieu de remise. L'API et le service de modération ayant chacun leur base, une table obligerait en
-plus à la dupliquer. Une table ne se justifierait qu'avec une gestion par un administrateur, des sous-catégories ou des
-métadonnées par catégorie.
+**Une table de référence plutôt qu'une énumération.** La migration `1763400000000-create-categories-table` crée la table
+`categories` (`id`, `code` unique, `label`, `sort_order`, `active`) et la remplit avec les huit catégories de départ.
+`listings.category_id` la référence par une clé étrangère, remplie à partir de l'ancienne colonne `category`, puis la
+colonne et sa contrainte `CHECK` sont supprimées : les annonces déjà en base gardent leur catégorie. Le retour arrière
+recrée la colonne ; une catégorie ajoutée depuis retombe alors sur `OTHER`.
+
+- **Ajouter ou retirer une catégorie** est une ligne dans la table (`INSERT`, ou `active = false`), sans déploiement. Une
+  catégorie retirée n'est plus proposée mais reste lisible sur les annonces qui l'ont.
+- **L'API** expose la liste par `GET /api/v1/categories` (code et libellé, catégories proposées, dans l'ordre
+  d'affichage) et renvoie la catégorie d'une annonce sous la forme de son code. Un code inconnu ou retiré est refusé
+  (erreur 400) avant tout enregistrement de la photo. Le formulaire construit sa liste à partir de cette réponse : plus
+  aucun libellé de catégorie n'est écrit dans l'interface.
+- **Le service de modération** ne garde que le code reçu dans l'événement, sans clé étrangère : les deux services ont
+  chacun leur base, et la file doit continuer à recevoir une annonce même si une catégorie est retirée ensuite. La
+  migration `1763400000000-open-category-code` y supprime la contrainte `CHECK` qui figeait les huit codes, et le
+  validateur de l'événement ne contrôle plus que la forme du code.
+- **Les autres listes** (état, type d'annonce, lieu de remise) restent des énumérations avec contrainte `CHECK` : elles
+  portent des règles de gestion (le prix dépend du type) et ne changent pas sans modification du code.
+
+Catégories de départ :
 
 | Code | Libellé affiché |
 |---|---|
@@ -142,7 +156,7 @@ métadonnées par catégorie.
 | `CLOTHING` | Vêtements |
 | `OTHER` | Autres |
 
-À l'écran, le front traduit les codes par une table de correspondance (comme `CONDITION_LABELS` dans `api.ts`) :
+À l'écran, le front traduit les autres codes par des tables de correspondance (comme `CONDITION_LABELS` dans `api.ts`) :
 
 | Code | Libellé affiché |
 |---|---|
@@ -198,7 +212,7 @@ Les types d'annonce suivent la même logique : `EXCHANGE` « Échange », `GIFT`
 - **Toast :** annoncé aux lecteurs d'écran par la région `aria-live` de Sonner, visible 8 secondes, mis en pause au
   survol et au focus, fermable au bouton « Fermer la notification ». Il survit à la redirection : il est monté au niveau
   de l'application, pas de la page. L'information n'est pas perdue à sa disparition : la nouvelle annonce reste
-  affichée avec son statut « En attente de modération ». Les styles de Sonner sont importés depuis sa feuille CSS, car la
+  affichée avec son statut « En attente de validation ». Les styles de Sonner sont importés depuis sa feuille CSS, car la
   politique de sécurité du site (`style-src 'self'`) bloque ceux qu'il injecterait lui-même.
 - **Focus :** le titre de chaque page est focalisable (`tabIndex=-1`), mais le focus n'y est pas déplacé
   automatiquement après la redirection : à compléter.
@@ -218,7 +232,7 @@ notification.
 |---|---|---|
 | **1** | Connexion (Keycloak) | Titre « Connexion » centré, champ « Nom d'utilisateur ou email », lien d'inscription, aucun sélecteur de langue |
 | **2** | Dépôt d'annonce | « Déposer une annonce » : choix du type (échange, don, vente), puis catégorie et état côte à côte, titre, description, « Je cherche en échange » (facultatif), lieu de remise, photo avec son aperçu, encart « Avant de publier ». Le champ « Prix » de la vente n'y est pas dessiné |
-| **3** | Mes annonces | Quatre annonces avec photo et statut (En attente de modération, Publiée, Refusée) |
+| **3** | Mes annonces | Quatre annonces avec photo et statut (En attente de validation, Publiée, Refusée) |
 | **3b** | Notification de confirmation | Toast « Annonce soumise pour validation ! », en haut à droite sous l'en-tête |
 | **4** | Dépôt sur mobile | Même formulaire en 390 px, bouton d'action en bas |
 | **5** | Connexion sur mobile | Même page de connexion en 390 px |
@@ -273,7 +287,7 @@ courant et 3:1 pour les composants d'interface.
 | `blood-text` | `#ff9aa3` | Liens, statut « Refusée », texte rouge | 9,6:1 | 8,8:1 | 7,9:1 |
 | `gold` | `#e6b450` | Accent : sous-titre, rubrique courante, titres du pied de page | 10,1:1 | 9,4:1 | 8,4:1 |
 | `success` | `#7fdba5` | Statut « Publiée », rôle « Membre », bordure du toast | 11,6:1 | 10,7:1 | 9,6:1 |
-| `warning` | `#f2b866` | Statut « En attente de modération » | 10,9:1 | 10,1:1 | 9,0:1 |
+| `warning` | `#f2b866` | Statut « En attente de validation » | 10,9:1 | 10,1:1 | 9,0:1 |
 
 ### Actions et focus
 

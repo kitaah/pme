@@ -3,7 +3,6 @@ import { Check, Image as ImageIcon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import {
   ApiError,
-  CATEGORY_LABELS,
   Category,
   CONDITION_LABELS,
   Condition,
@@ -81,7 +80,8 @@ export function ListingForm() {
   const [kind, setKind] = useState<ListingKind>('EXCHANGE');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<Category>('FIGURINES');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [category, setCategory] = useState('');
   const [condition, setCondition] = useState<Condition>('GOOD');
   const [wantedInExchange, setWantedInExchange] = useState('');
   const [price, setPrice] = useState('');
@@ -89,6 +89,18 @@ export function ListingForm() {
   const [photo, setPhoto] = useState<File | undefined>();
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState<Erreur | null>(null);
+
+  // La liste vient de l'API (table de reference). Si elle est indisponible, la liste reste vide et
+  // l'annonce est deposee sans categorie : l'API la range dans « Autres ».
+  useEffect(() => {
+    api
+      .listCategories()
+      .then((data) => {
+        setCategories(data);
+        setCategory(data[0]?.code ?? '');
+      })
+      .catch(() => undefined);
+  }, []);
 
   function choisirPhoto(event: ChangeEvent<HTMLInputElement>) {
     const fichier = event.target.files?.[0];
@@ -126,7 +138,7 @@ export function ListingForm() {
         title,
         description,
         condition,
-        category,
+        category: category || undefined,
         kind,
         priceCents,
         wantedInExchange: kind === 'EXCHANGE' ? wantedInExchange : undefined,
@@ -201,11 +213,11 @@ export function ListingForm() {
                 id="category"
                 className="field h-12 rounded-[10px] px-3 py-0 text-[15px]"
                 value={category}
-                onChange={(e) => setCategory(e.target.value as Category)}
+                onChange={(e) => setCategory(e.target.value)}
               >
-                {(Object.keys(CATEGORY_LABELS) as Category[]).map((key) => (
-                  <option key={key} value={key}>
-                    {CATEGORY_LABELS[key]}
+                {categories.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.label}
                   </option>
                 ))}
               </select>
@@ -379,7 +391,7 @@ export function ListingForm() {
               <Link to="/mes-annonces" className="text-blood-text">
                 mes annonces
               </Link>
-              , au statut « En attente de modération ».
+              , au statut « En attente de validation ».
             </p>
           </div>
         </aside>

@@ -1,4 +1,4 @@
-export { HandoverPlace, ListingCategory, ListingCondition, ListingKind } from '@pme/common';
+export { HandoverPlace, ListingCondition, ListingKind } from '@pme/common';
 
 /** Cycle de vie d'une annonce. Le POC s'arrete a PENDING_MODERATION. */
 export enum ListingStatus {

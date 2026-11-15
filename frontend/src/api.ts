@@ -1,7 +1,11 @@
 import { accessToken } from './auth';
 
 export type Condition = 'NEW' | 'VERY_GOOD' | 'GOOD' | 'FAIR';
-export type Category = 'FIGURINES' | 'FILMS' | 'BOOKS' | 'POSTERS' | 'MUSIC' | 'GAMES' | 'CLOTHING' | 'OTHER';
+/** Categorie de la table de reference de l'API : le code identifie, le libelle s'affiche. La liste vient de l'API. */
+export interface Category {
+  code: string;
+  label: string;
+}
 export type ListingKind = 'EXCHANGE' | 'GIFT' | 'SALE';
 export type HandoverPlace = 'SHOP_ANGOULEME' | 'SHOP_AIX' | 'SHOP_LYON' | 'SHOP_LONDON' | 'TO_AGREE';
 export type ListingStatus = 'PENDING_MODERATION' | 'PUBLISHED' | 'REJECTED';
@@ -11,7 +15,8 @@ export interface Listing {
   title: string;
   description: string;
   condition: Condition;
-  category: Category;
+  /** Code de la categorie (voir api.listCategories). */
+  category: string;
   kind: ListingKind;
   /** Centimes, pour une vente seulement. */
   priceCents: number | null;
@@ -31,7 +36,8 @@ export interface NewListing {
   title: string;
   description: string;
   condition: Condition;
-  category: Category;
+  /** Code d'une categorie proposee par l'API ; absent, l'API range l'annonce dans « Autres ». */
+  category?: string;
   kind: ListingKind;
   priceCents?: number;
   wantedInExchange?: string;
@@ -83,7 +89,7 @@ function toFormData(input: NewListing): FormData {
   form.append('title', input.title);
   form.append('description', input.description);
   form.append('condition', input.condition);
-  form.append('category', input.category);
+  if (input.category) form.append('category', input.category);
   form.append('kind', input.kind);
   if (input.priceCents !== undefined) form.append('priceCents', String(input.priceCents));
   form.append('handoverPlace', input.handoverPlace);
@@ -95,6 +101,7 @@ function toFormData(input: NewListing): FormData {
 export const api = {
   createListing: (input: NewListing) => call<Listing>('/api/v1/listings', { method: 'POST', body: toFormData(input) }),
   myListings: () => call<Listing[]>('/api/v1/listings/mine'),
+  listCategories: () => call<Category[]>('/api/v1/categories'),
 };
 
 export const CONDITION_LABELS: Record<Condition, string> = {
@@ -102,17 +109,6 @@ export const CONDITION_LABELS: Record<Condition, string> = {
   VERY_GOOD: 'Très bon état',
   GOOD: 'Bon état',
   FAIR: 'Satisfaisant',
-};
-
-export const CATEGORY_LABELS: Record<Category, string> = {
-  FIGURINES: 'Figurines et statues',
-  FILMS: 'Films',
-  BOOKS: 'Livres et fanzines',
-  POSTERS: 'Affiches et goodies',
-  MUSIC: 'Musique',
-  GAMES: 'Jeux',
-  CLOTHING: 'Vêtements',
-  OTHER: 'Autres',
 };
 
 export const KIND_LABELS: Record<ListingKind, string> = {
@@ -130,7 +126,7 @@ export const HANDOVER_PLACE_LABELS: Record<HandoverPlace, string> = {
 };
 
 export const STATUS_LABELS: Record<ListingStatus, string> = {
-  PENDING_MODERATION: 'En attente de modération',
+  PENDING_MODERATION: 'En attente de validation',
   PUBLISHED: 'Publiée',
   REJECTED: 'Refusée',
 };
