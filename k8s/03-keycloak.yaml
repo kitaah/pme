@@ -79,11 +79,10 @@ spec:
               valueFrom:
                 secretKeyRef: { name: pme-secrets, key: keycloak-admin-password }
             - name: KC_DB_USERNAME
-              valueFrom:
-                secretKeyRef: { name: pme-secrets, key: db-username }
+              value: pme_keycloak
             - name: KC_DB_PASSWORD
               valueFrom:
-                secretKeyRef: { name: pme-secrets, key: db-password }
+                secretKeyRef: { name: pme-secrets, key: db-keycloak-password }
             # Limite le heap JVM (voir projet Spring : jusqu'a 800Mi observes sans limite)
             - name: JAVA_OPTS_APPEND
               value: "-Xmx384m"

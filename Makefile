@@ -6,10 +6,10 @@
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
         minikube-up minikube-down helm ingress ingress-restart mesh-renew inotify istio istio-scan mesh-check authz-check netpol-check jwt-check cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
         env kubeseal sealed-secrets sealed-prereqs seal image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
-        garage-secrets seal-now garage-init \
+        garage-secrets db-secrets seal-now garage-init \
         pods logs logs-api logs-moderation logs-keycloak \
         port-forward stop-forward api moderation frontend \
-        queues db-listings db-moderation create-grafana-db \
+        queues db-listings db-moderation \
         demo-stop-moderation demo-start-moderation demo-kill-api \
         app keycloak nats adminer prometheus grafana alloy \
         docs-serve docs-check docs-image docs-run docs-stop scripts-perms
@@ -112,10 +112,10 @@ help:
 	@echo "    make image                    - Construit les 3 images dans Minikube"
 	@echo "    make deploy                   - secrets chiffres (generes si absents) + ca-configmap + kubectl apply -k k8s/ (Postgres, NATS, Keycloak, Garage, API, moderation, front, ingress)"
 	@echo "    make garage-secrets           - Genere dans .env les secrets de Garage s'ils manquent (fait par make seal)"
+	@echo "    make db-secrets               - Genere dans .env les mots de passe des comptes PostgreSQL de chaque service s'ils manquent (fait par make seal)"
 	@echo "    make garage-init              - Mise en service du stockage des photos : disposition, depot et cle (fait par make deploy)"
 	@echo "    make redeploy                 - image + redemarrage des 3 deployments (apres une modification du code)"
 	@echo "    make undeploy                 - Supprime le namespace (donnees comprises)"
-	@echo "    make create-grafana-db        - Cree la base grafana dans un PostgreSQL existant (make reset la cree d'office)"
 	@echo ""
 	@echo "  Observation"
 	@echo "    make pods | logs-api | logs-moderation | logs-keycloak"
@@ -431,7 +431,8 @@ sealed-secrets:
 sealed-prereqs:
 	@{ command -v kubeseal >/dev/null && kubeseal --version 2>/dev/null | grep -q "$(KUBESEAL_VERSION)"; } || { echo "kubeseal $(KUBESEAL_VERSION) absent : lancer make kubeseal"; exit 1; }
 	@for v in POSTGRES_USER POSTGRES_PASSWORD NATS_USER NATS_PASSWORD KEYCLOAK_ADMIN KEYCLOAK_ADMIN_PASSWORD GRAFANA_ADMIN GRAFANA_ADMIN_PASSWORD \
-		GARAGE_ACCESS_KEY GARAGE_SECRET_KEY GARAGE_RPC_SECRET GARAGE_ADMIN_TOKEN; do \
+		GARAGE_ACCESS_KEY GARAGE_SECRET_KEY GARAGE_RPC_SECRET GARAGE_ADMIN_TOKEN \
+		DB_API_PASSWORD DB_MODERATION_PASSWORD DB_KEYCLOAK_PASSWORD DB_GRAFANA_PASSWORD; do \
 		test -n "$$(printenv $$v)" || { echo "$$v absent de .env"; exit 1; }; \
 		test "$$(printenv $$v)" != "CHANGE_ME" || { echo "$$v vaut encore CHANGE_ME dans .env : choisir un mot de passe"; exit 1; }; \
 	done
@@ -440,10 +441,11 @@ sealed-prereqs:
 # Les valeurs viennent de l'environnement de make (.env), jamais d'arguments de commande : elles
 # n'apparaissent ni dans la liste des processus ni dans l'historique du shell. Le fichier temporaire est prive
 # (umask 077) et supprime a la fin. A relancer apres un changement de secret ou un nouveau cluster (nouvelle cle).
-# Les trois etapes sont des appels separes ($(MAKE)) : make lit .env UNE fois, au demarrage. Les secrets de Garage
+# Les etapes sont des appels separes ($(MAKE)) : make lit .env UNE fois, au demarrage. Les secrets de Garage
 # generes par garage-secrets ne seraient pas vus par la suite de ce meme appel ; le nouvel appel relit .env.
 seal: .env
 	@$(MAKE) --no-print-directory garage-secrets
+	@$(MAKE) --no-print-directory db-secrets
 	@$(MAKE) --no-print-directory seal-now
 
 seal-now: .env sealed-prereqs
@@ -454,7 +456,9 @@ seal-now: .env sealed-prereqs
 		"keycloak-admin-username=$$KEYCLOAK_ADMIN" "keycloak-admin-password=$$KEYCLOAK_ADMIN_PASSWORD" \
 		"grafana-admin-username=$$GRAFANA_ADMIN" "grafana-admin-password=$$GRAFANA_ADMIN_PASSWORD" \
 		"garage-access-key=$$GARAGE_ACCESS_KEY" "garage-secret-key=$$GARAGE_SECRET_KEY" \
-		"garage-rpc-secret=$$GARAGE_RPC_SECRET" "garage-admin-token=$$GARAGE_ADMIN_TOKEN" > "$$tmp"; \
+		"garage-rpc-secret=$$GARAGE_RPC_SECRET" "garage-admin-token=$$GARAGE_ADMIN_TOKEN" \
+		"db-api-password=$$DB_API_PASSWORD" "db-moderation-password=$$DB_MODERATION_PASSWORD" \
+		"db-keycloak-password=$$DB_KEYCLOAK_PASSWORD" "db-grafana-password=$$DB_GRAFANA_PASSWORD" > "$$tmp"; \
 	kubectl create secret generic pme-secrets --namespace $(NS) --from-env-file="$$tmp" --dry-run=client -o yaml \
 		| kubeseal --controller-name sealed-secrets-controller --controller-namespace kube-system --namespace $(NS) --format yaml \
 		> "$(SEALED_FILE).tmp" && mv "$(SEALED_FILE).tmp" "$(SEALED_FILE)"
@@ -479,6 +483,23 @@ garage-secrets: .env
 	gen GARAGE_SECRET_KEY "$$(openssl rand -hex 32)"; \
 	gen GARAGE_RPC_SECRET "$$(openssl rand -hex 32)"; \
 	gen GARAGE_ADMIN_TOKEN "$$(openssl rand -hex 32)"
+
+# Mots de passe des quatre comptes PostgreSQL (un par service : API, moderation, Keycloak, Grafana) : generes dans .env
+# SEULEMENT s'ils manquent ou valent encore CHANGE_ME, jamais modifies ensuite (meme logique que garage-secrets : un compte
+# est cree une seule fois, a l'initialisation du volume, avec le mot de passe present alors). 48 hexa chacun.
+db-secrets: .env
+	@set -e; umask 077; \
+	gen() { \
+		cur=$$(sed -n "s/^$$1=//p" .env | tail -1); \
+		if [ -z "$$cur" ] || [ "$$cur" = "CHANGE_ME" ]; then \
+			awk -v k="$$1" -v v="$$2" 'BEGIN { FS = OFS = "=" } $$1 == k { print k "=" v; f = 1; next } { print } END { if (!f) print k "=" v }' .env > .env.tmp \
+				&& mv .env.tmp .env && echo "  $$1 genere dans .env"; \
+		fi; \
+	}; \
+	gen DB_API_PASSWORD "$$(openssl rand -hex 24)"; \
+	gen DB_MODERATION_PASSWORD "$$(openssl rand -hex 24)"; \
+	gen DB_KEYCLOAK_PASSWORD "$$(openssl rand -hex 24)"; \
+	gen DB_GRAFANA_PASSWORD "$$(openssl rand -hex 24)"
 
 # Fichier chiffre absent (premier deploiement) : il est genere automatiquement. Present, il n'est jamais regenere ;
 # apres un changement dans .env, lancer `make seal`.
@@ -547,9 +568,17 @@ restart:
 
 # La suppression d'un namespace rend la main avant d'etre terminee : on attend explicitement,
 # sinon "make reset" repart sur un namespace encore en cours de suppression et echoue.
+# Les volumes (PostgreSQL, Garage...) ne sont pas dans le namespace : supprimer le namespace efface les demandes de
+# volume, mais Minikube peut laisser les VOLUMES eux-memes en etat "Released", avec leurs donnees. `make reset`
+# redeployait alors sur l'ancien disque (PostgreSQL : "Skipping initialization", comptes jamais crees). On releve donc
+# les volumes du namespace AVANT, on leur laisse 30 s pour disparaitre, puis on supprime ceux qui restent et leur
+# dossier dans la machine Minikube (/tmp/hostpath-provisioner/<namespace>, ignore sans Minikube).
 undeploy:
-	kubectl delete namespace $(NS) --ignore-not-found
-	kubectl wait --for=delete namespace/$(NS) --timeout=180s 2>/dev/null || true
+	@pvs=$$(kubectl get pv -o jsonpath='{range .items[?(@.spec.claimRef.namespace=="$(NS)")]}{.metadata.name}{"\n"}{end}' 2>/dev/null); \
+	kubectl delete namespace $(NS) --ignore-not-found; \
+	kubectl wait --for=delete namespace/$(NS) --timeout=180s 2>/dev/null || true; \
+	for pv in $$pvs; do kubectl wait --for=delete pv/$$pv --timeout=30s 2>/dev/null || kubectl delete pv/$$pv --ignore-not-found --wait=false; done; \
+	minikube ssh -- "sudo rm -rf /tmp/hostpath-provisioner/$(NS)" >/dev/null 2>&1 || true
 
 reset: undeploy deploy
 
@@ -576,11 +605,6 @@ logs-keycloak:
 queues:
 	@kubectl -n $(NS) exec deploy/nats -- wget --no-check-certificate -qO- 'https://localhost:8222/jsz?streams=1&consumers=1' \
 		| python3 -m json.tool
-
-# Cree la base `grafana` dans un PostgreSQL deja initialise : postgres-init.sh ne s'execute qu'une fois.
-# Sans effet si la base existe deja.
-create-grafana-db:
-	kubectl -n $(NS) exec deploy/postgres -- sh -c "psql -U \"\$$POSTGRES_USER\" -d pme -tAc \"SELECT 1 FROM pg_database WHERE datname='grafana'\" | grep -q 1 || psql -U \"\$$POSTGRES_USER\" -d pme -c \"CREATE DATABASE grafana\""
 
 db-listings:
 	kubectl -n $(NS) exec deploy/postgres -- sh -c 'psql -U "$$POSTGRES_USER" -d pme -c "SELECT id, owner_username, title, status, created_at FROM listings ORDER BY created_at DESC"'
@@ -657,12 +681,12 @@ DEV_KEYCLOAK_ENV = KEYCLOAK_ISSUER=$(KEYCLOAK_URL)/realms/pme \
 DEV_TLS_ENV = DB_SSL_CA=$(CURDIR)/$(CA_FILE) NATS_TLS_CA=$(CURDIR)/$(CA_FILE)
 
 api: ca-cert
-	@cd api && DB_HOST=localhost DB_NAME=pme DB_USER='$(POSTGRES_USER)' DB_PASSWORD='$(POSTGRES_PASSWORD)' \
+	@cd api && DB_HOST=localhost DB_NAME=pme DB_USER=pme_api DB_PASSWORD='$(DB_API_PASSWORD)' \
 		NATS_HOST=localhost NATS_USER='$(NATS_USER)' NATS_PASSWORD='$(NATS_PASSWORD)' \
 		$(DEV_TLS_ENV) $(DEV_KEYCLOAK_ENV) npm run start:dev
 
 moderation: ca-cert
-	@cd moderation-service && DB_HOST=localhost DB_NAME=moderation DB_USER='$(POSTGRES_USER)' DB_PASSWORD='$(POSTGRES_PASSWORD)' \
+	@cd moderation-service && DB_HOST=localhost DB_NAME=moderation DB_USER=pme_moderation DB_PASSWORD='$(DB_MODERATION_PASSWORD)' \
 		NATS_HOST=localhost NATS_USER='$(NATS_USER)' NATS_PASSWORD='$(NATS_PASSWORD)' \
 		$(DEV_TLS_ENV) $(DEV_KEYCLOAK_ENV) npm run start:dev
 

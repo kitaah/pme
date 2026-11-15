@@ -2,7 +2,7 @@
 # La source de donnees et le tableau de bord sont fournis au demarrage (provisioning) par des ConfigMaps :
 # rien n'est a configurer a la main, et un redemarrage retrouve le meme etat.
 # L'etat interne de Grafana (comptes, preferences) est dans PostgreSQL, base `grafana` : meme principe que Keycloak,
-# il survit a la recreation du pod. La base est creee par postgres-init.sh (ou par make create-grafana-db).
+# il survit a la recreation du pod. La base est creee par postgres-init.sh.
 # Joint par l'ingress (k8s/08-ingress.yaml) sur https://grafana.localhost (make grafana).
 apiVersion: apps/v1
 kind: Deployment
@@ -75,11 +75,10 @@ spec:
             - name: GF_DATABASE_NAME
               value: grafana
             - name: GF_DATABASE_USER
-              valueFrom:
-                secretKeyRef: { name: pme-secrets, key: db-username }
+              value: pme_grafana
             - name: GF_DATABASE_PASSWORD
               valueFrom:
-                secretKeyRef: { name: pme-secrets, key: db-password }
+                secretKeyRef: { name: pme-secrets, key: db-grafana-password }
             # Connexion chiffree et certificat du serveur verifie contre l'autorite locale.
             - name: GF_DATABASE_SSL_MODE
               value: verify-full

@@ -22,10 +22,16 @@ instant sans que l'une écrase l'autre. Enfin, elle garantit que chaque modifica
 du tout** : si une panne survient au milieu d'une écriture, la base revient à son état précédent plutôt que de
 conserver une donnée à moitié écrite.
 
-**Une instance, quatre bases.**
+**Une instance, quatre bases, un compte par base.**
 Un même programme PostgreSQL, appelé **instance**, peut héberger plusieurs bases indépendantes. Le projet en utilise
-quatre, qui ne se voient pas entre elles : chaque composant n'accède qu'à la sienne. Une seule instance suffit donc, ce
-qui économise la mémoire de l'ordinateur sans mélanger les données.
+quatre, et chaque composant a **son propre compte**, propriétaire de sa seule base : `pme_api`, `pme_moderation`,
+`pme_keycloak` et `pme_grafana`. Un compte ne peut pas se connecter à la base d'un autre, et donc encore moins lire ses
+tables. Une seule instance suffit, ce qui économise la mémoire de l'ordinateur sans mélanger les données.
+
+Cette séparation correspond au [C4 niveau 2](../conception-depot-annonce.md#conformite-au-c4-niveau-2), qui distingue la
+base du Cœur de celle de la modération. L'isolation est logique, par les droits, et non physique : si l'instance
+s'arrête, les quatre bases s'arrêtent avec elle. En production, chaque service aurait sa propre instance : le seul
+changement serait l'adresse du serveur dans la configuration du service.
 
 ```d2
 vars: {
@@ -54,16 +60,17 @@ grafana: "Grafana" {class: boite}
 
 postgres: "PostgreSQL : une instance, un volume de 1 Go" {
   class: boite
+  label.near: bottom-center
   pme: "Base pme\nannonces" {class: boite}
   moderation_db: "Base moderation\nfile de relecture" {class: boite}
   keycloak_db: "Base keycloak\ncomptes et rôles" {class: boite}
   grafana_db: "Base grafana\ntableaux de bord" {class: boite}
 }
 
-api -> postgres.pme
-moderation -> postgres.moderation_db
-keycloak -> postgres.keycloak_db
-grafana -> postgres.grafana_db
+api -> postgres.pme: "compte pme_api"
+moderation -> postgres.moderation_db: "compte pme_moderation"
+keycloak -> postgres.keycloak_db: "compte pme_keycloak"
+grafana -> postgres.grafana_db: "compte pme_grafana"
 ```
 
 **Les connexions sont chiffrées, et le serveur l'impose.**
@@ -76,6 +83,13 @@ propre adresse, et les commandes lancées à l'intérieur du pod. Le maillage [I
 d'une seconde couche de chiffrement, sans les remplacer : le serveur continue d'imposer son propre TLS, et les
 applications de vérifier son certificat. Le maillage et les politiques réseau n'ouvrent en outre le port 5432 qu'à cinq composants : l'API, le
 service de modération, Keycloak, Grafana et Adminer.
+
+**L'isolation est imposée deux fois.**
+Le fichier `pg_hba.conf` n'autorise chaque compte de service que sur sa base et refuse tout autre essai, par exemple
+`pme_api` vers `moderation`. Si cette règle était un jour mal écrite, le droit `CONNECT` de chaque base, retiré à tout le
+monde sauf à son propriétaire, refuserait de toute façon la connexion. Le compte d'administration, qui n'est lié à aucun
+service, ne sert qu'à [Adminer](adminer.md) et à `psql`. Les mots de passe des quatre comptes sont distincts et générés
+dans `.env` par `make seal`.
 
 **Les données survivent au redémarrage, pas à la suppression.**
 Un conteneur est éphémère : tout ce qu'il écrit disparaît avec lui. Les données de PostgreSQL sont donc rangées sur un
@@ -94,6 +108,7 @@ base, et le passage d'une version à l'autre est reproductible.
 | **Base de données** | Espace qui regroupe les tables d'une même application. |
 | **Connexion** | Canal ouvert entre une application et la base. Leur nombre est limité, car chacune consomme de la mémoire. |
 | **Instance** | Programme PostgreSQL en fonctionnement. Il héberge une ou plusieurs bases. |
+| **Rôle (compte)** | Identité qui se connecte à PostgreSQL, avec ses propres droits. Ici, un rôle par service. |
 | **Migration** | Fichier qui décrit une modification du schéma, par exemple l'ajout d'une table ou d'une colonne. |
 | **`pg_hba.conf`** | Fichier qui décide qui peut se connecter, depuis où et avec quelles exigences. |
 | **Schéma** | Description de la structure d'une base : ses tables, leurs colonnes et leurs contraintes. |
@@ -111,6 +126,7 @@ base, et le passage d'une version à l'autre est reproductible.
     - `moderation` : la file des annonces à relire ;
     - `keycloak` : les comptes, les rôles et les sessions ;
     - `grafana` : les tableaux de bord et leurs réglages.
+- Il isole les données de chaque composant : un compte par base, sans accès aux autres.
 - Il garantit la cohérence des données : une annonce incomplète ou en double est refusée par la base elle-même, et non
   seulement par le code de l'API.
 - Il n'accepte du réseau que des connexions chiffrées, avec un certificat émis par cert-manager.
@@ -139,13 +155,13 @@ sous cette limite même lorsque l'autoscaler ajoute des exemplaires :
 | Fichier ou dossier | Description |
 |---|---|
 | **`k8s/01-postgres.yaml`** | Déploie PostgreSQL dans le cluster, avec son volume de données. |
-| **`k8s/config/postgres-init.sh`** | Crée les bases supplémentaires à la première initialisation du volume. |
-| **`k8s/config/postgres-hba.conf`** | Impose le chiffrement aux connexions venant du réseau. |
+| **`k8s/config/postgres-init.sh`** | Crée à la première initialisation du volume les quatre comptes de service et leurs bases, et retire à tous le droit de se connecter aux bases des autres. |
+| **`k8s/config/postgres-hba.conf`** | Impose le chiffrement aux connexions venant du réseau et limite chaque compte de service à sa base. |
 | **`k8s/00-internal-tls.yaml`** | Demande à cert-manager le certificat du serveur. |
 | **`api/src/migrations/`** | Contient les migrations qui créent et font évoluer les tables des annonces. |
 | **`moderation-service/src/migrations/`** | Contient les migrations de la file de modération. |
 | **`api/src/config/configuration.ts`** | Lit les paramètres de connexion de l'API, dont le plafond de connexions. |
-| **`.env`** | Contient l'identifiant et le mot de passe de la base. Ce fichier est exclu de Git. |
+| **`.env`** | Contient le compte d'administration et les mots de passe des quatre comptes de service. Ce fichier est exclu de Git. |
 
 ## Commandes essentielles
 
@@ -158,12 +174,13 @@ sous cette limite même lorsque l'autoscaler ajoute des exemplaires :
 | **`make port-forward`** | Rend la base joignable depuis l'ordinateur, sur le port 5432. |
 | **`make db-listings`** | Affiche les annonces enregistrées. |
 | **`make db-moderation`** | Affiche les annonces en attente de modération. |
-| **`make create-grafana-db`** | Crée la base de Grafana sur un cluster déjà installé. |
+| **`make db-secrets`** | Génère dans `.env` les mots de passe des comptes de service s'ils manquent. Appelé par `make seal`. |
 | **`make ca-configmap`** | Copie l'autorité locale dans le namespace, pour que les applications vérifient le certificat. |
 
 !!! note "À savoir"
-    Le script de création des bases ne s'exécute qu'à la toute première initialisation du volume. Sur un cluster déjà
-    installé, une base manquante se crée avec la commande dédiée, par exemple `make create-grafana-db`.
+    Le script de création des comptes et des bases ne s'exécute qu'à la toute première initialisation du volume. Un
+    cluster installé avant l'isolation par compte doit donc repartir de zéro (`make reset`, ou `minikube delete` puis
+    `make deploy`), après un `make seal` qui régénère le fichier de secrets.
 
 !!! warning "Attention"
     `make undeploy` supprime le namespace, donc le volume : toutes les données sont perdues, annonces et comptes

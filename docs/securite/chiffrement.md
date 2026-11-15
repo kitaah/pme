@@ -123,7 +123,7 @@ chaine: "" {
 
 Le point important du côté de PostgreSQL est que l'obligation est **posée par le serveur**, et non laissée à la
 discrétion des clients. Le fichier de règles d'accès fourni par l'image accepte les connexions TCP en clair ; le projet
-le remplace par le sien, qui n'autorise que les connexions chiffrées depuis le reste du cluster. Une application mal
+le remplace par le sien, qui n'autorise que les connexions chiffrées depuis le reste du cluster, et qui limite chaque compte de service à sa propre base (voir [PostgreSQL](../outils/postgresql.md)). Une application mal
 configurée n'obtient donc pas une connexion en clair : elle est refusée.
 
 Trois exceptions figurent dans ces règles, toutes internes au pod : la socket Unix, utilisée par l'initialisation de
@@ -207,7 +207,7 @@ depuis un autre pod avec `sslmode=disable` est rejetée par le serveur, avant m�
 | **`k8s/08-ingress.yaml`** | Termine le TLS avec le certificat de cert-manager. |
 | **`k8s/08-middlewares.yaml`** | Ajoute l'en-tête HSTS aux réponses de l'ingress, compresse les réponses, limite le débit (API et photos) et valide les jetons de l'API. |
 | **`k8s/traefik/values.yaml`** | Redirige le HTTP vers le HTTPS pour tous les noms d'hôte. |
-| **`k8s/config/postgres-hba.conf`** | Impose le TLS et SCRAM-SHA-256 à toute connexion venant du cluster. |
+| **`k8s/config/postgres-hba.conf`** | Impose le TLS et SCRAM-SHA-256 à toute connexion venant du cluster, et limite chaque compte de service à sa base. |
 | **`k8s/config/nats.conf`** | Active le TLS de NATS pour les clients et pour le port de supervision, et fixe la version minimale à 1.3. |
 
 ## Pour aller plus loin

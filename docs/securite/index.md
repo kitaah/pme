@@ -81,7 +81,7 @@ Chaque mesure est détaillée dans la page de sa couche.
 |---|---|---|
 | **Identité et accès** | Connexion par Keycloak (flux avec PKCE, jeton gardé en mémoire par le navigateur), jeton signé vérifié par Traefik puis par l'API, deux rôles, refus par défaut, données cloisonnées par membre, protection contre les essais répétés, aucun compte d'amorçage conservé. | [Authentification](authentification.md) |
 | **Échanges** | HTTPS sur tous les noms d'hôte, mTLS strict entre les pods par Istio, chaque composant n'acceptant que ses appelants prévus (refus par défaut, double filtre : autorisation par identité d'Istio et politiques réseau de Calico), TLS jusqu'à PostgreSQL et NATS (y compris le port de supervision de NATS), photos lisibles seulement par adresse signée de cinq minutes, mots de passe jamais transmis en clair, certificats renouvelés seuls. | [Chiffrement](chiffrement.md) |
-| **Secrets** | Mots de passe chiffrés avant d'entrer dans Git, secrets du stockage générés au hasard, déchiffrables par le seul cluster, recherche de secrets oubliés, aucun secret en clair dans la pipeline. | [Secrets](secrets.md) |
+| **Secrets** | Un compte PostgreSQL par service, limité à sa seule base, mots de passe chiffrés avant d'entrer dans Git, secrets du stockage générés au hasard, déchiffrables par le seul cluster, recherche de secrets oubliés, aucun secret en clair dans la pipeline. | [Secrets](secrets.md) |
 | **Conteneurs et cluster** | Aucun droit d'administrateur, disque en lecture seule, capacités retirées, jeton du cluster non monté, un compte de service par composant, ressources plafonnées, standards de sécurité des pods imposés, composants du maillage isolés, images sans outils de développement. | [Durcissement](durcissement.md) |
 | **Application** | Validation stricte des entrées et des messages NATS, requêtes SQL paramétrées, photos contrôlées et ré-encodées (taille bornée, métadonnées GPS retirées), limitation de débit, en-têtes de sécurité et politique de contenu, seule l'API exposée, erreurs qui ne révèlent rien, données personnelles réduites au minimum. | [Défenses applicatives](application.md) |
 
@@ -104,7 +104,6 @@ connus sont les suivants. Chacun est repris, avec son contexte, dans la page con
 
 | Priorité | Limite | Conséquence | Page |
 |---|---|---|---|
-| **Haute** | **Un seul compte PostgreSQL** | Les quatre bases partagent le même compte : aucune séparation des droits. | [Durcissement](durcissement.md) |
 | **Haute** | **Outils d'exploitation sans authentification** | Adminer, Prometheus et Alloy sont joignables sans mot de passe propre. | [Authentification](authentification.md) |
 | **Haute** | **Pas de second facteur** | La connexion repose sur le seul mot de passe, dont la politique impose 12 caractères mais n'écarte pas les mots de passe courants. | [Authentification](authentification.md) |
 | **Haute** | **Console d'administration de Keycloak exposée** | Elle est joignable par l'ingress comme la page de connexion, et le realm `master` n'a pas de protection contre les essais répétés dans le dépôt. | [Authentification](authentification.md) |

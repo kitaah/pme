@@ -116,8 +116,12 @@ Pour se connecter :
 
 1. Lancer `make adminer`.
 2. Choisir le système « PostgreSQL ». Le champ « Serveur » est déjà rempli.
-3. Saisir l'identifiant et le mot de passe du fichier `.env`.
+3. Saisir l'identifiant et le mot de passe d'administration (`POSTGRES_USER` et `POSTGRES_PASSWORD` du fichier `.env`).
 4. Indiquer la base souhaitée : `pme`, `moderation`, `keycloak` ou `grafana`.
+
+Les comptes de service (`pme_api`, `pme_moderation`, `pme_keycloak`, `pme_grafana`) fonctionnent aussi, avec leur mot
+de passe `DB_*_PASSWORD` du fichier `.env`, mais chacun n'ouvre que sa propre base. Seul le compte d'administration
+peut ouvrir les quatre.
 
 !!! tip "Astuce"
     La table `listings` de la base `pme` est celle à ouvrir pour suivre une annonce. Sa colonne de statut montre le
