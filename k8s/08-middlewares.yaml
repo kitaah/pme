@@ -97,6 +97,34 @@ spec:
     maxRequestBodyBytes: 6291456
     memRequestBodyBytes: 1048576
 ---
+# Limitation de debit des photos, propre a Garage. Une page « Mes annonces » charge une photo par annonce, d'un seul coup :
+# le plafond de l'API (200 par minute, rafale de 50) serait trop strict pour ces lectures, qui sont legeres. L'URL de
+# chaque photo est signee et ne dure que cinq minutes, mais elle peut etre rappelee en boucle pendant ce temps : ce
+# plafond protege Garage de cette repetition. Chaque Ingress a son propre compteur dans Traefik : les photos ne
+# consomment donc pas le quota de l'API. Meme remarque que ci-dessus sur l'adresse source vue sur Minikube.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: garage-rate-limit
+spec:
+  rateLimit:
+    average: 600
+    period: 1m
+    burst: 100
+---
+# Chaine de Garage : les traitements de reponse, puis la limitation de debit des photos. Pas de jeton : la signature de
+# l'URL est l'autorisation.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: garage-defaults
+spec:
+  chain:
+    middlewares:
+      - name: hsts
+      - name: compress
+      - name: garage-rate-limit
+---
 # Chaine de l'API et de la moderation : les traitements de reponse, la taille du corps, la
 # limitation de debit, puis la validation du jeton.
 apiVersion: traefik.io/v1alpha1

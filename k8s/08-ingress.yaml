@@ -22,7 +22,7 @@
 # Traefik pour tous les noms, et la taille des en-tetes de Keycloak (erreur 502 avec nginx, tampon de 16 Ko) n'est
 # plus un sujet, Traefik n'ayant pas ce tampon. HSTS et compression : k8s/08-middlewares.yaml.
 #
-# Deux Ingress pour le meme nom d'hote : l'annotation des middlewares s'applique a TOUS les chemins d'un Ingress, et le
+# Garage a son propre Ingress (`pme-garage`, limite de debit des photos). Pour pme.localhost, deux Ingress pour le meme nom d'hote : l'annotation des middlewares s'applique a TOUS les chemins d'un Ingress, et le
 # jeton ne doit etre exige que sous /api/v1 (le site, lui, doit se charger sans jeton). Traefik les fusionne : le chemin le
 # plus long l'emporte, comme dans un Ingress unique. Le certificat est declare dans chacun.
 #
@@ -73,7 +73,6 @@ spec:
         - grafana.localhost
         - prometheus.localhost
         - alloy.localhost
-        - garage.localhost
   rules:
     - host: pme.localhost
       http:
@@ -117,11 +116,27 @@ spec:
             pathType: Prefix
             backend:
               service: { name: alloy, port: { number: 12345 } }
-    # Stockage objet : le navigateur lit les photos ici, par URL signee de courte duree fournie
-    # par l'API (relation 13 du C4 niveau 2). Pas de validation de jeton a l'ingress : la
-    # signature de l'URL EST l'autorisation, et un jeton Keycloak ne circulerait pas dans la
-    # balise <img> d'une page. Rien n'est public pour autant : sans signature valable, Garage
-    # refuse la lecture. Seule l'interface S3 (3900) est exposee, jamais l'administration (3903).
+---
+# Stockage objet : le navigateur lit les photos ici, par URL signee de courte duree fournie par l'API (relation 13 du C4
+# niveau 2). Pas de validation de jeton a l'ingress : la signature de l'URL EST l'autorisation, et un jeton Keycloak ne
+# circulerait pas dans la balise <img> d'une page. Rien n'est public pour autant : sans signature valable, Garage refuse
+# la lecture. Seule l'interface S3 (3900) est exposee, jamais l'administration (3903).
+# Ingress a part : les middlewares s'appliquent a tout un Ingress, et les photos ont leur propre limite de debit
+# (garage-defaults, k8s/08-middlewares.yaml), plus large que celle de l'API.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pme-garage
+  annotations:
+    # <namespace>-<nom>@kubernetescrd : HSTS, compression, puis limite de debit des photos.
+    traefik.ingress.kubernetes.io/router.middlewares: pme-garage-defaults@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - secretName: pme-tls
+      hosts:
+        - garage.localhost
+  rules:
     - host: garage.localhost
       http:
         paths:
