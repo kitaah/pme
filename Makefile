@@ -4,7 +4,7 @@
 
 .PHONY: help install test test-integration test-perf image-test \
         lint format format-check lint-yaml lint-docker lint-k8s secrets-scan audit coverage sonar quality \
-        minikube-up minikube-down helm ingress ingress-restart mesh-renew inotify istio istio-scan mesh-check authz-check netpol-check jwt-check cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
+        minikube-up minikube-down helm ingress ingress-restart mesh-renew inotify istio istio-scan mesh-check authz-check netpol-check jwt-check smoke cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
         env kubeseal sealed-secrets sealed-prereqs seal image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         garage-secrets db-secrets seal-now garage-init \
         pods logs logs-api logs-moderation logs-keycloak \
@@ -100,6 +100,7 @@ help:
 	@echo "    make authz-check              - Verifie les autorisations par identite : seules les sources prevues joignent chaque composant"
 	@echo "    make netpol-check             - Verifie les politiques reseau (Calico) : un pod sans l'etiquette prevue est coupe, meme avec la bonne identite"
 	@echo "    make jwt-check                - Verifie la validation des jetons a l'ingress : sans jeton valide, Traefik repond 401 sur /api/v1 ; le site reste public"
+	@echo "    make smoke                    - Test de fumee : deploiements, comptes PostgreSQL, donnees de base, ingress et photo aleatoire, une ligne OK ou KO par controle"
 	@echo "    make ca-configmap             - Copie l'autorite locale dans le namespace $(NS) (verification du TLS de PostgreSQL)"
 	@echo "    make tunnel                   - Redirige les ports 80 et 443 vers l'ingress (cluster cree sans --ports ; laisser ouvert, mot de passe demande)"
 	@echo "    make hosts                    - Affiche la ligne a ajouter dans /etc/hosts pour les noms .localhost"
@@ -340,6 +341,12 @@ jwt-check:
 	n=$$(kubectl -n $(TRAEFIK_NS) logs deploy/traefik --since-time=$$start | grep '"DownstreamStatus":401' | grep '"OriginStatus":0' | grep -c '"RequestPath":"/api/v1/'); \
 	if [ "$$n" -ge 3 ]; then echo "401 emis par Traefik sans atteindre un service : $$n (attendu : 3 ou plus) : OK"; \
 	else echo "Seulement $$n refus emis par Traefik (attendu : 3 ou plus) : le 401 vient peut-etre de l'API, voir le log de Traefik"; exit 1; fi
+
+# Test de fumee de la plateforme deployee (scripts/smoke.sh) : douze deploiements disponibles, un compte PostgreSQL par service
+# limite a sa base, donnees de base presentes (tables, flux NATS, bucket), ingress qui repond comme prevu, et une image aleatoire envoyee dans Garage
+# puis relue et supprimee (scripts/smoke-photo.js). Aucune donnee conservee, aucune connexion Keycloak requise. Code de sortie 1 si un controle echoue.
+smoke:
+	@NS=$(NS) TRAEFIK_NS=$(TRAEFIK_NS) APP_HOST=$(APP_HOST) KEYCLOAK_HOST=$(KEYCLOAK_HOST) sh scripts/smoke.sh
 
 # metrics-server (addon Minikube) : fournit la charge des pods a l'autoscaler (k8s/11-autoscaling.yaml). Sans lui, la cible
 # de chaque autoscaler reste <unknown> et le nombre de pods ne change jamais. Les premieres mesures arrivent apres ~1 minute.

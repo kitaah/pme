@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Point d'entrée unique de toutes les opérations du projet : cluster, secrets, déploiement, observation, développement, qualité, tests et documentation |
 | **Fichier** | `Makefile`, à la racine du dépôt |
-| **Nombre de commandes** | 83 cibles, regroupées en douze thèmes ci-dessous (plus `seal-now`, étape interne de `make seal`) |
+| **Nombre de commandes** | 84 cibles, regroupées en douze thèmes ci-dessous (plus `seal-now`, étape interne de `make seal`) |
 | **Aide intégrée** | `make help`, qui n'en liste qu'une partie : cette page est la liste complète |
 | **Configuration** | Variables en tête du `Makefile` (voir la dernière section) et fichier `.env` pour les mots de passe |
 
@@ -98,6 +98,7 @@ navigateur, `make seal` (nouveau cluster, donc nouvelle clé ; génère aussi le
 | **`make mesh-check`** | Vérifie le mTLS : un pod hors du maillage doit être refusé, puis affiche les derniers échanges vus par ztunnel avec leurs identités. |
 | **`make authz-check`** | Vérifie les autorisations d'Istio avec trois pods temporaires. Attendu : l'identité `default` vers Keycloak est refusée, `pme-api` vers Keycloak passe, `pme-api` vers Prometheus est refusée. |
 | **`make jwt-check`** | Vérifie la validation des jetons par Traefik avec des pods temporaires. Attendu : sans jeton ou avec un jeton invalide, `/api/v1` répond 401 ; le site reste accessible (200). |
+| **`make smoke`** | Test de fumée de la plateforme déployée (`scripts/smoke.sh`), une ligne OK ou KO par contrôle, code de sortie 1 au moindre échec. Il vérifie : les douze déploiements disponibles ; chaque compte PostgreSQL ouvre sa base et seulement elle (mauvais mot de passe et connexion sans TLS refusés) ; les données de base (tables, listes de référence, flux NATS `LISTINGS`, bucket des photos) ; l'ingress vu par un visiteur anonyme (site public, Keycloak joignable, `/api/v1` et la modération fermées en 401, HTTP redirigé vers HTTPS) ; enfin une **image aléatoire** générée dans le pod de l'API, envoyée dans Garage, relue, lue par URL signée à travers Traefik puis supprimée (`scripts/smoke-photo.js`). Aucune donnée n'est conservée et aucune connexion Keycloak n'est nécessaire. |
 | **`make netpol-check`** | Vérifie les politiques réseau de Calico avec deux pods temporaires. Attendu : avec l'étiquette prévue, Keycloak répond ; sans elle, la connexion est coupée. |
 
 ### Secrets
