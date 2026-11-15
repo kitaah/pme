@@ -88,4 +88,67 @@ describe('auth', () => {
 
     expect(keycloak.logout).toHaveBeenCalledWith({ redirectUri: window.location.origin });
   });
+
+  describe("adresse de retour apres la connexion", () => {
+    // initAuth memorise sa promesse au niveau du module : chaque cas recharge le module pour repartir de zero.
+    async function initAt(path: string) {
+      sessionStorage.clear();
+      return initFrom(path);
+    }
+    async function initFrom(path: string) {
+      window.history.pushState({}, '', path);
+      vi.resetModules();
+      const fresh = await import('./auth');
+      keycloak.init.mockClear();
+      await fresh.initAuth();
+      return keycloak.init.mock.calls[0][0] as { redirectUri?: string };
+    }
+
+    it("renvoie vers « Mes annonces » quand la personne arrive sur l'accueil", async () => {
+      const options = await initAt('/');
+
+      expect(options.redirectUri).toBe(`${window.location.origin}/mes-annonces`);
+    });
+
+    it("ne renvoie plus vers « Mes annonces » quand l'accueil est actualise dans le meme onglet", async () => {
+      await initAt('/');
+      const options = await initFrom('/');
+
+      expect(options.redirectUri).toBeUndefined();
+    });
+
+    it('garde une adresse precise (lien direct, actualisation) telle quelle', async () => {
+      const options = await initAt('/mes-annonces');
+
+      expect(options.redirectUri).toBeUndefined();
+    });
+
+    it("garde le comportement par defaut quand le stockage de l'onglet est indisponible", async () => {
+      const broken = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('stockage refuse');
+      });
+      const options = await initAt('/');
+      broken.mockRestore();
+
+      expect(options.redirectUri).toBeUndefined();
+    });
+
+    it("se deconnecte meme quand le stockage de l'onglet est indisponible", () => {
+      const broken = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+        throw new Error('stockage refuse');
+      });
+      logout();
+      broken.mockRestore();
+
+      expect(keycloak.logout).toHaveBeenCalled();
+    });
+
+    it("renvoie de nouveau vers « Mes annonces » a la connexion suivante, apres une deconnexion", async () => {
+      await initAt('/');
+      logout();
+      const options = await initFrom('/');
+
+      expect(options.redirectUri).toBe(`${window.location.origin}/mes-annonces`);
+    });
+  });
 });

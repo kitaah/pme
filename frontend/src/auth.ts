@@ -7,10 +7,34 @@ const keycloak = new Keycloak({ url: config.keycloakUrl, realm: config.realm, cl
 
 let initPromise: Promise<boolean> | undefined;
 
+const LANDING_FLAG = 'pme.landing-done';
+const AFTER_LOGIN_PATH = '/mes-annonces';
+
+/**
+ * Adresse de retour de Keycloak : « Mes annonces » quand la personne arrive sur l'accueil, une seule fois par onglet.
+ * Une adresse precise (lien direct, actualisation de /mes-annonces) est conservee telle quelle, et une actualisation
+ * de l'accueil, plus tard dans l'onglet, ne l'en fait pas sortir. Le jeton n'etant garde qu'en memoire, chaque chargement
+ * repasse par Keycloak : sans ce drapeau, l'accueil renverrait toujours vers « Mes annonces ».
+ */
+function loginRedirectUri(): string | undefined {
+  try {
+    if (window.location.pathname !== '/' || sessionStorage.getItem(LANDING_FLAG)) return undefined;
+    sessionStorage.setItem(LANDING_FLAG, '1');
+    return `${window.location.origin}${AFTER_LOGIN_PATH}`;
+  } catch {
+    return undefined; // stockage indisponible : on garde le comportement par defaut
+  }
+}
+
 /** Redirige vers la page de connexion Keycloak si besoin (Authorization Code + PKCE). */
 export function initAuth(): Promise<boolean> {
   // memorise la promesse : React.StrictMode execute les effets deux fois en developpement
-  initPromise ??= keycloak.init({ onLoad: 'login-required', pkceMethod: 'S256', checkLoginIframe: false });
+  initPromise ??= keycloak.init({
+    onLoad: 'login-required',
+    pkceMethod: 'S256',
+    checkLoginIframe: false,
+    redirectUri: loginRedirectUri(),
+  });
   return initPromise;
 }
 
@@ -42,5 +66,10 @@ export async function accessToken(): Promise<string> {
 }
 
 export function logout(): void {
+  try {
+    sessionStorage.removeItem(LANDING_FLAG);
+  } catch {
+    /* stockage indisponible : sans effet */
+  }
   void keycloak.logout({ redirectUri: window.location.origin });
 }
