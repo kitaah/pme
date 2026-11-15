@@ -131,8 +131,8 @@ La page se compose des éléments suivants :
 | **`App`** | Attend la fin de la connexion, récupère l'utilisateur, puis assemble la page et ses deux routes : le dépôt (`/`) et « Mes annonces » (`/mes-annonces`), grâce à React Router. |
 | **`Header`** | Affiche le logo, la navigation, le nom de l'utilisateur, ses rôles et le bouton de déconnexion. |
 | **`Footer`** | Pied de page : rubriques, mentions légales et lien d'accessibilité. |
-| **`ListingForm`** | Formulaire de dépôt : titre, description, type d'annonce, état, prix ou contrepartie, lieu de remise et photo. Il affiche les erreurs renvoyées par l'API et conserve la saisie. |
-| **`MyListings`** | Liste les annonces du membre, avec leur photo, leur type et leur statut de modération. |
+| **`ListingForm`** | Formulaire de dépôt : titre, description, type d'annonce, catégorie, état, prix ou contrepartie, lieu de remise et photo. Les listes de catégories et de lieux viennent de l'API. Il affiche les erreurs renvoyées par l'API et conserve la saisie. |
+| **`MyListings`** | Liste les annonces du membre, avec leur photo, leur type, leur lieu de remise et leur statut. |
 | **`ConfirmationToast`** | Notification « Annonce soumise pour validation ! », affichée après le dépôt, avant la redirection vers la liste. |
 | **`components/ui/`** | Composants de base issus de shadcn/ui, dont le bouton. |
 

@@ -42,7 +42,7 @@ envoyé sur le bus ne transporte que cette clé, jamais le fichier.
 | **Thème de connexion Keycloak** | Création d'un thème `pme` (le dépôt n'en contient aucun), qui reprend la palette « Nuit de festival » | La page de connexion doit suivre le reste de l'application |
 | **Inscription** | Ouverte : `registrationAllowed` passe à `true`, donc le lien « Créer un compte » de la maquette apparaît sous le formulaire | La maquette le montre ; un compte créé n'a aucun rôle tant que `membre` n'est pas ajouté aux rôles par défaut du realm |
 | **Nom de la rubrique** | « Espace membre » | La rubrique couvre l'échange, le don et la vente, pas seulement le troc |
-| **Lieu de remise** | Liste fermée : les quatre magasins de l'entreprise, ou « à convenir » | Sans lieu, une annonce d'échange n'est pas exploitable. Une liste fermée ne collecte aucune donnée personnelle, et la remise en magasin prolonge l'activité de l'enseigne. Une adresse précise serait incohérente : les métadonnées EXIF de la photo, position GPS comprise, sont justement retirées |
+| **Lieu de remise** | Table de référence `handover_places` : les quatre magasins de l'entreprise, ou « à convenir », référencée par une clé étrangère | Sans lieu, une annonce d'échange n'est pas exploitable. Une liste de lieux gérée par l'entreprise ne collecte aucune donnée personnelle, et ouvrir ou fermer un magasin se fait sans déploiement, et la remise en magasin prolonge l'activité de l'enseigne. Une adresse précise serait incohérente : les métadonnées EXIF de la photo, position GPS comprise, sont justement retirées |
 
 ## Conformité au C4 niveau 2
 
@@ -70,7 +70,8 @@ Deux règles découlent du C4 :
 1. **Connexion.** Le membre arrive sur la page de connexion Keycloak, en français, sans sélecteur de langue. Le champ
    s'intitule « Nom d'utilisateur ou email ».
 2. **Formulaire.** Après connexion, la page « Déposer une annonce » s'affiche : type d'annonce (échange, don ou vente),
-   catégorie, état, titre, description, lieu de remise et photo (facultative). Selon le type, le formulaire montre ce qui
+   catégorie, état, titre, description, lieu de remise et photo (facultative). Les listes de catégories et de lieux de
+   remise sont demandées à l'API (`GET /api/v1/categories` et `GET /api/v1/handover-places`) à l'ouverture de la page. Selon le type, le formulaire montre ce qui
    est recherché en échange (facultatif) ou le prix, et n'affiche rien pour un don.
 3. **Envoi.** Le navigateur envoie le formulaire en multipart à `POST /api/v1/listings`, avec le jeton.
 4. **Contrôles à l'entrée.** Traefik limite la taille du corps (6 Mo), le débit et vérifie le jeton.
@@ -94,6 +95,110 @@ ouvert avec un message d'erreur, et la photo éventuellement déjà enregistrée
 
 ## Modèle de données
 
+Le schéma montre les quatre tables et leurs deux bases. Dans la base `pme`, `listings` pointe vers les tables de référence `categories` et `handover_places` par des clés étrangères. Le service de modération a sa propre base : il ne garde que le code de la catégorie et du lieu, reçu dans l'événement, et rien ne le relie par une clé étrangère à la base `pme`.
+
+```d2
+vars: {
+  d2-config: {
+    layout-engine: elk
+    theme-id: 5
+    pad: 16
+  }
+}
+direction: right
+
+classes: {
+  table: {
+    style: {
+      font-size: 20
+    }
+  }
+  lien: {
+    style: {
+      font-size: 18
+    }
+  }
+}
+
+pme: "Base pme (API)" {
+  style.font-size: 22
+
+  categories: "categories" {
+    class: table
+    shape: sql_table
+    id: smallint {constraint: primary_key}
+    code: "varchar(30)" {constraint: unique}
+    "label": "varchar(60)"
+    sort_order: smallint
+    active: boolean
+  }
+
+  handover_places: "handover_places" {
+    class: table
+    shape: sql_table
+    id: smallint {constraint: primary_key}
+    code: "varchar(30)" {constraint: unique}
+    "label": "varchar(60)"
+    sort_order: smallint
+    active: boolean
+  }
+
+  listings: "listings" {
+    class: table
+    shape: sql_table
+    id: uuid {constraint: primary_key}
+    owner_id: uuid
+    owner_username: "varchar(100)"
+    title: "varchar(100)"
+    description: "varchar(1000)"
+    condition: "varchar(20)"
+    category_id: smallint {constraint: foreign_key}
+    kind: "varchar(20)"
+    price_cents: "integer"
+    wanted_in_exchange: "varchar(120)"
+    handover_place_id: smallint {constraint: foreign_key}
+    photo_key: "varchar(200)"
+    photo_mime: "varchar(40)"
+    status: "varchar(30)"
+    created_at: timestamptz
+    updated_at: timestamptz
+  }
+
+  listings.category_id -> categories.id: "catégorie" {class: lien}
+  listings.handover_place_id -> handover_places.id: "lieu" {class: lien}
+}
+
+moderation: "Base moderation (service de modération)" {
+  style.font-size: 22
+
+  moderation_queue: "moderation_queue" {
+    class: table
+    shape: sql_table
+    id: uuid {constraint: primary_key}
+    listing_id: uuid {constraint: unique}
+    owner_id: uuid
+    owner_username: "varchar(100)"
+    title: "varchar(100)"
+    description: "varchar(1000)"
+    condition: "varchar(20)"
+    category: "varchar(30)"
+    kind: "varchar(20)"
+    price_cents: "integer"
+    wanted_in_exchange: "varchar(120)"
+    handover_place: "varchar(30)"
+    photo_key: "varchar(200)"
+    status: "varchar(20)"
+    submitted_at: timestamptz
+    received_at: timestamptz
+  }
+}
+
+moderation.moderation_queue.listing_id -> pme.listings.id: "même annonce, par l'événement\n(aucune clé étrangère entre deux bases)" {
+  class: lien
+  style.stroke-dash: 4
+}
+```
+
 Table `listings`, base `pme` :
 
 | Colonne | Type | Règle |
@@ -104,12 +209,12 @@ Table `listings`, base `pme` :
 | `condition` | énumération | `NEW`, `VERY_GOOD`, `GOOD`, `FAIR` (`NEW`, `GOOD`, `FAIR` existent déjà) |
 | `kind` | énumération | `EXCHANGE` (valeur par défaut), `GIFT`, `SALE` |
 | `wanted_in_exchange` | texte | Facultatif, 120 caractères maximum, saisi pour un échange |
-| `handover_place` | énumération | `SHOP_ANGOULEME`, `SHOP_AIX`, `SHOP_LYON`, `SHOP_LONDON`, `TO_AGREE` (valeur par défaut) |
+| `handover_place_id` | clé étrangère | Référence `handover_places.id`, obligatoire. L'API reçoit le code (`SHOP_LYON`…, `TO_AGREE` par défaut) et renvoie le code avec son libellé |
 | `price_cents` | entier | Obligatoire si `SALE` (1 à 999 999), vide sinon, garanti par une contrainte de base. En centimes, jamais en nombre décimal |
 | `photo_key` | texte | Clé de l'objet dans le bucket (`pending/<identifiant>.webp`), vide si pas de photo |
 | `photo_mime` | texte | Type de l'image stockée, vide si pas de photo |
 
-Le statut existant (`PENDING_MODERATION`) reste inchangé. Les migrations initiales ne sont pas modifiées : quatre
+Le statut existant (`PENDING_MODERATION`) reste inchangé. Les migrations initiales ne sont pas modifiées : cinq
 nouvelles migrations TypeORM, présentes dans l'API ou dans le service de modération (deux bases séparées), font
 évoluer les tables.
 
@@ -118,6 +223,7 @@ nouvelles migrations TypeORM, présentes dans l'API ou dans le service de modér
    l'avaient passent en `FAIR` (« Satisfaisant »), puis la contrainte est remplacée par les quatre valeurs restantes.
 3. `1763300000000-add-listing-category` ajoute la colonne `category`, décrite ci-dessous.
 4. `1763400000000-create-categories-table` (API) remplace cette colonne par la table `categories` ; `1763400000000-open-category-code` (modération) en retire la contrainte `CHECK`.
+5. `1763500000000-create-handover-places-table` (API) remplace la colonne `handover_place` par la table `handover_places` ; `1763500000000-open-handover-place-code` (modération) en retire la contrainte `CHECK` et porte la colonne à 30 caractères.
 
 Le validateur de l'événement reçu par le service de modération accepte les nouveaux codes.
 
@@ -140,8 +246,13 @@ recrée la colonne ; une catégorie ajoutée depuis retombe alors sur `OTHER`.
   chacun leur base, et la file doit continuer à recevoir une annonce même si une catégorie est retirée ensuite. La
   migration `1763400000000-open-category-code` y supprime la contrainte `CHECK` qui figeait les huit codes, et le
   validateur de l'événement ne contrôle plus que la forme du code.
-- **Les autres listes** (état, type d'annonce, lieu de remise) restent des énumérations avec contrainte `CHECK` : elles
-  portent des règles de gestion (le prix dépend du type) et ne changent pas sans modification du code.
+- **Le lieu de remise suit le même principe** : la table `handover_places` (`id`, `code` unique, `label`, `sort_order`,
+  `active`) contient les quatre magasins et « à convenir » (`TO_AGREE`, le lieu par défaut), `listings.handover_place_id`
+  la référence, et l'API expose `GET /api/v1/handover-places`. Contrairement à la catégorie, l'API renvoie le lieu d'une
+  annonce avec son code **et** son libellé, pour que « Mes annonces » l'affiche sans autre appel, même si le magasin est
+  fermé depuis. Le retour arrière ramène un lieu ajouté depuis à `TO_AGREE`.
+- **Les autres listes** (état, type d'annonce) restent des énumérations avec contrainte `CHECK` : elles portent des
+  règles de gestion (le prix dépend du type) et ne changent pas sans modification du code.
 
 Catégories de départ :
 
@@ -155,6 +266,16 @@ Catégories de départ :
 | `GAMES` | Jeux |
 | `CLOTHING` | Vêtements |
 | `OTHER` | Autres |
+
+Lieux de remise de départ :
+
+| Code | Libellé affiché |
+|---|---|
+| `SHOP_ANGOULEME` | Magasin d’Angoulême |
+| `SHOP_AIX` | Magasin d’Aix-en-Provence |
+| `SHOP_LYON` | Magasin de Lyon |
+| `SHOP_LONDON` | Magasin de Londres |
+| `TO_AGREE` | À convenir avec le membre |
 
 À l'écran, le front traduit les autres codes par des tables de correspondance (comme `CONDITION_LABELS` dans `api.ts`) :
 
@@ -172,8 +293,9 @@ Les types d'annonce suivent la même logique : `EXCHANGE` « Échange », `GIFT`
 | Élément | Détail |
 |---|---|
 | **Dépôt** | `POST /api/v1/listings`, `multipart/form-data` : champs texte et fichier `photo`. L'API accepte les trois types ; `kind` vaut `EXCHANGE` par défaut |
-| **Liste** | `GET /api/v1/listings/mine` : chaque annonce renvoie `photoUrl`, URL signée valable 5 minutes |
-| **Erreurs** | `400` champ invalide, `413` fichier trop gros, `415` type de fichier refusé |
+| **Liste** | `GET /api/v1/listings/mine` : chaque annonce renvoie `photoUrl`, URL signée valable 5 minutes, sa catégorie sous la forme de son code et son lieu de remise sous la forme `{ code, label }` |
+| **Référentiels** | `GET /api/v1/categories` et `GET /api/v1/handover-places` : la liste des valeurs proposées, `[{ code, label }]`, dans l'ordre d'affichage. `category` et `handoverPlace` reçoivent un code de ces listes (facultatifs : « Autres » et « à convenir » par défaut) |
+| **Erreurs** | `400` champ invalide (dont une catégorie ou un lieu de remise inconnu ou retiré), `413` fichier trop gros, `415` type de fichier refusé |
 | **Événement** | `listing.submitted` : `listingId`, `ownerId`, `ownerUsername`, `title`, `description`, `condition`, `category`, `kind`, `priceCents`, `wantedInExchange`, `handoverPlace`, `photoKey`, `submittedAt`. Le prix, la contrepartie et la photo ne sont présents que s'ils existent. Les champs ajoutés sont facultatifs à la réception : pendant un déploiement progressif, un pod de l'API encore à l'ancienne version publie un message sans eux |
 
 ## Bibliothèques et composants à installer

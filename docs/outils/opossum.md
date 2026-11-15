@@ -133,7 +133,7 @@ L'état du circuit est publié dans la mesure `circuit_breaker_state{name="postg
 | Fichier ou dossier | Description |
 |---|---|
 | **`api/src/common/`**<br>**`database-circuit-breaker.ts`** | Contient le disjoncteur, ses réglages et sa mesure. |
-| **`api/src/listings/listings.service.ts`** | Fait passer par le disjoncteur tous les appels à la base. |
+| **`api/src/listings/listings.service.ts`**<br>**`categories.service.ts`**<br>**`handover-places.service.ts`** | Font passer par le disjoncteur tous les appels à la base, y compris la lecture des listes de catégories et de lieux. |
 | **`api/src/listings/listings.module.ts`** | Crée le disjoncteur et publie sa mesure. |
 
 ## Commandes essentielles

@@ -1,15 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  api,
-  ApiError,
-  CONDITION_LABELS,
-  HANDOVER_PLACE_LABELS,
-  KIND_LABELS,
-  NewListing,
-  STATUS_LABELS,
-  formatPrice,
-  toCents,
-} from './api';
+import { api, ApiError, CONDITION_LABELS, KIND_LABELS, NewListing, STATUS_LABELS, formatPrice, toCents } from './api';
 
 vi.mock('./auth', () => ({
   accessToken: vi.fn().mockResolvedValue('jeton-test'),
@@ -98,6 +88,26 @@ describe('api', () => {
     expect(form.has('category')).toBe(false);
   });
 
+  it('liste les lieux de remise proposes en GET', async () => {
+    const places = [{ code: 'SHOP_LYON', label: 'Magasin de Lyon' }];
+    fetchMock.mockResolvedValue(jsonResponse(places));
+
+    await expect(api.listHandoverPlaces()).resolves.toEqual(places);
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/v1/handover-places');
+    expect(init.method).toBeUndefined();
+  });
+
+  it('n envoie pas de lieu de remise quand aucun n est choisi : l API applique « a convenir »', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ id: '1' }, 201));
+
+    await api.createListing({ ...base, handoverPlace: undefined });
+
+    const form = (fetchMock.mock.calls[0] as [string, RequestInit])[1].body as FormData;
+    expect(form.has('handoverPlace')).toBe(false);
+  });
+
   it('liste mes annonces en GET', async () => {
     fetchMock.mockResolvedValue(jsonResponse([{ id: '1' }]));
 
@@ -151,16 +161,8 @@ describe('libelles', () => {
     });
   });
 
-  it('fournit un libelle pour chaque type d annonce, lieu de remise et statut', () => {
+  it('fournit un libelle pour chaque type d annonce et statut', () => {
     expect(KIND_LABELS).toEqual({ EXCHANGE: 'Échange', GIFT: 'Don', SALE: 'Vente' });
-    expect(Object.keys(HANDOVER_PLACE_LABELS)).toEqual([
-      'SHOP_ANGOULEME',
-      'SHOP_AIX',
-      'SHOP_LYON',
-      'SHOP_LONDON',
-      'TO_AGREE',
-    ]);
-    expect(HANDOVER_PLACE_LABELS.TO_AGREE).toBe('À convenir avec le membre');
     expect(Object.keys(STATUS_LABELS)).toEqual(['PENDING_MODERATION', 'PUBLISHED', 'REJECTED']);
     expect(STATUS_LABELS.PUBLISHED).toBe('Publiée');
   });

@@ -9,6 +9,7 @@ import { loadConfiguration } from './config/configuration';
 import { HealthController } from './health/health.controller';
 import { MetricsController } from './metrics/metrics.controller';
 import { Category } from './listings/category.entity';
+import { HandoverPlace } from './listings/handover-place.entity';
 import { Listing } from './listings/listing.entity';
 import { ListingsModule } from './listings/listings.module';
 import { CreateListings1730000000000 } from './migrations/1730000000000-create-listings';
@@ -16,6 +17,7 @@ import { AddListingDetails1763100000000 } from './migrations/1763100000000-add-l
 import { RemoveForPartsCondition1763200000000 } from './migrations/1763200000000-remove-for-parts-condition';
 import { AddListingCategory1763300000000 } from './migrations/1763300000000-add-listing-category';
 import { CreateCategoriesTable1763400000000 } from './migrations/1763400000000-create-categories-table';
+import { CreateHandoverPlacesTable1763500000000 } from './migrations/1763500000000-create-handover-places-table';
 
 @Module({
   imports: [
@@ -32,7 +34,7 @@ import { CreateCategoriesTable1763400000000 } from './migrations/1763400000000-c
           // Connexion chiffree des que l'autorite est fournie : `rejectUnauthorized` impose que le certificat
           // du serveur soit signe par elle ET emis pour le nom utilise dans `host` (ici `postgres`).
           ssl: db.sslCaFile ? { ca: readFileSync(db.sslCaFile, 'utf8'), rejectUnauthorized: true } : false,
-          entities: [Listing, Category],
+          entities: [Listing, Category, HandoverPlace],
           // Ordre d'application : la liste est parcourue dans l'ordre des horodatages des noms.
           migrations: [
             CreateListings1730000000000,
@@ -40,6 +42,7 @@ import { CreateCategoriesTable1763400000000 } from './migrations/1763400000000-c
             RemoveForPartsCondition1763200000000,
             AddListingCategory1763300000000,
             CreateCategoriesTable1763400000000,
+            CreateHandoverPlacesTable1763500000000,
           ],
           migrationsRun: true, // schema gere uniquement par migrations (jamais synchronize)
           synchronize: false,

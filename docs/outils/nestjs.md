@@ -184,6 +184,7 @@ Les adresses exposées sont les suivantes :
 | Adresse | Qui peut l'appeler | Description |
 |---|---|---|
 | **`POST /api/v1/listings`** | Rôle `membre` | Dépose une annonce, avec une photo facultative (`multipart/form-data`), et la place en attente de validation. |
+| **`GET /api/v1/handover-places`** | Rôle `membre` | Renvoie les lieux de remise proposés (code et libellé), dans l'ordre d'affichage. |
 | **`GET /api/v1/categories`** | Rôle `membre` | Renvoie les catégories proposées pour une annonce (code et libellé), dans l'ordre d'affichage. |
 | **`GET /api/v1/listings/mine`** | Rôle `membre` | Renvoie les annonces du membre, les plus récentes d'abord, 50 par défaut et 100 au maximum. |
 | **`GET /api/v1/moderation/queue`** | Rôle `moderateur` | Renvoie la file des annonces à relire. Cette adresse appartient au service de modération. |

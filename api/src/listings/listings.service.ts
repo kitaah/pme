@@ -1,13 +1,12 @@
-import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthenticatedUser } from '@pme/common';
 import { DatabaseCircuitBreaker } from '../common/database-circuit-breaker';
 import { PhotoStorageService, StoredPhoto } from '../storage/photo-storage.service';
 import { CreateListingDto } from './create-listing.dto';
-import { CategoriesService } from './categories.service';
-import { Category, DEFAULT_CATEGORY_CODE } from './category.entity';
-import { HandoverPlace, ListingKind, ListingStatus } from './listing.enums';
+import { ListingReferences, ListingReferencesService } from './listing-references.service';
+import { ListingKind, ListingStatus } from './listing.enums';
 import { Listing } from './listing.entity';
 import { ListingEventsPublisher } from './listing-events.publisher';
 
@@ -15,9 +14,11 @@ import { ListingEventsPublisher } from './listing-events.publisher';
  * Annonce telle qu'elle est renvoyee au navigateur : le chemin de la photo dans le stockage
  * (`photoKey`) reste interne, le front ne recoit qu'une URL signee de courte duree.
  */
-export type ListingView = Omit<Listing, 'photoKey' | 'photoMime' | 'category'> & {
+export type ListingView = Omit<Listing, 'photoKey' | 'photoMime' | 'category' | 'handoverPlace'> & {
   /** Code de la categorie (`FIGURINES`...) : le libelle vient de GET /api/v1/categories. */
   category: string;
+  /** Lieu de remise avec son libelle : un lieu ferme depuis reste lisible sur les annonces qui l'ont. */
+  handoverPlace: { code: string; label: string };
   photoUrl: string | null;
 };
 
@@ -30,7 +31,7 @@ export class ListingsService {
     private readonly publisher: ListingEventsPublisher,
     private readonly database: DatabaseCircuitBreaker,
     private readonly photos: PhotoStorageService,
-    private readonly categories: CategoriesService,
+    private readonly references: ListingReferencesService,
   ) {}
 
   /**
@@ -44,9 +45,9 @@ export class ListingsService {
    */
   async submit(user: AuthenticatedUser, dto: CreateListingDto, photo?: Buffer): Promise<ListingView> {
     // La categorie est verifiee avant tout enregistrement : une photo n'est stockee que pour une demande recevable.
-    const category = await this.requireCategory(dto.category ?? DEFAULT_CATEGORY_CODE);
+    const references = await this.references.resolve(dto);
     const stored = photo ? await this.photos.store(photo) : undefined;
-    const listing = await this.save(user, dto, category, stored);
+    const listing = await this.save(user, dto, references, stored);
 
     try {
       await this.publisher.publishSubmitted(listing);
@@ -65,7 +66,7 @@ export class ListingsService {
     const listings = await this.database.run(() =>
       this.repository.find({
         where: { ownerId: user.id },
-        relations: { category: true },
+        relations: { category: true, handoverPlace: true },
         order: { createdAt: 'DESC' },
         take: limit,
       }),
@@ -75,17 +76,10 @@ export class ListingsService {
     return Promise.all(listings.map((listing) => this.toView(listing)));
   }
 
-  /** La categorie active portant ce code ; sinon 400, comme tout champ invalide. */
-  private async requireCategory(code: string): Promise<Category> {
-    const category = await this.categories.findActive(code);
-    if (!category) throw new BadRequestException("la catégorie est inconnue ou n'est plus proposée");
-    return category;
-  }
-
   private save(
     user: AuthenticatedUser,
     dto: CreateListingDto,
-    category: Category,
+    { category, handoverPlace }: ListingReferences,
     photo?: StoredPhoto,
   ): Promise<Listing> {
     const kind = dto.kind ?? ListingKind.EXCHANGE;
@@ -104,7 +98,7 @@ export class ListingsService {
             // refuserait un prix accompagnant un echange ou un don.
             priceCents: kind === ListingKind.SALE ? (dto.priceCents ?? null) : null,
             wantedInExchange: dto.wantedInExchange ?? null,
-            handoverPlace: dto.handoverPlace ?? HandoverPlace.TO_AGREE,
+            handoverPlace,
             photoKey: photo?.key ?? null,
             photoMime: photo?.mime ?? null,
             status: ListingStatus.PENDING_MODERATION,
@@ -132,10 +126,11 @@ export class ListingsService {
   }
 
   private async toView(listing: Listing): Promise<ListingView> {
-    const { category, ...rest } = listing;
+    const { category, handoverPlace, ...rest } = listing;
     const view = {
       ...rest,
       category: category.code,
+      handoverPlace: { code: handoverPlace.code, label: handoverPlace.label },
       photoUrl: listing.photoKey ? await this.photos.signedUrl(listing.photoKey) : null,
     };
     // Le chemin dans le stockage ne sort pas de l'API : seule l'URL signee est utile au navigateur.

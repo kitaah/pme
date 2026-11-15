@@ -12,7 +12,7 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
-import { HandoverPlace, ListingCondition, ListingKind } from './listing.enums';
+import { ListingCondition, ListingKind } from './listing.enums';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
@@ -83,11 +83,14 @@ export class CreateListingDto {
   @MaxLength(120, { message: 'la contrepartie souhaitée ne doit pas dépasser 120 caractères' })
   wantedInExchange?: string;
 
-  /** Lieu de remise. Absent : « à convenir » est applique par defaut. */
+  /**
+   * Code d'un lieu de remise de la table `handover_places`. Seule la forme est controlee ici ; l'existence l'est
+   * par le service. Absent : « à convenir » est applique par defaut.
+   */
   @Transform(trimOrUndefined)
   @IsOptional()
-  @IsEnum(HandoverPlace, {
-    message: 'le lieu de remise doit être un magasin de la liste ou TO_AGREE',
+  @Matches(/^[A-Z][A-Z_]{0,29}$/, {
+    message: 'le lieu de remise doit être un code en majuscules, par exemple SHOP_LYON',
   })
-  handoverPlace?: HandoverPlace;
+  handoverPlace?: string;
 }

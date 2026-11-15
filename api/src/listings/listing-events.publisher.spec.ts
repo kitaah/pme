@@ -1,4 +1,4 @@
-import { HandoverPlace, ListingCondition, ListingKind, ListingStatus } from './listing.enums';
+import { ListingCondition, ListingKind, ListingStatus } from './listing.enums';
 import { Listing } from './listing.entity';
 import { LISTING_SUBMITTED_SUBJECT } from './listing-events';
 import { ListingEventsPublisher } from './listing-events.publisher';
@@ -16,7 +16,7 @@ describe('ListingEventsPublisher', () => {
     kind: ListingKind.EXCHANGE,
     priceCents: null,
     wantedInExchange: null,
-    handoverPlace: HandoverPlace.TO_AGREE,
+    handoverPlace: { id: 5, code: 'TO_AGREE', label: 'À convenir avec le membre', sortOrder: 5, active: true },
     photoKey: null,
     photoMime: null,
     status: ListingStatus.PENDING_MODERATION,
@@ -61,7 +61,7 @@ describe('ListingEventsPublisher', () => {
       kind: ListingKind.SALE,
       priceCents: 4500,
       wantedInExchange: 'Un Blu-ray',
-      handoverPlace: HandoverPlace.SHOP_LYON,
+      handoverPlace: { id: 3, code: 'SHOP_LYON', label: 'Magasin de Lyon', sortOrder: 3, active: true },
       photoKey: 'pending/abc.webp',
       photoMime: 'image/webp',
     } as Listing;
