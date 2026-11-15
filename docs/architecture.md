@@ -135,7 +135,7 @@ conteneur « Stockage de fichiers » que prévoyait déjà le niveau 2 du C4 : *
 que jouera un hébergeur européen en production. Seule l'API y écrit ; la base ne garde que le chemin de l'objet.
 Le navigateur lit l'image directement, par une URL signée valable cinq minutes que l'API calcule : la photo d'une
 annonce en attente de modération n'est donc jamais publique. Dans le POC, cette lecture passe par l'ingress Traefik
-(`garage.localhost`), faute de S3 externe ; en production, le navigateur lira directement chez l'hébergeur S3, comme le
+(`garage.localhost`, avec sa propre limite de débit), faute de S3 externe ; en production, le navigateur lira directement chez l'hébergeur S3, comme le
 montre le C4. Le service de modération n'a aucun accès au stockage,
 et les politiques d'Istio comme celles de Calico le lui refusent.
 
@@ -205,7 +205,7 @@ reponse -> consommation -> file
 | **Une instance PostgreSQL, quatre bases** | Économiser la mémoire d'un cluster local. | Un seul compte partagé : aucune séparation des droits, limite connue de la [sécurité](securite/durcissement.md). |
 | **Identités déléguées à Keycloak** | L'API ne stocke aucun mot de passe ; elle ne garde que le `sub` du membre. | Keycloak devient indispensable au démarrage de la plateforme. |
 | **Jeton contrôlé à l'entrée, puis dans chaque service** | Traefik refuse tôt toute requête sans jeton valide. Chaque service revérifie le jeton et décide des rôles. | Traefik open source n'a pas ce contrôle en natif : un plugin communautaire est téléchargé à son démarrage, en version épinglée. |
-| **Débit limité à l'entrée** | Traefik plafonne à 200 requêtes par minute et par adresse, avant même l'API. | Le plafond de l'API, par exemplaire, reste en seconde barrière. |
+| **Débit limité à l'entrée** | Traefik plafonne à 200 requêtes par minute et par adresse, avant même l'API, et à 600 pour la lecture des photos. | Le plafond de l'API, par exemplaire, reste en seconde barrière. |
 | **Photos dans un stockage objet, pas dans la base** | Garder PostgreSQL léger et lisible, et reproduire le conteneur « Stockage de fichiers » du C4. | Un composant de plus (Garage) à sécuriser et à sauvegarder ; la photo et l'annonce ne sont pas dans la même transaction. |
 | **Lecture des photos par URL signée de cinq minutes** | La photo d'une annonce non modérée n'est jamais publique, et l'API n'a pas à relayer les octets. | L'adresse expire : l'interface la redemande à chaque affichage de la liste. |
 | **Photo enregistrée avant l'annonce, supprimée en cas d'échec** | Si le stockage refuse le fichier, rien n'est écrit en base ; si la publication échoue, ni annonce ni fichier orphelin ne restent. | Une panne simultanée du stockage et de la base peut laisser un fichier orphelin, tracé dans les logs. |

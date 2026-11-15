@@ -6,7 +6,7 @@
 |---|---|
 | **Rôle** | Protège l'API et l'interface contre les entrées hostiles, les abus et les fuites d'information |
 | **Validation** | Stricte : tout champ inattendu fait échouer la requête |
-| **Limitation de débit** | 200 requêtes par minute et par adresse, par exemplaire de l'API |
+| **Limitation de débit** | 200 requêtes par minute et par adresse, à Traefik puis par exemplaire de l'API ; 600 par minute pour la lecture des photos |
 | **En-têtes de sécurité** | Posés par Helmet sur l'API, par nginx sur l'interface |
 | **Format des erreurs** | Problem Details, norme RFC 9457 |
 
@@ -113,6 +113,10 @@ L'API accepte 200 requêtes par minute et par adresse. Au-delà, elle répond 42
 sont exemptées, pour qu'une montée en charge ne fasse pas croire à une panne. L'adresse retenue est celle du client
 réel, lue dans l'en-tête que pose l'ingress : l'API est configurée pour ne faire confiance qu'à **un seul** relais, car
 en faire confiance à davantage permettrait à un client de falsifier son adresse et de contourner le plafond.
+
+La lecture des photos a sa propre limite, à Traefik : 600 requêtes par minute et par adresse, rafale de 100. Une photo
+se lit par une adresse signée valable cinq minutes, qui pourrait être rappelée en boucle pendant ce temps ; le plafond
+protège Garage de cette répétition, tout en laissant une page de plusieurs dizaines d'annonces se charger d'un coup.
 
 **En-têtes de sécurité**
 

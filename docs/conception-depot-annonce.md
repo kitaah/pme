@@ -189,7 +189,7 @@ Les types d'annonce suivent la même logique : `EXCHANGE` « Échange », `GIFT`
 | **Garage** | Deployment avec volume persistant, service interne, image officielle `dxflrs/garage` en version fixée et épinglée par empreinte |
 | **Mise en service** | `make garage-init`, lancé par `make deploy` : crée la disposition du nœud, le bucket, importe la clé d'accès de l'API, puis l'autorise sur le bucket. Aucun Job Kubernetes : le port d'administration n'est ouvert à personne |
 | **Sealed Secret** | Les quatre secrets de Garage (clé d'accès, secret, secret RPC, jeton d'administration), générés dans `.env` par `make garage-secrets` |
-| **Middleware Traefik** | Limite la taille du corps de requête sur `pme-api` (6 Mo) |
+| **Middlewares Traefik** | Limitent la taille du corps de requête sur `pme-api` (6 Mo) et le débit de lecture des photos sur `garage.localhost` (600 requêtes par minute) |
 | **NetworkPolicy** | Autorise l'API vers Garage, et le navigateur vers Garage pour les URL signées |
 | **Keycloak** | `realm-pme.json` : langue unique `fr`, thème `pme`, textes « Nom d'utilisateur ou email », « Se connecter » et « Se souvenir de moi » |
 

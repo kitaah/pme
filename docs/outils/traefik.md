@@ -82,8 +82,14 @@ sensibles : celles vers [PostgreSQL](postgresql.md) et vers [NATS](nats.md).
 **Il ajoute des protections aux réponses.**
 Les réglages de réponse sont décrits dans des ressources appelées **middlewares**, que l'ingress référence. L'un ajoute
 l'en-tête HSTS, qui demande au navigateur de n'utiliser que HTTPS pour ces noms. Un autre compresse les réponses
-volumineuses pour accélérer le chargement. Un dernier plafonne le corps d'une requête à 6 Mo sous `/api/v1` : une photo de
+volumineuses pour accélérer le chargement. Un autre plafonne le corps d'une requête à 6 Mo sous `/api/v1` : une photo de
 5 Mo accompagnée des champs du formulaire passe, un envoi manifestement trop gros est refusé (413) avant d'atteindre l'API.
+
+**Il limite le débit.**
+Sous `/api/v1`, Traefik accepte 200 requêtes par minute et par adresse (rafale de 50) et répond 429 au-delà, avant que la
+requête n'atteigne l'API. Les photos ont leur propre limite, plus large : 600 requêtes par minute et par adresse (rafale
+de 100), car une page en charge une par annonce. Chaque Ingress a son compteur : les photos ne consomment pas le quota de
+l'API.
 
 **Il vérifie le jeton avant que la requête n'entre.**
 Sous `/api/v1`, un troisième middleware contrôle le jeton de connexion : signature, expiration, émetteur et application
@@ -153,7 +159,7 @@ Les sept noms d'hôte sont les suivants :
 | **<https://grafana.localhost>** | `grafana` | 3000 | Tableaux de bord. |
 | **<https://prometheus.localhost>** | `prometheus` | 9090 | Mesures brutes et état de la collecte. |
 | **<https://alloy.localhost>** | `alloy` | 12345 | Suivi de la collecte des logs. |
-| **<https://garage.localhost>** | `garage` | 3900 | Lecture des photos par URL signée, sans contrôle de jeton : la signature est l'autorisation. L'administration (3903) n'est jamais exposée. |
+| **<https://garage.localhost>** | `garage` | 3900 | Lecture des photos par URL signée, sans contrôle de jeton : la signature est l'autorisation, et la lecture est limitée à 600 requêtes par minute. L'administration (3903) n'est jamais exposée. |
 
 !!! note "À savoir"
     Ces noms d'hôte figurent aussi dans le `Makefile`, dans la configuration de Keycloak, de l'API, de la modération,
@@ -164,8 +170,8 @@ Les sept noms d'hôte sont les suivants :
 | Fichier ou dossier | Description |
 |---|---|
 | **`k8s/traefik/values.yaml`** | Réglages de Traefik : ports 80 et 443, redirection vers HTTPS, log d'accès, plugin de validation des jetons. |
-| **`k8s/08-ingress.yaml`** | Déclare les noms d'hôte, les chemins, les services visés et le certificat, en deux Ingress : l'un pour `/api/v1` (jeton exigé), l'autre pour le reste. |
-| **`k8s/08-middlewares.yaml`** | Décrit l'en-tête HSTS, la compression des réponses, la limite de taille du corps des requêtes et la validation des jetons. |
+| **`k8s/08-ingress.yaml`** | Déclare les noms d'hôte, les chemins, les services visés et le certificat, en trois Ingress : l'un pour `/api/v1` (jeton exigé), l'un pour `garage.localhost` (limite de débit des photos), l'autre pour le reste. |
+| **`k8s/08-middlewares.yaml`** | Décrit l'en-tête HSTS, la compression des réponses, la limite de taille du corps des requêtes, les limites de débit (API et photos) et la validation des jetons. |
 | **`k8s/08-certificate.yaml`** | Demande à cert-manager le certificat des sept noms d'hôte. |
 | **`k8s/03-keycloak.yaml`** | Fixe l'adresse publique de Keycloak. |
 | **`k8s/config/realm-pme.json`** | Liste les adresses de retour autorisées après la connexion. |
