@@ -6,7 +6,6 @@ import {
   Category,
   CONDITION_LABELS,
   Condition,
-  HANDOVER_PLACE_LABELS,
   HandoverPlace,
   KIND_LABELS,
   ListingKind,
@@ -28,6 +27,9 @@ const ADVICE = [
   'Signalez les défauts : une annonce honnête inspire confiance.',
   'Aucune donnée personnelle dans la description.',
 ];
+
+/** Lieu de remise preselectionne : « a convenir », qui n'engage aucun magasin. */
+const DEFAULT_HANDOVER_PLACE = 'TO_AGREE';
 
 type Erreur = { text: string; details?: string[] };
 
@@ -85,19 +87,27 @@ export function ListingForm() {
   const [condition, setCondition] = useState<Condition>('GOOD');
   const [wantedInExchange, setWantedInExchange] = useState('');
   const [price, setPrice] = useState('');
-  const [handoverPlace, setHandoverPlace] = useState<HandoverPlace>('TO_AGREE');
+  const [places, setPlaces] = useState<HandoverPlace[]>([]);
+  const [handoverPlace, setHandoverPlace] = useState('');
   const [photo, setPhoto] = useState<File | undefined>();
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState<Erreur | null>(null);
 
-  // La liste vient de l'API (table de reference). Si elle est indisponible, la liste reste vide et
-  // l'annonce est deposee sans categorie : l'API la range dans « Autres ».
+  // Les listes viennent de l'API (tables de reference). Si l'une est indisponible, elle reste vide et
+  // l'annonce est deposee sans ce champ : l'API applique « Autres » ou « a convenir ».
   useEffect(() => {
     api
       .listCategories()
       .then((data) => {
         setCategories(data);
         setCategory(data[0]?.code ?? '');
+      })
+      .catch(() => undefined);
+    api
+      .listHandoverPlaces()
+      .then((data) => {
+        setPlaces(data);
+        setHandoverPlace((data.find((p) => p.code === DEFAULT_HANDOVER_PLACE) ?? data[0])?.code ?? '');
       })
       .catch(() => undefined);
   }, []);
@@ -142,7 +152,7 @@ export function ListingForm() {
         kind,
         priceCents,
         wantedInExchange: kind === 'EXCHANGE' ? wantedInExchange : undefined,
-        handoverPlace,
+        handoverPlace: handoverPlace || undefined,
         photo,
       });
       // La notification survit au changement de page : la zone des notifications est montee a la
@@ -321,12 +331,12 @@ export function ListingForm() {
             id="handover"
             className="field h-12 rounded-[10px] px-3 py-0 text-[15px]"
             value={handoverPlace}
-            onChange={(e) => setHandoverPlace(e.target.value as HandoverPlace)}
+            onChange={(e) => setHandoverPlace(e.target.value)}
             aria-describedby="handover-hint"
           >
-            {(Object.keys(HANDOVER_PLACE_LABELS) as HandoverPlace[]).map((key) => (
-              <option key={key} value={key}>
-                {HANDOVER_PLACE_LABELS[key]}
+            {places.map((place) => (
+              <option key={place.code} value={place.code}>
+                {place.label}
               </option>
             ))}
           </select>

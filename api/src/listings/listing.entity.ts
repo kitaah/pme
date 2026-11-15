@@ -9,7 +9,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Category } from './category.entity';
-import { HandoverPlace, ListingCondition, ListingKind, ListingStatus } from './listing.enums';
+import { ListingCondition, ListingKind, ListingStatus } from './listing.enums';
+import { HandoverPlace } from './handover-place.entity';
 
 @Entity({ name: 'listings' })
 @Index('idx_listings_owner', ['ownerId', 'createdAt'])
@@ -51,7 +52,8 @@ export class Listing {
   @Column({ name: 'wanted_in_exchange', type: 'varchar', length: 120, nullable: true })
   wantedInExchange: string | null;
 
-  @Column({ name: 'handover_place', type: 'varchar', length: 20, default: HandoverPlace.TO_AGREE })
+  @ManyToOne(() => HandoverPlace, { nullable: false })
+  @JoinColumn({ name: 'handover_place_id' })
   handoverPlace: HandoverPlace;
 
   /**

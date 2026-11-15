@@ -168,8 +168,8 @@ describe('CreateListingDto', () => {
       expect(messages).toContain('la contrepartie souhaitée doit être une chaîne de caractères');
     });
 
-    it.each(['SHOP_ANGOULEME', 'SHOP_AIX', 'SHOP_LYON', 'SHOP_LONDON', 'TO_AGREE'])(
-      'accepte le lieu de remise %s',
+    it.each(['SHOP_ANGOULEME', 'SHOP_AIX', 'SHOP_LYON', 'SHOP_LONDON', 'TO_AGREE', 'SHOP_NOUVEAU'])(
+      'accepte le code de lieu de remise %s : le format seul est controle, l existence l est par le service',
       async (handoverPlace) => {
         const { messages } = await check({ ...valid, handoverPlace });
 
@@ -177,10 +177,13 @@ describe('CreateListingDto', () => {
       },
     );
 
-    it('refuse un lieu de remise inconnu', async () => {
-      const { messages } = await check({ ...valid, handoverPlace: 'PARIS' });
+    it.each(['paris', 'SHOP LYON', 'SHOP-LYON!', '1SHOP', 'A'.repeat(31)])(
+      'refuse le code de lieu de remise mal forme %s',
+      async (handoverPlace) => {
+        const { messages } = await check({ ...valid, handoverPlace });
 
-      expect(messages).toEqual(['le lieu de remise doit être un magasin de la liste ou TO_AGREE']);
-    });
+        expect(messages).toEqual(['le lieu de remise doit être un code en majuscules, par exemple SHOP_LYON']);
+      },
+    );
   });
 });

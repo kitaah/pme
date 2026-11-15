@@ -1,16 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CircleCheck, CircleX, Clock, ImageOff, Plus } from 'lucide-react';
 import { Link } from 'react-router';
-import {
-  CONDITION_LABELS,
-  HANDOVER_PLACE_LABELS,
-  KIND_LABELS,
-  Listing,
-  ListingStatus,
-  STATUS_LABELS,
-  api,
-  formatPrice,
-} from '../api';
+import { CONDITION_LABELS, KIND_LABELS, Listing, ListingStatus, STATUS_LABELS, api, formatPrice } from '../api';
 
 /**
  * Une chaine complete par statut : une classe assemblee a la volee ne serait pas generee par
@@ -133,7 +124,7 @@ export function MyListings() {
                   <span aria-hidden="true">·</span>
                   <span>{CONDITION_LABELS[listing.condition]}</span>
                   <span aria-hidden="true">·</span>
-                  <span>{HANDOVER_PLACE_LABELS[listing.handoverPlace]}</span>
+                  <span>{listing.handoverPlace.label}</span>
                 </div>
               </div>
             </li>

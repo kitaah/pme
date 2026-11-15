@@ -45,7 +45,7 @@ s'appuie sur des briques précises :
 | Étape | Ce que l'on montre | Briques |
 |---|---|---|
 | **Connexion** | Le membre est redirigé vers la page de connexion de Keycloak, s'authentifie, puis revient sur l'interface où son nom d'utilisateur et son rôle « Membre » s'affichent. | Keycloak, React |
-| **Dépôt de l'annonce** | Le membre remplit le formulaire : titre, description, type d'annonce (échange, don ou vente), contrepartie souhaitée ou prix selon le type, état, lieu de remise et une photo facultative. Traefik limite le débit et la taille du corps de la requête, et vérifie le jeton. L'API revérifie le jeton, le rôle et les données, contrôle et ré-encode la photo, l'enregistre dans le stockage objet, puis écrit l'annonce. Une notification confirme la soumission et le membre est redirigé vers « Mes annonces », où l'annonce apparaît au statut « En attente de validation », photo comprise. | Traefik, React, NestJS, Garage |
+| **Dépôt de l'annonce** | Le membre remplit le formulaire : titre, description, type d'annonce (échange, don ou vente), contrepartie souhaitée ou prix selon le type, catégorie, état, lieu de remise et une photo facultative. Traefik limite le débit et la taille du corps de la requête, et vérifie le jeton. L'API revérifie le jeton, le rôle et les données, contrôle et ré-encode la photo, l'enregistre dans le stockage objet, puis écrit l'annonce. Une notification confirme la soumission et le membre est redirigé vers « Mes annonces », où l'annonce apparaît au statut « En attente de validation », photo comprise. | Traefik, React, NestJS, Garage |
 | **Prise en charge par la modération** | L'API répond sans attendre la modération. L'événement « annonce soumise » est conservé dans le flux JetStream, et le service de modération, séparé de l'API, le consomme (visible dans ses logs). | NATS, NestJS |
 | **Tout le parcours** | Les composants tournent ensemble sur Minikube. | Minikube |
 
@@ -58,72 +58,75 @@ vars: {
   d2-config: {
     layout-engine: elk
     theme-id: 5
-    pad: 8
+    pad: 16
   }
 }
 direction: down
 
-# Mise en forme commune : texte lisible à la largeur de la page, angles arrondis
 classes: {
   boite: {
     style: {
-      font-size: 24
+      font-size: 22
       border-radius: 12
     }
   }
   donnee: {
     style: {
-      font-size: 24
+      font-size: 22
       border-radius: 12
       stroke-dash: 3
+    }
+  }
+  lien: {
+    style: {
+      font-size: 18
     }
   }
 }
 
 navigateur: "Navigateur\nmembre ou modérateur" {class: boite}
 
-cluster: "Cluster Minikube" {
+cluster: "Cluster\nMinikube" {
   style.font-size: 22
+  label.near: top-left
 
-  entree: "Namespace traefik" {
+  entree: "Namespace\ntraefik" {
     style.font-size: 22
+    label.near: top-left
     traefik: "Traefik\nHTTPS, limite de débit,\ncontrôle des jetons" {class: boite}
   }
 
-  pme: "Namespace pme" {
+  pme: "Namespace\npme" {
     style.font-size: 22
+    label.near: top-left
 
-    applicatif: "Applicatif" {
-      style.font-size: 22
-      frontend: "Interface React\npme.localhost/" {class: boite}
-      api: "API NestJS\n/api/v1" {class: boite}
-      moderation: "Service de modération\n/api/v1/moderation" {class: boite}
+    frontend: "Interface React\npme.localhost/" {class: boite}
+    api: "API NestJS\n/api/v1" {class: boite}
+    moderation: "Service de modération\n/api/v1/moderation" {class: boite}
+    keycloak: "Keycloak\nidentités et jetons" {class: boite}
+    nats: "NATS JetStream\nflux LISTINGS" {class: boite}
+    postgres: "PostgreSQL\nbases pme, moderation,\nkeycloak, grafana" {class: donnee}
+    garage: "Garage\nstockage objet S3\nphotos des annonces" {
+      class: donnee
+      width: 520
     }
 
-    socle: "Socle" {
-      style.font-size: 22
-      keycloak: "Keycloak\nidentités et jetons" {class: boite}
-      nats: "NATS JetStream\nflux LISTINGS" {class: boite}
-      postgres: "PostgreSQL\nbases pme, moderation,\nkeycloak, grafana" {class: donnee}
-      garage: "Garage\nstockage objet S3\nphotos des annonces" {class: donnee}
-    }
-
-    applicatif.api -> socle.nats: publie listing.submitted
-    socle.nats -> applicatif.moderation: consomme
-    applicatif.api -> socle.postgres
-    applicatif.api -> socle.garage: enregistre la photo
-    applicatif.moderation -> socle.postgres
-    socle.keycloak -> socle.postgres
+    api -> nats: "publie\nlisting.submitted" {class: lien}
+    nats -> moderation: "consomme" {class: lien}
+    api -> postgres: "annonces\n(base pme)" {class: lien}
+    moderation -> postgres: "file\n(base moderation)" {class: lien}
+    keycloak -> postgres: "identités\n(base keycloak)" {class: lien}
+    api -> garage: "enregistre\nla photo" {class: lien}
   }
 
-  entree.traefik -> pme.applicatif.frontend
-  entree.traefik -> pme.applicatif.api
-  entree.traefik -> pme.applicatif.moderation
-  entree.traefik -> pme.socle.keycloak: connexion et clés\nde vérification
-  entree.traefik -> pme.socle.garage: lecture des photos\n(URL signée)
+  entree.traefik -> pme.frontend: "site" {class: lien}
+  entree.traefik -> pme.api: "/api/v1" {class: lien}
+  entree.traefik -> pme.moderation: "/api/v1/moderation" {class: lien}
+  entree.traefik -> pme.keycloak: "connexion\net clés" {class: lien}
+  entree.traefik -> pme.garage: "lecture des photos\n(URL signée)" {class: lien}
 }
 
-navigateur -> cluster.entree.traefik: HTTPS
+navigateur -> cluster.entree.traefik: "HTTPS" {class: lien}
 ```
 
 Traefik, l'API et le service de modération lisent chacun les clés publiques de Keycloak pour vérifier les jetons : le schéma ne

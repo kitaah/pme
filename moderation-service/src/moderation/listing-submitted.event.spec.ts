@@ -43,7 +43,8 @@ describe('ListingSubmittedEvent', () => {
     ['priceCents', 0],
     ['priceCents', 12.5],
     ['wantedInExchange', 'a'.repeat(121)],
-    ['handoverPlace', 'PARIS'],
+    ['handoverPlace', 'paris'],
+    ['handoverPlace', 'SHOP LYON!'],
     ['photoKey', 'a'.repeat(201)],
   ])('refuse %s invalide (%s)', async (field, value) => {
     const result = await messages({ ...base, [field]: value });
