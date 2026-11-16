@@ -97,8 +97,8 @@ Les quatre bases accessibles sont les suivantes :
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/07-adminer.yaml`** | Déploie Adminer dans le cluster. |
-| **`k8s/08-ingress.yaml`** | Rend l'interface accessible sur `adminer.localhost`. |
+| **`k8s/11-adminer.yaml`** | Déploie Adminer dans le cluster. |
+| **`k8s/14-ingress.yaml`** | Rend l'interface accessible sur `adminer.localhost`. |
 | **`.env`** | Contient l'identifiant et le mot de passe à saisir sur la page de connexion. |
 
 ## Commandes essentielles

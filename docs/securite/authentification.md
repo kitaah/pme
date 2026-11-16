@@ -201,7 +201,7 @@ Pour vérifier le refus par défaut, trois appels suffisent :
 | Fichier ou dossier | Description |
 |---|---|
 | **`k8s/config/realm-pme.json`** | Déclare le realm, les rôles et l'application. |
-| **`k8s/03-keycloak-admin-job.yaml`** | Crée l'administrateur permanent, supprime le compte d'amorçage et pose la politique de mots de passe. |
+| **`k8s/07-keycloak-admin-job.yaml`** | Crée l'administrateur permanent, supprime le compte d'amorçage et pose la politique de mots de passe. |
 | **`libs/common/src/auth/`**<br>**`jwt.strategy.ts`** | Vérifie la signature, l'émetteur, la date et l'application émettrice. |
 | **`libs/common/src/auth/`**<br>**`jwt-auth.guard.ts`** | Garde globale : exige un jeton sauf sur les routes marquées publiques. |
 | **`libs/common/src/auth/`**<br>**`roles.guard.ts`** | Contrôle des rôles, erreur 403 en cas de refus. |

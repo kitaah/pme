@@ -1,4 +1,4 @@
-# Keycloak 26 en mode dev, joint par l'ingress (k8s/08-ingress.yaml) sur https://keycloak.localhost (TLS termine a l'ingress, HTTP en interne).
+# Keycloak 26 en mode dev, joint par l'ingress (k8s/14-ingress.yaml) sur https://keycloak.localhost (TLS termine a l'ingress, HTTP en interne).
 # Le realm `pme` (roles membre / moderateur, clients pme-web et pme-cli, utilisateurs de demonstration)
 # est importe au demarrage depuis le ConfigMap `keycloak-realm` (config/realm-pme.json).
 # Le theme de connexion `pme` (palette et police du site) vient du ConfigMap `keycloak-theme`
@@ -54,7 +54,7 @@ spec:
             - start-dev
             - --import-realm
             - --db=postgres
-            # Pool limite a 10 connexions (100 par defaut) : voir le budget dans 01-postgres.yaml.
+            # Pool limite a 10 connexions (100 par defaut) : voir le budget dans 03-postgres.yaml.
             - --db-pool-max-size=10
             # sslmode=verify-full : connexion chiffree ET verification du nom du serveur contre l'autorite locale.
             - "--db-url=jdbc:postgresql://postgres:5432/keycloak?sslmode=verify-full&sslrootcert=/etc/ssl/pme/ca.crt"
@@ -71,7 +71,7 @@ spec:
             - containerPort: 8080
           env:
             # Compte d'amorcage : Keycloak 26 le considere comme temporaire (bandeau d'avertissement dans la console).
-            # Le Job k8s/03-keycloak-admin-job.yaml cree l'administrateur permanent (keycloak-admin-username) puis
+            # Le Job k8s/07-keycloak-admin-job.yaml cree l'administrateur permanent (keycloak-admin-username) puis
             # supprime ce compte. Le nom est donc fixe et different de l'administrateur permanent.
             - name: KC_BOOTSTRAP_ADMIN_USERNAME
               value: bootstrap

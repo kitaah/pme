@@ -108,7 +108,7 @@ navigateur, `make seal` (nouveau cluster, donc nouvelle clé ; génère aussi le
 | **`make kubeseal`** | Installe l'outil `kubeseal` à la bonne version s'il est absent (Linux, `sudo` demandé). Requis par `seal`. |
 | **`make sealed-secrets`** | Installe le contrôleur Sealed Secrets dans `kube-system`, une fois par cluster, à la même version que `kubeseal`. |
 | **`make sealed-prereqs`** | Contrôle préalable de `seal` : `kubeseal` à la bonne version, les seize variables de `.env` renseignées (aucun `CHANGE_ME` : administration de la base, NATS, Keycloak, Grafana, les quatre mots de passe des comptes PostgreSQL de service et les quatre secrets de Garage), contrôleur installé (il l'installe sinon). |
-| **`make seal`** | Génère les secrets de Garage s'ils manquent (`garage-secrets`), puis chiffre `.env` dans `k8s/14-pme-secrets-sealed.yaml` (`seal-now`), à versionner dans Git. Les deux étapes sont des appels séparés : `make` ne lit `.env` qu'une fois, au démarrage. À relancer après un changement de secret ou sur un nouveau cluster. |
+| **`make seal`** | Génère les secrets de Garage s'ils manquent (`garage-secrets`), puis chiffre `.env` dans `k8s/01-pme-secrets-sealed.yaml` (`seal-now`), à versionner dans Git. Les deux étapes sont des appels séparés : `make` ne lit `.env` qu'une fois, au démarrage. À relancer après un changement de secret ou sur un nouveau cluster. |
 
 ### Images et déploiement
 

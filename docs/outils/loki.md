@@ -98,7 +98,7 @@ Les étiquettes attachées à chaque ligne sont volontairement peu nombreuses :
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/12-loki.yaml`** | Déploie Loki dans le cluster. |
+| **`k8s/16-loki.yaml`** | Déploie Loki dans le cluster. |
 | **`k8s/config/loki.yml`** | Règle le stockage et la durée de conservation. |
 | **`k8s/config/grafana-datasource-loki.yml`** | Déclare Loki comme source de données de Grafana. |
 | **`k8s/config/grafana-dashboard-logs.json`** | Décrit le tableau de bord des logs. |

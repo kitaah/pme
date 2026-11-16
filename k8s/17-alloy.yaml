@@ -1,4 +1,4 @@
-# Alloy : lit les logs des pods du namespace et les envoie a Loki (k8s/12-loki.yaml). Remplace Promtail, arrete en 2026.
+# Alloy : lit les logs des pods du namespace et les envoie a Loki (k8s/16-loki.yaml). Remplace Promtail, arrete en 2026.
 # Contrairement aux autres pods du projet, celui-ci a besoin du jeton du compte de service : il interroge l'API Kubernetes
 # pour lister les pods et lire leurs logs. Ses droits sont limites par un Role au seul namespace pme (lecture seule).
 # La configuration (decouverte, etiquettes, envoi) est dans k8s/config/alloy.alloy.

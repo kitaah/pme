@@ -1,6 +1,6 @@
 # Certificats TLS des services internes du SI (PostgreSQL et NATS).
 # Signes par l'autorite locale `pme-ca-issuer` (k8s/cert-manager/issuers.yaml), la meme que les certificats
-# de l'ingress (k8s/08-certificate.yaml) : un seul bundle de confiance pour tout le cluster.
+# de l'ingress (k8s/12-certificate.yaml) : un seul bundle de confiance pour tout le cluster.
 #
 # A la difference de l'ingress, ces certificats ne servent PAS a un navigateur : ils chiffrent et authentifient
 # les connexions entre les pods. Les clients verifient le nom du serveur (`verify-full`), d'ou la liste des noms

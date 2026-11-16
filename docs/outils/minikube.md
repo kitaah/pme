@@ -207,13 +207,13 @@ Le cluster est créé avec les paramètres suivants :
 | **`k8s/kustomization.yaml`** | Liste les manifestes déployés ensemble et génère les ConfigMaps à partir de `k8s/config/`. |
 | **`k8s/namespace.yaml`** | Crée le namespace `pme`, lui applique la règle de sécurité `baseline` et l'enrôle dans le maillage Istio. |
 | **`k8s/istio/`** | Contient les réglages des charts Helm d'Istio (voir [Istio](istio.md)). |
-| **`k8s/15-service-accounts.yaml`** | Déclare un compte de service par composant : chacun a ainsi sa propre identité dans le maillage. |
-| **`k8s/16-mesh-mtls.yaml`** | Impose le mode strict du maillage : toute connexion hors mTLS est refusée. |
-| **`k8s/17-authorization-policies.yaml`** | Refuse tout appel entre pods par défaut, puis autorise chaque composant à n'être appelé que par ses clients prévus. |
-| **`k8s/18-network-policies.yaml`** | Refuse toute connexion entrante par défaut, puis ouvre chaque composant à ses seuls appelants : second filtre, au niveau du réseau. |
+| **`k8s/02-service-accounts.yaml`** | Déclare un compte de service par composant : chacun a ainsi sa propre identité dans le maillage. |
+| **`k8s/20-mesh-mtls.yaml`** | Impose le mode strict du maillage : toute connexion hors mTLS est refusée. |
+| **`k8s/21-authorization-policies.yaml`** | Refuse tout appel entre pods par défaut, puis autorise chaque composant à n'être appelé que par ses clients prévus. |
+| **`k8s/22-network-policies.yaml`** | Refuse toute connexion entrante par défaut, puis ouvre chaque composant à ses seuls appelants : second filtre, au niveau du réseau. |
 | **`k8s/config/`** | Contient les fichiers de configuration fournis aux composants : PostgreSQL, NATS, Grafana, Alloy et interface. |
-| **`k8s/14-pme-secrets-sealed.yaml`** | Contient les mots de passe chiffrés, sous une forme qui peut être versionnée dans Git sans risque (voir [Sealed Secrets](sealed-secrets.md)). |
-| **`k8s/11-autoscaling.yaml`** | Définit, pour l'interface, l'API et la modération, l'autoscaling et le nombre minimal de réplicas disponibles. |
+| **`k8s/01-pme-secrets-sealed.yaml`** | Contient les mots de passe chiffrés, sous une forme qui peut être versionnée dans Git sans risque (voir [Sealed Secrets](sealed-secrets.md)). |
+| **`k8s/19-autoscaling.yaml`** | Définit, pour l'interface, l'API et la modération, l'autoscaling et le nombre minimal de réplicas disponibles. |
 | **`api/Dockerfile`** | Décrit la fabrication de l'image de l'API. |
 | **`moderation-service/Dockerfile`** | Décrit la fabrication de l'image du service de modération. |
 | **`frontend/Dockerfile`** | Décrit la fabrication de l'image de l'interface. |

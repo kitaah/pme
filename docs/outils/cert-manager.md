@@ -114,9 +114,9 @@ Les certificats émis sont les suivants :
 | Fichier ou dossier | Description |
 |---|---|
 | **`k8s/cert-manager/issuers.yaml`** | Déclare l'autorité locale et l'émetteur qui signe les certificats. |
-| **`k8s/08-certificate.yaml`** | Demande le certificat des sept noms d'hôte. |
+| **`k8s/12-certificate.yaml`** | Demande le certificat des sept noms d'hôte. |
 | **`k8s/00-internal-tls.yaml`** | Demande les certificats internes de PostgreSQL et de NATS. |
-| **`k8s/08-ingress.yaml`** | Utilise le certificat public pour chiffrer les échanges avec le navigateur. |
+| **`k8s/14-ingress.yaml`** | Utilise le certificat public pour chiffrer les échanges avec le navigateur. |
 | **`pme-ca.crt`** | Certificat de l'autorité locale, à importer dans le navigateur. Ce fichier est exclu de Git. |
 | **`Makefile`** | Contient les commandes d'installation et d'export de l'autorité. |
 

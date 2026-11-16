@@ -196,16 +196,16 @@ depuis un autre pod avec `sslmode=disable` est rejetée par le serveur, avant m�
 | Fichier ou dossier | Description |
 |---|---|
 | **`k8s/cert-manager/issuers.yaml`** | Déclare l'autorité locale et son émetteur. |
-| **`k8s/08-certificate.yaml`** | Certificat unique des sept noms d'hôte de l'ingress. |
+| **`k8s/12-certificate.yaml`** | Certificat unique des sept noms d'hôte de l'ingress. |
 | **`k8s/00-internal-tls.yaml`** | Certificats de PostgreSQL et de NATS. |
 | **`k8s/istio/`** | Réglages des quatre charts Helm d'Istio, avec des ressources réduites pour Minikube. |
 | **`k8s/namespace.yaml`** | Porte le label qui enrôle le namespace `pme` dans le maillage. |
-| **`k8s/15-service-accounts.yaml`** | Un compte de service par composant, donc une identité par composant. |
-| **`k8s/16-mesh-mtls.yaml`** | Impose le mode strict : toute connexion hors mTLS est refusée. |
-| **`k8s/17-authorization-policies.yaml`** | Refus par défaut, puis une règle par composant qui nomme ses appelants autorisés. |
-| **`k8s/18-network-policies.yaml`** | Même filtrage au niveau du réseau du cluster, par étiquette de pod, appliqué par Calico. |
-| **`k8s/08-ingress.yaml`** | Termine le TLS avec le certificat de cert-manager. |
-| **`k8s/08-middlewares.yaml`** | Ajoute l'en-tête HSTS aux réponses de l'ingress, compresse les réponses, limite le débit (API et photos) et valide les jetons de l'API. |
+| **`k8s/02-service-accounts.yaml`** | Un compte de service par composant, donc une identité par composant. |
+| **`k8s/20-mesh-mtls.yaml`** | Impose le mode strict : toute connexion hors mTLS est refusée. |
+| **`k8s/21-authorization-policies.yaml`** | Refus par défaut, puis une règle par composant qui nomme ses appelants autorisés. |
+| **`k8s/22-network-policies.yaml`** | Même filtrage au niveau du réseau du cluster, par étiquette de pod, appliqué par Calico. |
+| **`k8s/14-ingress.yaml`** | Termine le TLS avec le certificat de cert-manager. |
+| **`k8s/13-middlewares.yaml`** | Ajoute l'en-tête HSTS aux réponses de l'ingress, compresse les réponses, limite le débit (API et photos) et valide les jetons de l'API. |
 | **`k8s/traefik/values.yaml`** | Redirige le HTTP vers le HTTPS pour tous les noms d'hôte. |
 | **`k8s/config/postgres-hba.conf`** | Impose le TLS et SCRAM-SHA-256 à toute connexion venant du cluster, et limite chaque compte de service à sa base. |
 | **`k8s/config/nats.conf`** | Active le TLS de NATS pour les clients et pour le port de supervision, et fixe la version minimale à 1.3. |

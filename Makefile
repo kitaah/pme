@@ -40,8 +40,8 @@ CA_FILE ?= pme-ca.crt
 # noms d'hote .localhost (contexte securise pour les navigateurs : requis par keycloak-js).
 # Pour les joindre depuis l'ordinateur : "make tunnel" (redirige les ports 80 et 443 vers l'ingress), puis la ligne /etc/hosts de "make hosts".
 # Le navigateur doit faire confiance a l'autorite locale : "make ca-cert" ecrit pme-ca.crt, a importer une fois.
-# Ces noms sont aussi ecrits dans k8s/08-ingress.yaml, k8s/03-keycloak.yaml (hostname-url), k8s/04-api.yaml et
-# k8s/05-moderation.yaml (emetteur), k8s/10-grafana.yaml, k8s/config/realm-pme.json (URL de retour), k8s/08-certificate.yaml et
+# Ces noms sont aussi ecrits dans k8s/14-ingress.yaml, k8s/06-keycloak.yaml (hostname-url), k8s/08-api.yaml et
+# k8s/09-moderation.yaml (emetteur), k8s/18-grafana.yaml, k8s/config/realm-pme.json (URL de retour), k8s/12-certificate.yaml et
 # k8s/config/frontend-config.js : les changer ici ne suffit pas.
 # NATS et PostgreSQL restent joints par "kubectl port-forward" (voir make port-forward, qui lance aussi l'ingress).
 APP_HOST ?= pme.localhost
@@ -109,7 +109,7 @@ help:
 	@echo "    make env                      - Cree .env depuis env.example s'il manque (jamais ecrase)"
 	@echo "    make kubeseal                 - Installe kubeseal $(KUBESEAL_VERSION) sur l'ordinateur s'il est absent (requis par make seal)"
 	@echo "    make sealed-secrets           - Installe le controleur Sealed Secrets (fait aussi par seal si absent)"
-	@echo "    make seal                     - Re-chiffre .env dans k8s/14-pme-secrets-sealed.yaml (a versionner)"
+	@echo "    make seal                     - Re-chiffre .env dans k8s/01-pme-secrets-sealed.yaml (a versionner)"
 	@echo "    make image                    - Construit les 3 images dans Minikube"
 	@echo "    make deploy                   - secrets chiffres (generes si absents) + ca-configmap + kubectl apply -k k8s/ (Postgres, NATS, Keycloak, Garage, API, moderation, front, ingress)"
 	@echo "    make garage-secrets           - Genere dans .env les secrets de Garage s'ils manquent (fait par make seal)"
@@ -158,7 +158,7 @@ help:
 # alors joignable sans "make tunnel" ni redirection. Option prise en compte a la CREATION du cluster seulement :
 # sur un cluster existant, il faut "minikube delete" puis "make minikube-up" (les deploiements sont perdus).
 # Le port 443 sert le HTTPS (cert-manager).
-# --cni=calico : plugin reseau qui APPLIQUE les politiques reseau (k8s/18-network-policies.yaml). Celui de Minikube par defaut
+# --cni=calico : plugin reseau qui APPLIQUE les politiques reseau (k8s/22-network-policies.yaml). Celui de Minikube par defaut
 # ne le fait pas : les politiques seraient acceptees mais sans effet. Meme contrainte : choisi a la creation seulement.
 minikube-up: scripts-perms
 	minikube start --driver=docker --memory=$(MINIKUBE_MEMORY) --cpus=$(MINIKUBE_CPUS) --cni=calico \
@@ -185,10 +185,10 @@ helm:
 # L'addon Minikube est desactive d'abord : il occupe les ports 80 et 443 du noeud, que Traefik reprend. Sur un
 # cluster neuf la commande ne fait rien. `helm upgrade --install` sert aussi bien a installer qu'a mettre a jour,
 # et --wait attend que le controleur soit pret : un "make deploy" lance trop tot echouerait sur les ressources Traefik.
-# Le chart installe aussi les definitions des ressources Traefik (Middleware...) utilisees par k8s/08-middlewares.yaml.
+# Le chart installe aussi les definitions des ressources Traefik (Middleware...) utilisees par k8s/13-middlewares.yaml.
 # Redirection HTTP vers HTTPS, ports du noeud et log d'acces : voir k8s/traefik/values.yaml.
-# Traefik exige TLS 1.2 au minimum par defaut, comme PostgreSQL (k8s/01-postgres.yaml) et NATS (k8s/config/nats.conf).
-# HSTS et compression des reponses : k8s/08-middlewares.yaml.
+# Traefik exige TLS 1.2 au minimum par defaut, comme PostgreSQL (k8s/03-postgres.yaml) et NATS (k8s/config/nats.conf).
+# HSTS et compression des reponses : k8s/13-middlewares.yaml.
 ingress:
 	@command -v helm >/dev/null || { echo "helm absent : lancer make helm"; exit 1; }
 	@minikube addons disable ingress >/dev/null 2>&1 || true
@@ -236,7 +236,7 @@ inotify:
 # Quatre charts Helm, installes dans l'ordre : base (definitions des ressources), istiod (plan de controle, emet les
 # identites), cni (agent par noeud qui redirige le trafic) et ztunnel (proxy par noeud qui chiffre). Reglages : k8s/istio/.
 # Le namespace de Traefik est enrole ici (il est cree par `make ingress`, a lancer avant) : sans cela, l'ingress ne
-# pourrait plus joindre les services, car le namespace pme refuse les connexions hors mesh (k8s/16-mesh-mtls.yaml).
+# pourrait plus joindre les services, car le namespace pme refuse les connexions hors mesh (k8s/20-mesh-mtls.yaml).
 # Le namespace pme, lui, est enrole par le label de k8s/namespace.yaml.
 # Sur un cluster existant, cette commande suffit : il n'est pas necessaire de le recreer.
 istio: inotify
@@ -276,8 +276,8 @@ mesh-check:
 	@echo "Derniers echanges chiffres vus par ztunnel (identites spiffe) :"
 	@kubectl -n istio-system logs ds/ztunnel --tail=300 | grep spiffe | tail -5 || true
 
-# Verifie les politiques d'autorisation d'Istio (k8s/17-authorization-policies.yaml) avec trois pods temporaires. Chacun a une
-# ETIQUETTE que les politiques reseau (k8s/18-network-policies.yaml) autorisent vers sa destination : seule l'IDENTITE (compte de
+# Verifie les politiques d'autorisation d'Istio (k8s/21-authorization-policies.yaml) avec trois pods temporaires. Chacun a une
+# ETIQUETTE que les politiques reseau (k8s/22-network-policies.yaml) autorisent vers sa destination : seule l'IDENTITE (compte de
 # service) decide alors. Chaque ligne annonce le resultat attendu. Un refus de ztunnel se voit a une connexion coupee (curl
 # echoue, sans code HTTP : "HTTP 000") ; une connexion autorisee renvoie un code HTTP.
 #   - etiquette pme-api, compte `default` (aucune regle ne le cite) -> Keycloak : refuse ;
@@ -299,7 +299,7 @@ authz-check:
 		--overrides='{"spec":{"serviceAccountName":"pme-api"}}' -- \
 		curl -sS -m 5 -o /dev/null -w "HTTP %{http_code}\n" http://prometheus:9090/-/ready || true
 
-# Verifie les politiques reseau (k8s/18-network-policies.yaml) avec deux pods temporaires qui ont TOUS DEUX l'identite pme-api,
+# Verifie les politiques reseau (k8s/22-network-policies.yaml) avec deux pods temporaires qui ont TOUS DEUX l'identite pme-api,
 # donc que les politiques d'Istio autorisent vers Keycloak. Seule l'etiquette differe : c'est elle que lit le reseau.
 #   - etiquette pme-api  -> Keycloak : autorise (HTTP 200) ;
 #   - sans etiquette     -> Keycloak : coupe par Calico (HTTP 000), alors qu'Istio l'aurait laisse passer.
@@ -315,7 +315,7 @@ netpol-check:
 		--overrides='{"spec":{"serviceAccountName":"pme-api"}}' -- \
 		curl -sS -m 5 -o /dev/null -w "HTTP %{http_code}\n" http://keycloak:8080/realms/pme || true
 
-# Verifie la validation des jetons par Traefik (middleware `jwt`, k8s/08-middlewares.yaml). Un seul pod temporaire, hors du
+# Verifie la validation des jetons par Traefik (middleware `jwt`, k8s/13-middlewares.yaml). Un seul pod temporaire, hors du
 # mesh, s'adresse a l'ingress comme un navigateur (nom d'hote pme.localhost, certificat non verifie). Sa sortie est lue dans son
 # log une fois le pod termine : l'attachement direct (kubectl run -i) perd parfois des morceaux de texte. Chaque ligne annonce le resultat attendu :
 #   - sans jeton        -> /api/v1/listings/mine : 401 ;
@@ -360,7 +360,7 @@ seed-listings:
 seed-listings-clean:
 	@NS=$(NS) sh scripts/seed-listings.sh clean "$(SEED_USER)"
 
-# metrics-server (addon Minikube) : fournit la charge des pods a l'autoscaler (k8s/11-autoscaling.yaml). Sans lui, la cible
+# metrics-server (addon Minikube) : fournit la charge des pods a l'autoscaler (k8s/19-autoscaling.yaml). Sans lui, la cible
 # de chaque autoscaler reste <unknown> et le nombre de pods ne change jamais. Les premieres mesures arrivent apres ~1 minute.
 metrics-server:
 	minikube addons enable metrics-server
@@ -424,7 +424,7 @@ hosts:
 # Un Secret Kubernetes n'est qu'encode en base64 : le versionner reviendrait a publier les mots de passe.
 # Le controleur Sealed Secrets (dans le cluster) detient une cle privee. `make seal` chiffre les secrets avec sa cle
 # publique : le fichier obtenu (SealedSecret) se versionne dans Git, et seul ce cluster sait le dechiffrer en Secret.
-SEALED_FILE := k8s/14-pme-secrets-sealed.yaml
+SEALED_FILE := k8s/01-pme-secrets-sealed.yaml
 
 # kubeseal (outil qui chiffre les secrets) : installe une seule fois par ordinateur, dans /usr/local/bin (d'ou le mot de
 # passe administrateur). Sans effet si la bonne version est deja installee. Linux uniquement ; ailleurs, voir
@@ -532,8 +532,8 @@ $(SEALED_FILE): | .env
 #
 # Garage demarre sans savoir ou ranger les donnees : il faut lui decrire sa disposition (layout),
 # puis creer le depot (bucket) et la cle d'acces. La cle n'est pas generee par Garage : elle est
-# IMPORTEE depuis .env, ou l'API lit la meme valeur (k8s/04-api.yaml). Les commandes passent par le
-# conteneur lui-meme : le port d'administration n'est ouvert a personne (k8s/18-network-policies.yaml).
+# IMPORTEE depuis .env, ou l'API lit la meme valeur (k8s/08-api.yaml). Les commandes passent par le
+# conteneur lui-meme : le port d'administration n'est ouvert a personne (k8s/22-network-policies.yaml).
 garage-init: .env
 	@test -n "$$GARAGE_ACCESS_KEY" || { echo "GARAGE_ACCESS_KEY absent de .env"; exit 1; }
 	@kubectl -n $(NS) rollout status deployment garage --timeout=300s
@@ -687,7 +687,7 @@ stop-forward:
 
 # En developpement local, les services tournent sur l'ordinateur mais lisent les cles de
 # Keycloak par l'ingress (make port-forward le lance). L'emetteur attendu est le meme qu'en cluster, puisque
-# --hostname-url le fige (voir k8s/03-keycloak.yaml).
+# --hostname-url le fige (voir k8s/06-keycloak.yaml).
 DEV_KEYCLOAK_ENV = KEYCLOAK_ISSUER=$(KEYCLOAK_URL)/realms/pme \
 	KEYCLOAK_JWKS_URI=$(KEYCLOAK_URL)/realms/pme/protocol/openid-connect/certs \
 	KEYCLOAK_ALLOWED_CLIENTS=pme-web \

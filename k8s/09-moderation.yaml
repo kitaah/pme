@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/name: pme-moderation
     app.kubernetes.io/component: backend
 spec:
-  # Pas de `replicas` : le nombre de pods est piloge par l'autoscaler (k8s/11-autoscaling.yaml, minimum 2).
+  # Pas de `replicas` : le nombre de pods est piloge par l'autoscaler (k8s/19-autoscaling.yaml, minimum 2).
   revisionHistoryLimit: 3
   strategy:
     type: RollingUpdate

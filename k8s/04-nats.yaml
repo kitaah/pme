@@ -8,7 +8,7 @@
 # Pour le consulter depuis l'ordinateur : `make port-forward`, qui vise le Deployment et non le Service.
 # NATS n'a pas d'interface web : l'etat des flux se lit sur /jsz (voir `make queues` et `make nats`).
 #
-# Stockage persistant (PersistentVolumeClaim ci-dessous, 1Gi, comme PostgreSQL dans k8s/01-postgres.yaml) :
+# Stockage persistant (PersistentVolumeClaim ci-dessous, 1Gi, comme PostgreSQL dans k8s/03-postgres.yaml) :
 # les messages survivent desormais a l'arret du SERVICE DE MODERATION (ils restent dans le flux) et a la
 # perte du pod NATS (redemarrage, mise a jour de l'image). La limite de stockage de JetStream (768 Mo, sous les 1Gi
 # du volume) est dans k8s/config/nats.conf : cette option n'existe qu'en fichier. NATS refuse alors les nouveaux

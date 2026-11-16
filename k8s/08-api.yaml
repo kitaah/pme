@@ -1,5 +1,5 @@
 # API REST NestJS : depose et liste les annonces, publie `listing.submitted` sur NATS JetStream,
-# et enregistre les photos dans le stockage objet (k8s/03-garage.yaml). Seul ce service y ecrit :
+# et enregistre les photos dans le stockage objet (k8s/05-garage.yaml). Seul ce service y ecrit :
 # c'est la relation 25 du C4 niveau 2.
 # Image construite dans Minikube (make image-api), executee sans privilege root (utilisateur `node`).
 apiVersion: apps/v1
@@ -11,7 +11,7 @@ metadata:
     app.kubernetes.io/name: pme-api
     app.kubernetes.io/component: backend
 spec:
-  # Pas de `replicas` : le nombre de pods est piloge par l'autoscaler (k8s/11-autoscaling.yaml, minimum 2).
+  # Pas de `replicas` : le nombre de pods est piloge par l'autoscaler (k8s/19-autoscaling.yaml, minimum 2).
   revisionHistoryLimit: 3
   strategy:
     type: RollingUpdate
@@ -56,7 +56,7 @@ spec:
               value: "3000"
             - name: DB_HOST
               value: postgres
-            # Au plus 10 connexions a PostgreSQL par pod (4 pods maximum : voir le budget dans 01-postgres.yaml).
+            # Au plus 10 connexions a PostgreSQL par pod (4 pods maximum : voir le budget dans 03-postgres.yaml).
             - name: DB_POOL_SIZE
               value: "10"
             # Tas de Node plafonne a 75 % de la limite de memoire du conteneur (256 Mi) : le ramasse-miettes
@@ -98,7 +98,7 @@ spec:
             # Le job de performance de la pipeline la leve pour la duree du test (scripts/perf-ci.sh).
             - name: THROTTLE_LIMIT
               value: "200"
-            # ---- Stockage objet des photos (Garage, k8s/03-garage.yaml) ----
+            # ---- Stockage objet des photos (Garage, k8s/05-garage.yaml) ----
             # Deux adresses pour un seul stockage : l'API ECRIT par le service interne, et SIGNE
             # les URL de lecture pour l'adresse publique, celle que le navigateur utilisera. La
             # signature couvre le nom d'hote : calculee pour l'adresse interne, elle serait

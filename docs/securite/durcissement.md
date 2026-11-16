@@ -245,10 +245,10 @@ sauf dans l'espace temporaire monté à cet effet.
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/04-api.yaml`**<br>**`k8s/05-moderation.yaml`** | Réglages les plus complets : compte sans privilège, disque en lecture seule, capacités retirées. |
-| **`k8s/06-frontend.yaml`** | Mêmes réglages pour l'interface, avec le compte de nginx non privilégié. |
-| **`k8s/13-alloy.yaml`** | La seule exception : jeton de cluster et droits de lecture sur les pods. |
-| **`k8s/18-network-policies.yaml`** | Refus par défaut des connexions entrantes, puis une règle par composant qui nomme ses appelants. |
+| **`k8s/08-api.yaml`**<br>**`k8s/09-moderation.yaml`** | Réglages les plus complets : compte sans privilège, disque en lecture seule, capacités retirées. |
+| **`k8s/10-frontend.yaml`** | Mêmes réglages pour l'interface, avec le compte de nginx non privilégié. |
+| **`k8s/17-alloy.yaml`** | La seule exception : jeton de cluster et droits de lecture sur les pods. |
+| **`k8s/22-network-policies.yaml`** | Refus par défaut des connexions entrantes, puis une règle par composant qui nomme ses appelants. |
 | **`api/Dockerfile`**<br>**`moderation-service/Dockerfile`**<br>**`frontend/Dockerfile`** | Construction en plusieurs étapes, image finale sans outils de développement ni `npm`. |
 | **`tests/image/`** | Les 24 contrôles de structure appliqués aux images. |
 | **`k8s/istio/namespace.yaml`**<br>**`k8s/istio/cni-values.yaml`** | Namespace dédié aux composants privilégiés du maillage, et profil seccomp de l'agent istio-cni. |

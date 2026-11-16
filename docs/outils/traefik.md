@@ -170,10 +170,10 @@ Les sept noms d'hôte sont les suivants :
 | Fichier ou dossier | Description |
 |---|---|
 | **`k8s/traefik/values.yaml`** | Réglages de Traefik : ports 80 et 443, redirection vers HTTPS, log d'accès, plugin de validation des jetons. |
-| **`k8s/08-ingress.yaml`** | Déclare les noms d'hôte, les chemins, les services visés et le certificat, en trois Ingress : l'un pour `/api/v1` (jeton exigé), l'un pour `garage.localhost` (limite de débit des photos), l'autre pour le reste. |
-| **`k8s/08-middlewares.yaml`** | Décrit l'en-tête HSTS, la compression des réponses, la limite de taille du corps des requêtes, les limites de débit (API et photos) et la validation des jetons. |
-| **`k8s/08-certificate.yaml`** | Demande à cert-manager le certificat des sept noms d'hôte. |
-| **`k8s/03-keycloak.yaml`** | Fixe l'adresse publique de Keycloak. |
+| **`k8s/14-ingress.yaml`** | Déclare les noms d'hôte, les chemins, les services visés et le certificat, en trois Ingress : l'un pour `/api/v1` (jeton exigé), l'un pour `garage.localhost` (limite de débit des photos), l'autre pour le reste. |
+| **`k8s/13-middlewares.yaml`** | Décrit l'en-tête HSTS, la compression des réponses, la limite de taille du corps des requêtes, les limites de débit (API et photos) et la validation des jetons. |
+| **`k8s/12-certificate.yaml`** | Demande à cert-manager le certificat des sept noms d'hôte. |
+| **`k8s/06-keycloak.yaml`** | Fixe l'adresse publique de Keycloak. |
 | **`k8s/config/realm-pme.json`** | Liste les adresses de retour autorisées après la connexion. |
 | **`k8s/config/frontend-config.js`** | Indique au site l'adresse de Keycloak. |
 | **`Makefile`** | Contient les noms d'hôte, la version du chart et les commandes liées à l'ingress. |

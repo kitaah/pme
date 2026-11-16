@@ -2,7 +2,7 @@
 # hors de Kustomize : ces ressources sont globales au cluster et cert-manager doit etre installe avant elles.
 #
 # Chaine : emetteur auto-signe (amorce) -> certificat d'autorite `pme-ca` -> emetteur `pme-ca-issuer`,
-# qui signe les certificats de l'application (k8s/08-certificate.yaml).
+# qui signe les certificats de l'application (k8s/12-certificate.yaml).
 # En production, seul `pme-ca-issuer` est remplace (Let's Encrypt ou l'autorite interne de l'entreprise) :
 # le Certificate et les Ingress de l'application restent identiques.
 apiVersion: cert-manager.io/v1

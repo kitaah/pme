@@ -1,5 +1,5 @@
 # Front React servi par nginx (image `nginx-unprivileged`, utilisateur 101) : sert le site (fichiers statiques).
-# L'ingress achemine /api/v1 vers l'API et la moderation (k8s/08-ingress.yaml).
+# L'ingress achemine /api/v1 vers l'API et la moderation (k8s/14-ingress.yaml).
 # Systeme de fichiers en lecture seule : nginx n'ecrit que dans /tmp (fichier PID et caches temporaires).
 apiVersion: apps/v1
 kind: Deployment
@@ -10,7 +10,7 @@ metadata:
     app.kubernetes.io/name: pme-frontend
     app.kubernetes.io/component: frontend
 spec:
-  # Pas de `replicas` : le nombre de pods est piloge par l'autoscaler (k8s/11-autoscaling.yaml, minimum 2).
+  # Pas de `replicas` : le nombre de pods est piloge par l'autoscaler (k8s/19-autoscaling.yaml, minimum 2).
   revisionHistoryLimit: 3
   strategy:
     type: RollingUpdate

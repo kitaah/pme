@@ -4,7 +4,7 @@
 #
 # Deux filtres complementaires :
 #   - ici : l'ETIQUETTE du pod appelant (app.kubernetes.io/name), au niveau du reseau ;
-#   - k8s/17-authorization-policies.yaml : l'IDENTITE cryptographique du pod appelant (compte de service), par Istio.
+#   - k8s/21-authorization-policies.yaml : l'IDENTITE cryptographique du pod appelant (compte de service), par Istio.
 # Les listes d'appelants et les ports sont les memes dans les deux fichiers : a modifier ensemble.
 #
 # Entrees seulement : les connexions sortantes des pods ne sont pas filtrees (donc aucune regle pour le DNS).

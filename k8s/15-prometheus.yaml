@@ -3,7 +3,7 @@
 # redemarrage du pod. Elles disparaissent avec le namespace (`make undeploy`). La retention (6 h) reste courte
 # pour le POC ; --storage.tsdb.retention.size plafonne aussi la base sous la taille du volume.
 # Aucune authentification : outil de developpement et de demonstration, joint par
-# l'ingress (k8s/08-ingress.yaml) sur https://prometheus.localhost (make prometheus).
+# l'ingress (k8s/14-ingress.yaml) sur https://prometheus.localhost (make prometheus).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

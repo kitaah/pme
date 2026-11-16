@@ -21,7 +21,7 @@ ports:
   websecure:
     hostPort: 443
 
-# Plugin de validation des jetons JWT (k8s/08-middlewares.yaml). Traefik open source n'a pas de middleware JWT integre
+# Plugin de validation des jetons JWT (k8s/13-middlewares.yaml). Traefik open source n'a pas de middleware JWT integre
 # (il est reserve a Traefik Hub) : ce plugin communautaire, interprete par Traefik (Yaegi), le remplace. Il est declare ici,
 # dans la configuration statique, puis telecharge depuis GitHub au demarrage du controleur : Traefik doit donc pouvoir
 # joindre Internet, et la version est epinglee. Fonction "experimentale" de Traefik.
@@ -47,7 +47,7 @@ service:
 
 # Journal d'acces au format JSON, lisible avec `kubectl -n traefik logs deploy/traefik`.
 # Les en-tetes ne sont pas journalises (valeur par defaut du chart) : ni jeton, ni cookie dans les journaux.
-# Alloy ne lit que le namespace pme (k8s/13-alloy.yaml) : ce journal n'arrive donc pas dans Loki.
+# Alloy ne lit que le namespace pme (k8s/17-alloy.yaml) : ce journal n'arrive donc pas dans Loki.
 accessLog:
   enabled: true
   format: json

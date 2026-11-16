@@ -14,7 +14,7 @@ export interface DatabaseConfig {
    * et dans les tests d'integration (Testcontainers demarre un PostgreSQL sans TLS) : connexion en clair.
    */
   sslCaFile?: string;
-  /** Connexions maximum ouvertes vers PostgreSQL par instance (voir le budget dans k8s/01-postgres.yaml). */
+  /** Connexions maximum ouvertes vers PostgreSQL par instance (voir le budget dans k8s/03-postgres.yaml). */
   poolSize: number;
 }
 

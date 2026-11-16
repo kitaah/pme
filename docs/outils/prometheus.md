@@ -112,12 +112,12 @@ Les mesures principales sont les suivantes :
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/09-prometheus.yaml`** | Déploie Prometheus dans le cluster et fixe sa durée de conservation. |
+| **`k8s/15-prometheus.yaml`** | Déploie Prometheus dans le cluster et fixe sa durée de conservation. |
 | **`k8s/config/prometheus.yml`** | Liste les cibles à interroger et la fréquence de collecte. |
 | **`libs/common/src/metrics/metrics.ts`** | Définit les mesures communes aux deux services et chronomètre chaque requête. |
 | **`api/src/metrics/metrics.controller.ts`** | Publie les mesures de l'API sur le chemin `/api/metrics`. |
 | **`moderation-service/src/metrics/`**<br>**`metrics.controller.ts`** | Publie les mesures du service de modération. |
-| **`k8s/08-ingress.yaml`** | N'expose que `/api/v1` : les mesures restent internes au cluster. |
+| **`k8s/14-ingress.yaml`** | N'expose que `/api/v1` : les mesures restent internes au cluster. |
 
 ## Commandes essentielles
 
