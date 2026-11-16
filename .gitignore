@@ -18,3 +18,5 @@ site/
 # Rapports JUnit des tests d'integration (make test-integration)
 junit.xml
 reports/
+# Resultats du test de charge (make test-perf) : resume k6, logs de l API, jeton de test
+perf-results/
