@@ -1,5 +1,5 @@
 # Ingress HTTPS : un seul point d'entree pour les interfaces web, un nom d'hote .localhost par service.
-# Le TLS s'arrete ici (terminaison a l'ingress) : le certificat `pme-tls` vient de cert-manager (k8s/08-certificate.yaml).
+# Le TLS s'arrete ici (terminaison a l'ingress) : le certificat `pme-tls` vient de cert-manager (k8s/12-certificate.yaml).
 # Le HTTP est redirige vers le HTTPS par Traefik (k8s/traefik/values.yaml). Derriere l'ingress, les services restent en HTTP dans le cluster.
 # Le suffixe .localhost est voulu : les navigateurs traitent ces noms comme un contexte securise.
 # keycloak-js (PKCE) en a besoin ; avec un suffixe .local, la connexion echoue.
@@ -20,21 +20,21 @@
 # Controleur : Traefik, installe par Helm (make ingress). Il remplace ingress-nginx, archive en mars 2026.
 # Les anciennes annotations nginx.ingress.kubernetes.io/* n'existent plus : la redirection vers HTTPS est faite par
 # Traefik pour tous les noms, et la taille des en-tetes de Keycloak (erreur 502 avec nginx, tampon de 16 Ko) n'est
-# plus un sujet, Traefik n'ayant pas ce tampon. HSTS et compression : k8s/08-middlewares.yaml.
+# plus un sujet, Traefik n'ayant pas ce tampon. HSTS et compression : k8s/13-middlewares.yaml.
 #
 # Garage a son propre Ingress (`pme-garage`, limite de debit des photos). Pour pme.localhost, deux Ingress pour le meme nom d'hote : l'annotation des middlewares s'applique a TOUS les chemins d'un Ingress, et le
 # jeton ne doit etre exige que sous /api/v1 (le site, lui, doit se charger sans jeton). Traefik les fusionne : le chemin le
 # plus long l'emporte, comme dans un Ingress unique. Le certificat est declare dans chacun.
 #
 # Le navigateur doit faire confiance a l'autorite locale (make ca-cert), sinon il affiche un avertissement.
-# Les noms d'hote sont aussi ecrits dans le Makefile (APP_HOST...), k8s/03-keycloak.yaml, 04-api.yaml,
-# 05-moderation.yaml, 10-grafana.yaml, config/realm-pme.json et config/frontend-config.js : a changer ensemble.
+# Les noms d'hote sont aussi ecrits dans le Makefile (APP_HOST...), k8s/06-keycloak.yaml, 08-api.yaml,
+# 09-moderation.yaml, 18-grafana.yaml, config/realm-pme.json et config/frontend-config.js : a changer ensemble.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: pme-api
   annotations:
-    # <namespace>-<nom>@kubernetescrd : HSTS, compression, puis validation du jeton (k8s/08-middlewares.yaml).
+    # <namespace>-<nom>@kubernetescrd : HSTS, compression, puis validation du jeton (k8s/13-middlewares.yaml).
     traefik.ingress.kubernetes.io/router.middlewares: pme-api-defaults@kubernetescrd
 spec:
   ingressClassName: traefik
@@ -60,7 +60,7 @@ kind: Ingress
 metadata:
   name: pme
   annotations:
-    # <namespace>-<nom>@kubernetescrd : la chaine HSTS + compression de k8s/08-middlewares.yaml.
+    # <namespace>-<nom>@kubernetescrd : la chaine HSTS + compression de k8s/13-middlewares.yaml.
     traefik.ingress.kubernetes.io/router.middlewares: pme-web-defaults@kubernetescrd
 spec:
   ingressClassName: traefik
@@ -122,7 +122,7 @@ spec:
 # circulerait pas dans la balise <img> d'une page. Rien n'est public pour autant : sans signature valable, Garage refuse
 # la lecture. Seule l'interface S3 (3900) est exposee, jamais l'administration (3903).
 # Ingress a part : les middlewares s'appliquent a tout un Ingress, et les photos ont leur propre limite de debit
-# (garage-defaults, k8s/08-middlewares.yaml), plus large que celle de l'API.
+# (garage-defaults, k8s/13-middlewares.yaml), plus large que celle de l'API.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

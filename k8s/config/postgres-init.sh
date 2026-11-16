@@ -3,7 +3,7 @@
 # Une base par composant, et UN COMPTE PAR BASE : `pme` (API), `moderation` (service de moderation), `keycloak` et
 # `grafana` (etat interne de Grafana). Chaque compte est proprietaire de sa seule base : il ne peut ni s'y connecter
 # a une autre, ni lire ses tables. Le superutilisateur (POSTGRES_USER) ne sert plus qu'a l'administration (Adminer, psql).
-# Les mots de passe viennent du Secret `pme-secrets` (variables DB_*_PASSWORD de k8s/01-postgres.yaml). Les regles
+# Les mots de passe viennent du Secret `pme-secrets` (variables DB_*_PASSWORD de k8s/03-postgres.yaml). Les regles
 # reseau qui completent ces droits sont dans postgres-hba.conf.
 set -e
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \

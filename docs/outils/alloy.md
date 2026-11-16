@@ -97,9 +97,9 @@ ce soit, et ne voit rien des autres namespaces.
 | Fichier ou dossier | Description |
 |---|---|
 | **`k8s/config/alloy.alloy`** | Décrit la chaîne de collecte, étape par étape. |
-| **`k8s/13-alloy.yaml`** | Déploie Alloy et lui accorde le droit de lire les pods du namespace. |
-| **`k8s/08-ingress.yaml`** | Rend l'interface accessible sur `alloy.localhost`. |
-| **`k8s/12-loki.yaml`** | Déploie Loki, destinataire des logs. |
+| **`k8s/17-alloy.yaml`** | Déploie Alloy et lui accorde le droit de lire les pods du namespace. |
+| **`k8s/14-ingress.yaml`** | Rend l'interface accessible sur `alloy.localhost`. |
+| **`k8s/16-loki.yaml`** | Déploie Loki, destinataire des logs. |
 
 ## Commandes essentielles
 

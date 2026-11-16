@@ -1,6 +1,6 @@
 # Stockage objet des photos d'annonces : le conteneur « Stockage de fichiers » du C4 niveau 2.
 # Garage (compatible S3, AGPLv3, francais) tient le role que jouera un hebergeur europeen en
-# production : seul le point d'acces change, pas le code de l'API (k8s/04-api.yaml, variables S3_*).
+# production : seul le point d'acces change, pas le code de l'API (k8s/08-api.yaml, variables S3_*).
 #
 # Garage et non MinIO : MinIO n'a plus d'image communautaire maintenue (mode maintenance fin 2025).
 # Garage est concu pour de petits deploiements : un seul processus, pas de base externe.

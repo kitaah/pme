@@ -1,5 +1,5 @@
 # Administrateur permanent de Keycloak. Keycloak 26 ne cree au demarrage qu'un compte d'amorcage "temporaire"
-# (k8s/03-keycloak.yaml, utilisateur `bootstrap`) et affiche un avertissement tant qu'on l'utilise.
+# (k8s/06-keycloak.yaml, utilisateur `bootstrap`) et affiche un avertissement tant qu'on l'utilise.
 # Ce Job, une fois Keycloak disponible :
 #   1. cree l'administrateur permanent du realm master (identifiants : keycloak-admin-* de pme-secrets) ;
 #   2. supprime le compte d'amorcage ;

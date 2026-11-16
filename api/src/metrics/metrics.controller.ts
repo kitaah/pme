@@ -4,7 +4,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 
 /**
  * Metriques au format Prometheus, lues par Prometheus a l'interieur du cluster.
- * L'ingress n'expose que /api/v1 (k8s/08-ingress.yaml) : cette route n'est jamais exposee a l'exterieur.
+ * L'ingress n'expose que /api/v1 (k8s/14-ingress.yaml) : cette route n'est jamais exposee a l'exterieur.
  */
 @Public()
 @SkipThrottle()

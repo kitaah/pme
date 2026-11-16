@@ -3,7 +3,7 @@
 # et disparaissent avec le namespace (`make undeploy`). La taille du volume sert de plafond : un pic de logs (test de charge)
 # ne peut pas remplir le disque du noeud Minikube. En production, Loki ecrirait dans un stockage objet (S3, GCS).
 # Aucune authentification et pas d'ingress : Loki n'a pas d'interface web, seul Grafana l'interroge (http://loki:3100).
-# Ce sont les pods Alloy (k8s/13-alloy.yaml) qui lui envoient les logs.
+# Ce sont les pods Alloy (k8s/17-alloy.yaml) qui lui envoient les logs.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

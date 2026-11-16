@@ -133,9 +133,9 @@ Les composants à un seul exemplaire se justifient aussi :
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/11-autoscaling.yaml`** | Déclare l'autoscaler et le nombre minimal d'exemplaires de chaque application. |
-| **`k8s/04-api.yaml`** | Décrit l'API, ses ressources demandées et son service sans adresse. |
-| **`k8s/05-moderation.yaml`** | Décrit le service de modération, sur le même principe. |
+| **`k8s/19-autoscaling.yaml`** | Déclare l'autoscaler et le nombre minimal d'exemplaires de chaque application. |
+| **`k8s/08-api.yaml`** | Décrit l'API, ses ressources demandées et son service sans adresse. |
+| **`k8s/09-moderation.yaml`** | Décrit le service de modération, sur le même principe. |
 | **`k8s/config/prometheus.yml`** | Interroge chaque exemplaire séparément pour relever ses mesures. |
 | **`Makefile`** | Contient les commandes d'activation et de suivi. |
 

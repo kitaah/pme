@@ -1,5 +1,5 @@
 # `kubectl apply -k k8s/` (ou `make deploy`). Le secret `pme-secrets` est fourni sous forme chiffree (SealedSecret,
-# 14-pme-secrets-sealed.yaml, genere par `make seal`) : le controleur Sealed Secrets le dechiffre dans le cluster.
+# 01-pme-secrets-sealed.yaml, genere par `make seal`) : le controleur Sealed Secrets le dechiffre dans le cluster.
 # Les ConfigMaps sont generes avec un suffixe de hash : modifier le realm ou la config du front
 # declenche automatiquement un redemarrage des pods concernes.
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -8,28 +8,28 @@ namespace: pme
 resources:
   - namespace.yaml
   - 00-internal-tls.yaml
-  - 01-postgres.yaml
-  - 02-nats.yaml
-  - 03-keycloak.yaml
-  - 03-keycloak-admin-job.yaml
-  - 03-garage.yaml
-  - 04-api.yaml
-  - 05-moderation.yaml
-  - 06-frontend.yaml
-  - 07-adminer.yaml
-  - 08-certificate.yaml
-  - 08-middlewares.yaml
-  - 08-ingress.yaml
-  - 09-prometheus.yaml
-  - 10-grafana.yaml
-  - 11-autoscaling.yaml
-  - 12-loki.yaml
-  - 13-alloy.yaml
-  - 14-pme-secrets-sealed.yaml
-  - 15-service-accounts.yaml
-  - 16-mesh-mtls.yaml
-  - 17-authorization-policies.yaml
-  - 18-network-policies.yaml
+  - 01-pme-secrets-sealed.yaml
+  - 02-service-accounts.yaml
+  - 03-postgres.yaml
+  - 04-nats.yaml
+  - 05-garage.yaml
+  - 06-keycloak.yaml
+  - 07-keycloak-admin-job.yaml
+  - 08-api.yaml
+  - 09-moderation.yaml
+  - 10-frontend.yaml
+  - 11-adminer.yaml
+  - 12-certificate.yaml
+  - 13-middlewares.yaml
+  - 14-ingress.yaml
+  - 15-prometheus.yaml
+  - 16-loki.yaml
+  - 17-alloy.yaml
+  - 18-grafana.yaml
+  - 19-autoscaling.yaml
+  - 20-mesh-mtls.yaml
+  - 21-authorization-policies.yaml
+  - 22-network-policies.yaml
 # Label commun a toutes les ressources et aux modeles de pods. Les selecteurs ne changent pas (immuables).
 labels:
   - pairs:
@@ -50,7 +50,7 @@ configMapGenerator:
     files:
       - realm-pme.json=config/realm-pme.json
   # Theme de connexion « pme » : les cles sont montees aux chemins attendus par Keycloak
-  # (k8s/03-keycloak.yaml). Les fichiers de police sont binaires : Kustomize les range
+  # (k8s/06-keycloak.yaml). Les fichiers de police sont binaires : Kustomize les range
   # automatiquement dans `binaryData`.
   - name: keycloak-theme
     files:

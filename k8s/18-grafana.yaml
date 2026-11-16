@@ -3,7 +3,7 @@
 # rien n'est a configurer a la main, et un redemarrage retrouve le meme etat.
 # L'etat interne de Grafana (comptes, preferences) est dans PostgreSQL, base `grafana` : meme principe que Keycloak,
 # il survit a la recreation du pod. La base est creee par postgres-init.sh.
-# Joint par l'ingress (k8s/08-ingress.yaml) sur https://grafana.localhost (make grafana).
+# Joint par l'ingress (k8s/14-ingress.yaml) sur https://grafana.localhost (make grafana).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -84,7 +84,7 @@ spec:
               value: verify-full
             - name: GF_DATABASE_CA_CERT_PATH
               value: /etc/ssl/pme/ca.crt
-            # Au plus 10 connexions ouvertes vers PostgreSQL (illimite par defaut) : voir le budget dans 01-postgres.yaml.
+            # Au plus 10 connexions ouvertes vers PostgreSQL (illimite par defaut) : voir le budget dans 03-postgres.yaml.
             - name: GF_DATABASE_MAX_OPEN_CONN
               value: "10"
             # Aucune requete sortante vers grafana.com (statistiques d'usage, recherche de mises a jour).

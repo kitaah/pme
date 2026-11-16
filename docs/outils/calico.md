@@ -90,7 +90,7 @@ istio -> abandon: identité absente ou usurpée
 
 ## Rôle dans le projet
 
-- Il applique les treize politiques réseau de `k8s/18-network-policies.yaml` : un refus par défaut, et une règle par composant.
+- Il applique les treize politiques réseau de `k8s/22-network-policies.yaml` : un refus par défaut, et une règle par composant.
 - Il garantit qu'un pod compromis ne peut joindre que les composants dont il est un appelant prévu. L'interface, par exemple, ne peut plus joindre PostgreSQL.
 - Il double le filtrage du maillage [Istio](istio.md), avec une vérification indépendante au niveau du réseau.
 - Sans lui, les politiques réseau sont acceptées par Kubernetes mais ne bloquent plus aucune connexion : seul le filtrage d'Istio subsiste.
@@ -106,8 +106,8 @@ La liste des composants et de leurs appelants autorisés figure dans la page [Du
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/18-network-policies.yaml`** | Déclare le refus par défaut et la politique de chaque composant. |
-| **`k8s/17-authorization-policies.yaml`** | Déclare les mêmes règles côté Istio, par identité : les deux fichiers se modifient ensemble. |
+| **`../../k8s/22-network-policies.yaml`** | Déclare le refus par défaut et la politique de chaque composant. |
+| **`../../k8s/21-authorization-policies.yaml`** | Déclare les mêmes règles côté Istio, par identité : les deux fichiers se modifient ensemble. |
 | **`Makefile`**<br>(cibles **`minikube-up`**,<br>**`netpol-check`** et **`authz-check`**) | Crée le cluster avec Calico, puis vérifie les politiques réseau et les autorisations d'Istio. |
 
 ## Commandes essentielles

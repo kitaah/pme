@@ -127,7 +127,7 @@ Ses sources de données sont les suivantes :
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/10-grafana.yaml`** | Déploie Grafana dans le cluster. |
+| **`k8s/18-grafana.yaml`** | Déploie Grafana dans le cluster. |
 | **`k8s/config/grafana-datasource.yml`** | Déclare Prometheus comme source de données. |
 | **`k8s/config/grafana-datasource-loki.yml`** | Déclare Loki comme source de données. |
 | **`k8s/config/grafana-dashboards.yml`** | Indique à Grafana où lire les tableaux de bord. |

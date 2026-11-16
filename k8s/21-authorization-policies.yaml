@@ -1,6 +1,6 @@
 # Autorisation par identite entre les pods : refus par defaut, puis une regle par composant qui nomme ceux qui ont le
-# droit de l'appeler. L'identite d'une source est celle de son compte de service (k8s/15-service-accounts.yaml), verifiee
-# par ztunnel grace au mTLS de k8s/16-mesh-mtls.yaml : elle ne peut pas etre usurpee par un pod qui n'a pas ce compte.
+# droit de l'appeler. L'identite d'une source est celle de son compte de service (k8s/02-service-accounts.yaml), verifiee
+# par ztunnel grace au mTLS de k8s/20-mesh-mtls.yaml : elle ne peut pas etre usurpee par un pod qui n'a pas ce compte.
 #
 # Mode ambient : ces regles sont appliquees par ztunnel, au niveau de la connexion (source, destination, port). Elles ne
 # regardent ni la methode HTTP ni le chemin (il faudrait un waypoint, un proxy supplementaire par namespace).

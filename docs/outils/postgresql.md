@@ -154,7 +154,7 @@ sous cette limite même lorsque l'autoscaler ajoute des exemplaires :
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/01-postgres.yaml`** | Déploie PostgreSQL dans le cluster, avec son volume de données. |
+| **`k8s/03-postgres.yaml`** | Déploie PostgreSQL dans le cluster, avec son volume de données. |
 | **`k8s/config/postgres-init.sh`** | Crée à la première initialisation du volume les quatre comptes de service et leurs bases, et retire à tous le droit de se connecter aux bases des autres. |
 | **`k8s/config/postgres-hba.conf`** | Impose le chiffrement aux connexions venant du réseau et limite chaque compte de service à sa base. |
 | **`k8s/00-internal-tls.yaml`** | Demande à cert-manager le certificat du serveur. |

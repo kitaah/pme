@@ -20,7 +20,7 @@ const MAX_LIMIT = 100;
 
 /**
  * Taille maximale de la photo acceptee par l'API. Traefik coupe plus tot, a 6 Mo de corps de
- * requete (k8s/08-middlewares.yaml) : une image de 5 Mo accompagnee des champs texte passe, un
+ * requete (k8s/13-middlewares.yaml) : une image de 5 Mo accompagnee des champs texte passe, un
  * envoi manifestement trop gros n'atteint jamais l'API.
  */
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;

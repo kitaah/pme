@@ -7,7 +7,7 @@
 | **Rôle** | Chiffre les échanges entre les pods du cluster, donne une identité à chacun et décide qui peut joindre quoi |
 | **Version** | Istio 1.30.0, en mode ambient |
 | **Installation** | Quatre charts Helm, lancés par `make istio` |
-| **Autorisations** | Refus par défaut, puis une politique par composant (`k8s/17-authorization-policies.yaml`) |
+| **Autorisations** | Refus par défaut, puis une politique par composant (`../../k8s/21-authorization-policies.yaml`) |
 | **Prérequis** | Limite `inotify` de l'ordinateur d'au moins 1024 instances, relevée par `make inotify` |
 | **Adresse en local** | Aucune interface : il travaille à l'intérieur du cluster |
 
@@ -117,9 +117,9 @@ vérifient pas l'identité des pods. L'application continue de fonctionner, mais
 |---|---|
 | **`k8s/istio/`** | Réglages des charts Helm : plan de contrôle, agent réseau et ztunnel, avec des ressources réduites pour Minikube. Contient aussi le namespace `istio-system` et le profil seccomp de l'agent réseau. |
 | **`k8s/namespace.yaml`** | Porte le label qui enrôle le namespace `pme` dans le maillage. |
-| **`k8s/15-service-accounts.yaml`** | Déclare un compte de service par composant, donc une identité par composant. |
-| **`k8s/16-mesh-mtls.yaml`** | Impose le mode strict : toute connexion hors mTLS est refusée. |
-| **`k8s/17-authorization-policies.yaml`** | Refuse tout par défaut, puis autorise chaque composant à n'être appelé que par ses clients prévus. |
+| **`k8s/02-service-accounts.yaml`** | Déclare un compte de service par composant, donc une identité par composant. |
+| **`k8s/20-mesh-mtls.yaml`** | Impose le mode strict : toute connexion hors mTLS est refusée. |
+| **`k8s/21-authorization-policies.yaml`** | Refuse tout par défaut, puis autorise chaque composant à n'être appelé que par ses clients prévus. |
 | **`Makefile`**<br>(cibles **`inotify`**, **`istio`**,<br>**`istio-scan`**, **`mesh-check`** et **`authz-check`**) | Relève la limite `inotify`, installe le maillage et enrôle Traefik, analyse ses images, puis vérifie le chiffrement et les autorisations. |
 
 ## Commandes essentielles

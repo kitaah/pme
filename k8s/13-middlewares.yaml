@@ -1,6 +1,6 @@
 # Traitements appliques par Traefik aux requetes et aux reponses (ressources `Middleware`).
 # Ils remplacent les reglages que le controleur ingress-nginx portait dans sa ConfigMap. Ils sont rattaches a
-# l'Ingress `pme` par l'annotation traefik.ingress.kubernetes.io/router.middlewares (k8s/08-ingress.yaml).
+# l'Ingress `pme` par l'annotation traefik.ingress.kubernetes.io/router.middlewares (k8s/14-ingress.yaml).
 #
 # HSTS : le navigateur n'utilisera plus que HTTPS pour ces noms pendant `stsSeconds` secondes. Duree volontairement
 # courte (7 jours) : un HSTS actif interdit de passer outre l'alerte du certificat, ce qui bloque le site apres un

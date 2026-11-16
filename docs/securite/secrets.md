@@ -79,7 +79,7 @@ etapes: "" {
 
 1. `make env` crée `.env` depuis son modèle, avec un masque de permissions strict. Le fichier est ignoré par Git.
 2. La personne remplace les valeurs `CHANGE_ME` par de vrais mots de passe. Les quatre secrets de Garage et les quatre mots de passe des comptes PostgreSQL de service font exception : `make seal` les génère lui-même, au hasard, s'ils manquent.
-3. `make seal` chiffre ces valeurs et écrit `k8s/14-pme-secrets-sealed.yaml`, qui est versionné.
+3. `make seal` chiffre ces valeurs et écrit `k8s/01-pme-secrets-sealed.yaml`, qui est versionné.
 4. `make deploy` applique ce fichier. Le contrôleur le déchiffre et crée le Secret dans le cluster.
 5. Les pods lisent les valeurs par référence au Secret, jamais en clair dans un manifeste.
 
@@ -156,7 +156,7 @@ installer, initialiser, desceller et sauvegarder. Pour seize valeurs fixes de d�
 |---|---|
 | **`env.example`** | Modèle des variables attendues, avec des valeurs de démonstration. |
 | **`.env`** | Les vraies valeurs, sur l'ordinateur, jamais versionnées. |
-| **`k8s/14-pme-secrets-sealed.yaml`** | Les seize secrets chiffrés, versionnés dans Git. |
+| **`k8s/01-pme-secrets-sealed.yaml`** | Les seize secrets chiffrés, versionnés dans Git. |
 | **`Makefile`**<br>(cible **`sealed-secrets`**) | Installe le contrôleur, à une version épinglée. |
 | **`.gitleaks.toml`** | Règles de recherche de secrets et exceptions assumées. |
 | **`Makefile`**<br>(cibles **`env`**, **`seal`**<br>et **`secrets-scan`**) | Création de `.env`, scellement et recherche de secrets. |

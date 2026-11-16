@@ -103,7 +103,7 @@ Le projet applique par ailleurs quelques règles d'hygiène, qui valent indépen
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/14-pme-secrets-sealed.yaml`** | Contient les seize valeurs chiffrées. C'est le fichier versionné. |
+| **`k8s/01-pme-secrets-sealed.yaml`** | Contient les seize valeurs chiffrées. C'est le fichier versionné. |
 | **`.env`** | Contient les identifiants et les mots de passe en clair. Ce fichier est exclu de Git. |
 | **`env.example`** | Sert de modèle pour `.env`. Il est versionné et ne contient aucune vraie valeur. |
 | **`k8s/kustomization.yaml`** | Ajoute le fichier chiffré aux manifestes déployés. |
@@ -129,7 +129,7 @@ La mise en place se fait une fois par poste et par cluster :
    un fichier existant.
 3. Remplacer chaque valeur `CHANGE_ME` par un vrai mot de passe, hormis les quatre secrets de Garage et les quatre mots de passe PostgreSQL de service, que `make seal` génère. `make seal` refuse de chiffrer le modèle tel quel.
 4. Lancer `make deploy`, qui installe le contrôleur et génère le fichier chiffré.
-5. Versionner `k8s/14-pme-secrets-sealed.yaml`.
+5. Versionner `k8s/01-pme-secrets-sealed.yaml`.
 
 !!! note "À savoir"
     Le contrôleur vit dans un autre namespace que la plateforme, et la définition d'un SealedSecret doit exister avant

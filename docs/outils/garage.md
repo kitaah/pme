@@ -77,10 +77,10 @@ Voici ce que fait l'API avec chaque photo :
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/03-garage.yaml`** | Déploie Garage : volume persistant, pod en un seul exemplaire et service. L'image est épinglée par empreinte. |
+| **`k8s/05-garage.yaml`** | Déploie Garage : volume persistant, pod en un seul exemplaire et service. L'image est épinglée par empreinte. |
 | **`k8s/config/garage.toml`** | Configure Garage : adresses d'écoute, région S3 et port d'administration, fermé à tout accès extérieur. |
-| **`k8s/08-ingress.yaml`** | Expose `garage.localhost` pour la lecture des photos par URL signée, dans un Ingress à part, avec sa propre limite de débit (600 requêtes par minute). |
-| **`k8s/17-authorization-policies.yaml`**<br>**`k8s/18-network-policies.yaml`** | Réservent l'accès à l'API (écriture) et à l'ingress (lecture). |
+| **`k8s/14-ingress.yaml`** | Expose `garage.localhost` pour la lecture des photos par URL signée, dans un Ingress à part, avec sa propre limite de débit (600 requêtes par minute). |
+| **`k8s/21-authorization-policies.yaml`**<br>**`k8s/22-network-policies.yaml`** | Réservent l'accès à l'API (écriture) et à l'ingress (lecture). |
 | **`api/src/storage/`**<br>**`photo-storage.service.ts`** | Contrôle, ré-encode, enregistre, supprime et signe les photos. |
 | **`.env`**<br>**`env.example`** | Portent les quatre secrets de Garage, générés par `make garage-secrets`. |
 

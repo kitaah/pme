@@ -150,7 +150,7 @@ Le serveur est configuré ainsi :
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/02-nats.yaml`** | Déploie le serveur NATS dans le cluster, avec JetStream activé. |
+| **`k8s/04-nats.yaml`** | Déploie le serveur NATS dans le cluster, avec JetStream activé. |
 | **`k8s/config/nats.conf`** | Configure le chiffrement du serveur (applications et supervision) et la limite de stockage des flux. |
 | **`libs/common/src/nats/`**<br>**`nats.client.ts`** | Gère la connexion au broker, pour l'API comme pour la modération. |
 | **`api/src/listings/`**<br>**`listing-events.publisher.ts`** | Publie l'événement « annonce déposée ». |
