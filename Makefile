@@ -449,7 +449,7 @@ sealed-secrets:
 
 sealed-prereqs:
 	@{ command -v kubeseal >/dev/null && kubeseal --version 2>/dev/null | grep -q "$(KUBESEAL_VERSION)"; } || { echo "kubeseal $(KUBESEAL_VERSION) absent : lancer make kubeseal"; exit 1; }
-	@for v in POSTGRES_USER POSTGRES_PASSWORD NATS_USER NATS_PASSWORD KEYCLOAK_ADMIN KEYCLOAK_ADMIN_PASSWORD GRAFANA_ADMIN GRAFANA_ADMIN_PASSWORD \
+	@for v in POSTGRES_USER POSTGRES_PASSWORD NATS_USER NATS_PASSWORD RABBITMQ_USER RABBITMQ_PASSWORD KEYCLOAK_ADMIN KEYCLOAK_ADMIN_PASSWORD GRAFANA_ADMIN GRAFANA_ADMIN_PASSWORD \
 		GARAGE_ACCESS_KEY GARAGE_SECRET_KEY GARAGE_RPC_SECRET GARAGE_ADMIN_TOKEN \
 		DB_API_PASSWORD DB_MODERATION_PASSWORD DB_KEYCLOAK_PASSWORD DB_GRAFANA_PASSWORD; do \
 		test -n "$$(printenv $$v)" || { echo "$$v absent de .env"; exit 1; }; \
@@ -472,6 +472,7 @@ seal-now: .env sealed-prereqs
 	printf '%s\n' \
 		"db-username=$$POSTGRES_USER" "db-password=$$POSTGRES_PASSWORD" \
 		"nats-username=$$NATS_USER" "nats-password=$$NATS_PASSWORD" \
+		"rabbitmq-username=$$RABBITMQ_USER" "rabbitmq-password=$$RABBITMQ_PASSWORD" \
 		"keycloak-admin-username=$$KEYCLOAK_ADMIN" "keycloak-admin-password=$$KEYCLOAK_ADMIN_PASSWORD" \
 		"grafana-admin-username=$$GRAFANA_ADMIN" "grafana-admin-password=$$GRAFANA_ADMIN_PASSWORD" \
 		"garage-access-key=$$GARAGE_ACCESS_KEY" "garage-secret-key=$$GARAGE_SECRET_KEY" \

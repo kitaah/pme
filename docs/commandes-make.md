@@ -56,7 +56,7 @@ navigateur, `make seal` (nouveau cluster, donc nouvelle clé ; génère aussi le
 
 !!! note "À savoir"
     Le `Makefile` crée aussi deux fichiers qui ne sont pas des commandes : `.env`, produit à la demande depuis
-    `env.example`, et `k8s/14-pme-secrets-sealed.yaml`, généré par `make deploy` s'il manque. Une fois présents, ils ne
+    `env.example`, et `k8s/01-pme-secrets-sealed.yaml`, généré par `make deploy` s'il manque. Une fois présents, ils ne
     sont jamais réécrits tout seuls : après un changement de mot de passe, c'est `make seal` qui les met à jour. Les
     quatre secrets de Garage et les quatre mots de passe des comptes PostgreSQL de service, eux, sont générés dans `.env` par `make seal` s'ils manquent, puis jamais modifiés.
 
@@ -107,7 +107,7 @@ navigateur, `make seal` (nouveau cluster, donc nouvelle clé ; génère aussi le
 |---|---|
 | **`make kubeseal`** | Installe l'outil `kubeseal` à la bonne version s'il est absent (Linux, `sudo` demandé). Requis par `seal`. |
 | **`make sealed-secrets`** | Installe le contrôleur Sealed Secrets dans `kube-system`, une fois par cluster, à la même version que `kubeseal`. |
-| **`make sealed-prereqs`** | Contrôle préalable de `seal` : `kubeseal` à la bonne version, les seize variables de `.env` renseignées (aucun `CHANGE_ME` : administration de la base, NATS, Keycloak, Grafana, les quatre mots de passe des comptes PostgreSQL de service et les quatre secrets de Garage), contrôleur installé (il l'installe sinon). |
+| **`make sealed-prereqs`** | Contrôle préalable de `seal` : `kubeseal` à la bonne version, les dix-huit variables de `.env` renseignées (aucun `CHANGE_ME` : administration de la base, NATS, Keycloak, Grafana, les quatre mots de passe des comptes PostgreSQL de service et les quatre secrets de Garage), contrôleur installé (il l'installe sinon). |
 | **`make seal`** | Génère les secrets de Garage s'ils manquent (`garage-secrets`), puis chiffre `.env` dans `k8s/01-pme-secrets-sealed.yaml` (`seal-now`), à versionner dans Git. Les deux étapes sont des appels séparés : `make` ne lit `.env` qu'une fois, au démarrage. À relancer après un changement de secret ou sur un nouveau cluster. |
 
 ### Images et déploiement
