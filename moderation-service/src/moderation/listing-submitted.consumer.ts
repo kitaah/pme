@@ -10,6 +10,7 @@ import {
   MODERATION_CONSUMER,
   ListingSubmittedEvent,
 } from './listing-submitted.event';
+import { ListingMessageConsumer } from './listing-message-consumer';
 import { ModerationService } from './moderation.service';
 
 /** Attente avant la remise d'un message dont le traitement a echoue passagerement. */
@@ -31,7 +32,7 @@ export class InvalidMessageError extends Error {}
  * le consommateur `moderation` est durable, JetStream retient sa position.
  */
 @Injectable()
-export class ListingSubmittedConsumer implements OnApplicationShutdown {
+export class ListingSubmittedConsumer extends ListingMessageConsumer implements OnApplicationShutdown {
   private readonly logger = new Logger(ListingSubmittedConsumer.name);
   private messages?: ConsumerMessages;
   private loop?: Promise<void>;
@@ -39,7 +40,9 @@ export class ListingSubmittedConsumer implements OnApplicationShutdown {
   constructor(
     private readonly nats: NatsClient,
     private readonly moderation: ModerationService,
-  ) {}
+  ) {
+    super();
+  }
 
   /** Demarre la consommation. Les flux et le consommateur durable doivent deja exister (nats-topology.ts). */
   async start(): Promise<void> {

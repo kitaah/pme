@@ -86,6 +86,18 @@ spec:
             # du nom du serveur. Absente en local et dans les tests : connexion en clair.
             - name: NATS_TLS_CA
               value: /etc/ssl/pme/ca.crt
+            # Broker de messages : `nats` ou `rabbitmq`. Se change avec `make broker-nats` / `make broker-rabbitmq`
+            # (kubectl set env, sans reconstruire d'image). Les deux brokers tournent en permanence dans le cluster.
+            - name: BROKER
+              value: nats
+            - name: RABBITMQ_HOST
+              value: rabbitmq
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: rabbitmq-username }
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: rabbitmq-password }
             # `iss` = URL publique vue par le navigateur ; les cles sont lues via le service interne
             - name: KEYCLOAK_ISSUER
               value: https://keycloak.localhost/realms/pme

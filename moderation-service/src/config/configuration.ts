@@ -1,7 +1,9 @@
 import {
+  Broker,
   DatabaseConfig,
   KeycloakConfig,
   NatsConfig,
+  loadBroker,
   loadDatabaseConfig,
   loadKeycloakConfig,
   loadNatsConfig,
@@ -18,6 +20,8 @@ export interface AppConfig {
   /** Requetes autorisees par minute et par IP (a relever pour les tests de charge). */
   throttleLimit: number;
   db: DatabaseConfig;
+  /** Broker utilise pour consommer : `nats` (defaut) ou `rabbitmq`. */
+  broker: Broker;
   nats: NatsConfig;
   keycloak: KeycloakConfig;
 }
@@ -27,6 +31,7 @@ export function loadConfiguration(env: NodeJS.ProcessEnv = process.env): AppConf
     port: num(env, 'PORT', 3001),
     throttleLimit: num(env, 'THROTTLE_LIMIT', 200),
     db: loadDatabaseConfig(env, { name: 'moderation', poolSize: 5 }),
+    broker: loadBroker(env),
     nats: loadNatsConfig(env),
     keycloak: loadKeycloakConfig(env),
   };

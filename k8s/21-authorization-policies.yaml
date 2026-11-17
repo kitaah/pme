@@ -90,6 +90,26 @@ spec:
         - operation:
             ports: ["4222"]
 ---
+# RabbitMQ (branche de demonstration) : l'API (publie) et la moderation (lit), sur le seul port AMQP.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-rabbitmq
+spec:
+  selector:
+    matchLabels:
+      app: rabbitmq
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/pme/sa/pme-api
+              - cluster.local/ns/pme/sa/pme-moderation
+      to:
+        - operation:
+            ports: ["5672"]
+---
 # Keycloak : l'ingress (page de connexion, console), l'API et la moderation (cles de verification des jetons), et le Job
 # keycloak-admin (creation de l'administrateur permanent).
 apiVersion: security.istio.io/v1

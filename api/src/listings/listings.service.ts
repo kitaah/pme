@@ -8,7 +8,7 @@ import { CreateListingDto } from './create-listing.dto';
 import { ListingReferences, ListingReferencesService } from './listing-references.service';
 import { ListingKind, ListingStatus } from './listing.enums';
 import { Listing } from './listing.entity';
-import { ListingEventsPublisher } from './listing-events.publisher';
+import { ListingEventsPort } from './listing-events.port';
 
 /**
  * Annonce telle qu'elle est renvoyee au navigateur : le chemin de la photo dans le stockage
@@ -28,7 +28,7 @@ export class ListingsService {
 
   constructor(
     @InjectRepository(Listing) private readonly repository: Repository<Listing>,
-    private readonly publisher: ListingEventsPublisher,
+    private readonly publisher: ListingEventsPort,
     private readonly database: DatabaseCircuitBreaker,
     private readonly photos: PhotoStorageService,
     private readonly references: ListingReferencesService,

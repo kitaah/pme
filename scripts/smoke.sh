@@ -67,7 +67,7 @@ sql_true() {
 }
 
 echo "== 1. Deploiements"
-for d in postgres nats keycloak garage pme-api pme-moderation pme-frontend grafana prometheus loki alloy adminer; do
+for d in postgres nats rabbitmq keycloak garage pme-api pme-moderation pme-frontend grafana prometheus loki alloy adminer; do
   ok_if "$d disponible" kubectl -n "$NS" wait --for=condition=available "deploy/$d" --timeout=10s
 done
 
@@ -92,6 +92,7 @@ ok_if "handover_places remplie" sql_true pme "select count(*) > 0 from handover_
 ok_if "table moderation_queue (base moderation)" sql_true moderation "select to_regclass('public.moderation_queue') is not null"
 ok_if "realm Keycloak importe (base keycloak)" sql_true keycloak "select count(*) > 0 from realm where name = 'pme'"
 ok_if "flux NATS LISTINGS present" sh -c "kubectl -n '$NS' exec deploy/nats -- wget --no-check-certificate -qO- 'https://localhost:8222/jsz?streams=1' | grep -q LISTINGS"
+ok_if "file RabbitMQ listing.submitted presente" sh -c "kubectl -n '$NS' exec deploy/rabbitmq -- rabbitmqctl list_queues name | grep -q listing.submitted"
 ok_if "bucket pme-photos present dans Garage" kubectl -n "$NS" exec deploy/garage -- /garage bucket info pme-photos
 
 echo "== 4. Ingress (visiteur anonyme)"

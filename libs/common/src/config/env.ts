@@ -31,6 +31,24 @@ export interface NatsConfig {
   tlsCaFile?: string;
 }
 
+/** Broker de messages : NATS JetStream (defaut) ou RabbitMQ, choisi par la variable BROKER. */
+export type Broker = 'nats' | 'rabbitmq';
+
+export function loadBroker(env: NodeJS.ProcessEnv): Broker {
+  const value = (env.BROKER ?? 'nats').toLowerCase();
+  if (value !== 'nats' && value !== 'rabbitmq') {
+    throw new Error(`BROKER doit valoir "nats" ou "rabbitmq" (recu : "${env.BROKER}")`);
+  }
+  return value;
+}
+
+export interface RabbitMqConfig {
+  host: string;
+  port: number;
+  user: string;
+  password: string;
+}
+
 export interface KeycloakConfig {
   /** Valeur attendue dans la claim `iss` : URL publique de Keycloak (celle que voit le navigateur). */
   issuer: string;
@@ -90,6 +108,15 @@ export function loadNatsConfig(env: NodeJS.ProcessEnv): NatsConfig {
     user: required(env, 'NATS_USER'),
     password: required(env, 'NATS_PASSWORD'),
     tlsCaFile: env.NATS_TLS_CA || undefined,
+  };
+}
+
+export function loadRabbitMqConfig(env: NodeJS.ProcessEnv): RabbitMqConfig {
+  return {
+    host: env.RABBITMQ_HOST ?? 'localhost',
+    port: num(env, 'RABBITMQ_PORT', 5672),
+    user: required(env, 'RABBITMQ_USER'),
+    password: required(env, 'RABBITMQ_PASSWORD'),
   };
 }
 

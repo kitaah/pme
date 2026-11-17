@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { NatsClient } from '@pme/common';
 import { JetStreamClient } from 'nats';
 import { LISTING_SUBMITTED_SUBJECT, ListingSubmittedEvent } from './listing-events';
+import { ListingEventsPort } from './listing-events.port';
 import { Listing } from './listing.entity';
 
 /** Delai maximal d'attente de l'accuse de reception du flux, et nouvelles tentatives. */
@@ -20,7 +21,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * ignore un message deja recu. Une publication rejouee ne cree donc pas de doublon.
  */
 @Injectable()
-export class ListingEventsPublisher {
+export class ListingEventsPublisher implements ListingEventsPort {
   private readonly logger = new Logger(ListingEventsPublisher.name);
 
   constructor(private readonly nats: NatsClient) {}

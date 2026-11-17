@@ -30,6 +30,7 @@ resources:
   - 20-mesh-mtls.yaml
   - 21-authorization-policies.yaml
   - 22-network-policies.yaml
+  - 23-rabbitmq.yaml
 # Label commun a toutes les ressources et aux modeles de pods. Les selecteurs ne changent pas (immuables).
 labels:
   - pairs:

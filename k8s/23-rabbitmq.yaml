@@ -1,0 +1,124 @@
+# RabbitMQ 4.1 : seconde solution de messagerie du POC, comparee a NATS JetStream (k8s/04-nats.yaml).
+# Les deux brokers tournent en permanence ; l'API et la moderation parlent a celui que designe la variable BROKER
+# (k8s/08-api.yaml et k8s/09-moderation.yaml). `make broker-nats` / `make broker-rabbitmq` changent ce choix sans
+# reconstruire d'image.
+#
+# Un seul port est publie : 5672 (AMQP, clients). Il n'y a pas d'interface de gestion (le plugin `management` n'est
+# pas dans cette image) : l'etat des files se lit avec `make queues-rabbitmq` (rabbitmqctl, via kubectl exec).
+# Le trafic entre pods est chiffre par le maillage Istio (mTLS, k8s/20-mesh-mtls.yaml) : RabbitMQ n'a pas de TLS propre
+# dans cette branche, contrairement a NATS.
+#
+# RABBITMQ_NODENAME fige le nom du noeud : par defaut il contient le nom d'hote du pod, qui change a chaque recreation.
+# Les donnees du volume (files durables, messages persistants) sont rangees sous ce nom et deviendraient introuvables.
+# Le conteneur demarre en root pour initialiser le volume, puis l'image passe sur l'utilisateur `rabbitmq` : les
+# capacites CHOWN, SETUID, SETGID, DAC_OVERRIDE et FOWNER (toutes admises par le niveau `baseline`) lui suffisent pour cela.
+# Les identifiants de l'administrateur par defaut viennent du Secret `pme-secrets` (cles rabbitmq-username et
+# rabbitmq-password) : l'API et la moderation se connectent avec ce compte.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rabbitmq-data
+  labels:
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/component: messaging
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  labels:
+    app: rabbitmq
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/component: messaging
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+        app.kubernetes.io/name: rabbitmq
+        app.kubernetes.io/component: messaging
+    spec:
+      serviceAccountName: rabbitmq
+      automountServiceAccountToken: false
+      # Sans cela, Kubernetes injecte des variables RABBITMQ_* issues du Service `rabbitmq` (ex. RABBITMQ_PORT=tcp://...),
+      # qui entrent en collision avec les variables que l'image attend.
+      enableServiceLinks: false
+      securityContext:
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:4.1-alpine
+          ports:
+            - name: amqp
+              containerPort: 5672
+          env:
+            - name: RABBITMQ_NODENAME
+              value: rabbit@localhost
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: rabbitmq-username }
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef: { name: pme-secrets, key: rabbitmq-password }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+              add: [CHOWN, SETUID, SETGID, DAC_OVERRIDE, FOWNER]
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/rabbitmq
+          # L'amorcage d'Erlang prend plusieurs secondes : la startupProbe laisse 3 minutes au premier demarrage et
+          # suspend les autres sondes jusqu'a son succes. Les commandes rabbitmq-diagnostics sont lentes (elles
+          # demarrent un noeud Erlang), d'ou les delais larges.
+          startupProbe:
+            exec:
+              command: [rabbitmq-diagnostics, -q, ping]
+            periodSeconds: 5
+            timeoutSeconds: 10
+            failureThreshold: 36
+          readinessProbe:
+            exec:
+              command: [rabbitmq-diagnostics, -q, ping]
+            periodSeconds: 10
+            timeoutSeconds: 10
+          livenessProbe:
+            exec:
+              command: [rabbitmq-diagnostics, -q, ping]
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 4
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: rabbitmq-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  labels:
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/component: messaging
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672

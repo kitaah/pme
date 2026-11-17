@@ -7,9 +7,9 @@
         minikube-up minikube-down helm ingress ingress-restart mesh-renew inotify istio istio-scan mesh-check authz-check netpol-check jwt-check smoke seed-listings seed-listings-clean cert-manager ca-cert ca-configmap metrics-server hpa tunnel hosts \
         env kubeseal sealed-secrets sealed-prereqs seal image image-api image-moderation image-frontend deploy redeploy restart undeploy reset \
         garage-secrets db-secrets seal-now garage-init \
-        pods logs logs-api logs-moderation logs-keycloak \
+        pods logs logs-api logs-moderation logs-keycloak logs-rabbitmq logs-nats logs-publish logs-receive \
         port-forward stop-forward api moderation frontend \
-        queues db-listings db-moderation \
+        queues queues-rabbitmq broker-nats broker-rabbitmq broker db-listings db-moderation \
         demo-stop-moderation demo-start-moderation demo-kill-api \
         app keycloak nats adminer prometheus grafana alloy \
         docs-serve docs-check docs-image docs-run docs-stop scripts-perms
@@ -121,6 +121,13 @@ help:
 	@echo "  Observation"
 	@echo "    make pods | logs-api | logs-moderation | logs-keycloak"
 	@echo "    make queues                   - Flux NATS : messages en attente / consommateurs"
+	@echo "    make queues-rabbitmq          - Files RabbitMQ : messages en attente / consommateurs / file des echecs"
+	@echo "    make broker-nats              - Bascule l'API et la moderation sur NATS (sans reconstruire d'image)"
+	@echo "    make broker-rabbitmq          - Bascule l'API et la moderation sur RabbitMQ (sans reconstruire d'image)"
+	@echo "    make broker                   - Affiche le broker utilise"
+	@echo "    make logs-publish             - L'API a publie l'annonce (Evenement listing.submitted)"
+	@echo "    make logs-receive             - La moderation l'a recue (Consommateur / Annonce)"
+	@echo "    make logs-rabbitmq            - Journal du pod RabbitMQ (logs-nats pour NATS)"
 	@echo "    make db-listings              - Annonces en base (API)"
 	@echo "    make db-moderation            - File de moderation en base (service de moderation)"
 	@echo ""
@@ -618,6 +625,21 @@ logs-moderation:
 logs-keycloak:
 	kubectl -n $(NS) logs -l app=keycloak --tail=100 -f
 
+logs-rabbitmq:
+	kubectl -n $(NS) logs -l app=rabbitmq --tail=100 -f
+
+logs-nats:
+	kubectl -n $(NS) logs -l app=nats --tail=100 -f
+
+# Pour la demonstration : la publication cote API, puis la reception cote moderation (les memes lignes pour NATS
+# et pour RabbitMQ ; `make broker` dit lequel est actif).
+logs-publish:
+	@kubectl -n $(NS) logs deploy/pme-api | grep -E "Evenement listing.submitted"
+
+logs-receive:
+	@kubectl -n $(NS) logs deploy/pme-moderation | grep -E "Consommateur|Annonce"
+
+
 # Etat des flux JetStream, lu sur le port de supervision de NATS (8222, HTTPS). La lecture se fait depuis le pod, sur
 # sa boucle locale : wget (busybox) n'a pas l'autorite locale, d'ou --no-check-certificate. Pour verifier le certificat,
 # utiliser `make port-forward` puis curl --cacert avec la CA locale (le certificat couvre `localhost`).
@@ -625,6 +647,29 @@ logs-keycloak:
 queues:
 	@kubectl -n $(NS) exec deploy/nats -- wget --no-check-certificate -qO- 'https://localhost:8222/jsz?streams=1&consumers=1' \
 		| python3 -m json.tool
+
+# Etat des files RabbitMQ (rabbitmqctl, depuis le pod). `messages_ready` = en attente, `messages_unacknowledged` = recus
+# mais pas encore acquittes, `consumers` = consommateurs connectes. `listing.submitted.dlq` recoit les messages rejetes.
+queues-rabbitmq:
+	@kubectl -n $(NS) exec deploy/rabbitmq -- rabbitmqctl list_queues name messages_ready messages_unacknowledged consumers
+
+# Choix du broker pour la demonstration : NATS et RabbitMQ tournent tous les deux en permanence, l'API et la moderation
+# ne parlent qu'a celui que designe BROKER. `kubectl set env` relance chaque deploiement (quelques secondes, aucune
+# image a reconstruire). Un `make deploy` ulterieur ne change pas ce choix.
+broker-nats:
+	@kubectl -n $(NS) set env deployment/pme-api BROKER=nats
+	@kubectl -n $(NS) set env deployment/pme-moderation BROKER=nats
+	@kubectl -n $(NS) rollout status deployment/pme-api deployment/pme-moderation
+	@echo "Broker : nats (suivre : make queues)"
+
+broker-rabbitmq:
+	@kubectl -n $(NS) set env deployment/pme-api BROKER=rabbitmq
+	@kubectl -n $(NS) set env deployment/pme-moderation BROKER=rabbitmq
+	@kubectl -n $(NS) rollout status deployment/pme-api deployment/pme-moderation
+	@echo "Broker : rabbitmq (suivre : make queues-rabbitmq)"
+
+broker:
+	@kubectl -n $(NS) get deployment pme-api pme-moderation -o jsonpath='{range .items[*]}{.metadata.name}{" : "}{.spec.template.spec.containers[0].env[?(@.name=="BROKER")].value}{"\n"}{end}'
 
 db-listings:
 	kubectl -n $(NS) exec deploy/postgres -- sh -c 'psql -U "$$POSTGRES_USER" -d pme -c "SELECT id, owner_username, title, status, created_at FROM listings ORDER BY created_at DESC"'
@@ -675,9 +720,10 @@ port-forward:
 	@( while true; do kubectl -n $(NS) port-forward deploy/nats $(NATS_MONITOR_PORT):8222; sleep 2; done ) &
 	@( while true; do kubectl -n $(NS) port-forward svc/postgres 5432:5432; sleep 2; done ) &
 	@( while true; do kubectl -n $(NS) port-forward svc/nats 4222:4222; sleep 2; done ) &
+	@( while true; do kubectl -n $(NS) port-forward svc/rabbitmq 5672:5672; sleep 2; done ) &
 	@sleep 2
 	@echo "NATS          : $(NATS_URL)/jsz?streams=1&consumers=1"
-	@echo "NATS (client) : localhost:4222 ; PostgreSQL : localhost:5432"
+	@echo "NATS (client) : localhost:4222 ; RabbitMQ : localhost:5672 ; PostgreSQL : localhost:5432"
 	@echo "Application   : $(APP_URL) (ingress sur 127.0.0.1:80 et :443, ligne /etc/hosts de 'make hosts' requise)"
 	@echo "'make stop-forward' pour tout arreter."
 
@@ -698,16 +744,21 @@ DEV_KEYCLOAK_ENV = KEYCLOAK_ISSUER=$(KEYCLOAK_URL)/realms/pme \
 # doit donc connaitre l'autorite locale, comme son equivalent dans le cluster. Les certificats sont valables
 # pour `localhost` (k8s/00-internal-tls.yaml), le nom compose par "make port-forward".
 # "make ca-cert", dont dependent les deux cibles ci-dessous, ecrit le fichier.
+# Broker utilise par `make api` et `make moderation` (nats ou rabbitmq) : make api BROKER=rabbitmq
+BROKER ?= nats
+
 DEV_TLS_ENV = DB_SSL_CA=$(CURDIR)/$(CA_FILE) NATS_TLS_CA=$(CURDIR)/$(CA_FILE)
 
 api: ca-cert
 	@cd api && DB_HOST=localhost DB_NAME=pme DB_USER=pme_api DB_PASSWORD='$(DB_API_PASSWORD)' \
-		NATS_HOST=localhost NATS_USER='$(NATS_USER)' NATS_PASSWORD='$(NATS_PASSWORD)' \
+		BROKER='$(BROKER)' NATS_HOST=localhost NATS_USER='$(NATS_USER)' NATS_PASSWORD='$(NATS_PASSWORD)' \
+		RABBITMQ_HOST=localhost RABBITMQ_USER='$(RABBITMQ_USER)' RABBITMQ_PASSWORD='$(RABBITMQ_PASSWORD)' \
 		$(DEV_TLS_ENV) $(DEV_KEYCLOAK_ENV) npm run start:dev
 
 moderation: ca-cert
 	@cd moderation-service && DB_HOST=localhost DB_NAME=moderation DB_USER=pme_moderation DB_PASSWORD='$(DB_MODERATION_PASSWORD)' \
-		NATS_HOST=localhost NATS_USER='$(NATS_USER)' NATS_PASSWORD='$(NATS_PASSWORD)' \
+		BROKER='$(BROKER)' NATS_HOST=localhost NATS_USER='$(NATS_USER)' NATS_PASSWORD='$(NATS_PASSWORD)' \
+		RABBITMQ_HOST=localhost RABBITMQ_USER='$(RABBITMQ_USER)' RABBITMQ_PASSWORD='$(RABBITMQ_PASSWORD)' \
 		$(DEV_TLS_ENV) $(DEV_KEYCLOAK_ENV) npm run start:dev
 
 frontend:
