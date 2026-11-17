@@ -72,7 +72,7 @@ C'est le principe du **GitOps** : le dépôt décrit l'état attendu du cluster,
 
 ## Rôle dans le projet
 
-- Il protège les seize valeurs du secret `pme-secrets` : identifiants et mots de passe d'administration de PostgreSQL, NATS,
+- Il protège les dix-huit valeurs du secret `pme-secrets` : identifiants et mots de passe d'administration de PostgreSQL, NATS,
   Keycloak et Grafana, mots de passe des quatre comptes PostgreSQL de service, et quatre secrets de [Garage](garage.md).
 - Il permet de versionner le fichier chiffré avec les autres manifestes, et donc de le déployer par la même commande.
 - Il garantit qu'une fuite du dépôt n'expose aucun mot de passe.
@@ -90,7 +90,7 @@ Le projet applique par ailleurs quelques règles d'hygiène, qui valent indépen
 
 !!! note "À savoir"
     Vault gère des secrets dynamiques, leur rotation et leur audit, au prix d'un service supplémentaire à installer,
-    initialiser, desceller et sauvegarder. Pour seize valeurs fixes de démonstration, Sealed Secrets suffit et tient en
+    initialiser, desceller et sauvegarder. Pour dix-huit valeurs fixes de démonstration, Sealed Secrets suffit et tient en
     deux commandes. Vault deviendrait pertinent si les secrets devaient tourner régulièrement ou être distribués à de
     nombreuses applications.
 
@@ -103,7 +103,7 @@ Le projet applique par ailleurs quelques règles d'hygiène, qui valent indépen
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/01-pme-secrets-sealed.yaml`** | Contient les seize valeurs chiffrées. C'est le fichier versionné. |
+| **`k8s/01-pme-secrets-sealed.yaml`** | Contient les dix-huit valeurs chiffrées. C'est le fichier versionné. |
 | **`.env`** | Contient les identifiants et les mots de passe en clair. Ce fichier est exclu de Git. |
 | **`env.example`** | Sert de modèle pour `.env`. Il est versionné et ne contient aucune vraie valeur. |
 | **`k8s/kustomization.yaml`** | Ajoute le fichier chiffré aux manifestes déployés. |

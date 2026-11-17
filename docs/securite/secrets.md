@@ -12,7 +12,7 @@
 
 ## Description
 
-Un **secret** est une valeur qui donne un accès : un mot de passe, une clé, un jeton. Le projet en compte seize, et tous
+Un **secret** est une valeur qui donne un accès : un mot de passe, une clé, un jeton. Le projet en compte dix-huit, et tous
 posent la même question : où les écrire ? Les laisser dans le code revient à les publier. Les garder sur l'ordinateur
 d'une seule personne revient à bloquer l'équipe le jour où cette personne est absente.
 
@@ -129,7 +129,7 @@ du job. Côté images, un contrôle de structure vérifie qu'aucun fichier `.env
   [Durcissement](durcissement.md) revient sur ce point pour PostgreSQL.
 
 Un gestionnaire comme HashiCorp Vault répondrait à la rotation et à l'audit, au prix d'un service supplémentaire à
-installer, initialiser, desceller et sauvegarder. Pour seize valeurs fixes de démonstration, Sealed Secrets suffit.
+installer, initialiser, desceller et sauvegarder. Pour dix-huit valeurs fixes de démonstration, Sealed Secrets suffit.
 
 ## Commandes de vérification
 
@@ -156,7 +156,7 @@ installer, initialiser, desceller et sauvegarder. Pour seize valeurs fixes de d�
 |---|---|
 | **`env.example`** | Modèle des variables attendues, avec des valeurs de démonstration. |
 | **`.env`** | Les vraies valeurs, sur l'ordinateur, jamais versionnées. |
-| **`k8s/01-pme-secrets-sealed.yaml`** | Les seize secrets chiffrés, versionnés dans Git. |
+| **`k8s/01-pme-secrets-sealed.yaml`** | Les dix-huit secrets chiffrés, versionnés dans Git. |
 | **`Makefile`**<br>(cible **`sealed-secrets`**) | Installe le contrôleur, à une version épinglée. |
 | **`.gitleaks.toml`** | Règles de recherche de secrets et exceptions assumées. |
 | **`Makefile`**<br>(cibles **`env`**, **`seal`**<br>et **`secrets-scan`**) | Création de `.env`, scellement et recherche de secrets. |
