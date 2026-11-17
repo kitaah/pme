@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
 import { ChannelModel, ConfirmChannel, connect } from 'amqplib';
 import { RabbitMqConfig } from '../config/env';
@@ -43,16 +44,23 @@ export class RabbitMqClient implements OnApplicationShutdown {
   }
 
   private async open(): Promise<ConfirmChannel> {
+    const { host, port, user, password, tlsCaFile } = this.options;
     const connection = await connect(
       {
-        protocol: 'amqp',
-        hostname: this.options.host,
-        port: this.options.port,
-        username: this.options.user,
-        password: this.options.password,
+        protocol: tlsCaFile ? 'amqps' : 'amqp',
+        hostname: host,
+        port,
+        username: user,
+        password,
         heartbeat: HEARTBEAT_SECONDS,
       },
-      { timeout: CONNECT_TIMEOUT_MS, clientProperties: { connection_name: this.clientName } },
+      {
+        timeout: CONNECT_TIMEOUT_MS,
+        clientProperties: { connection_name: this.clientName },
+        // TLS : le certificat du serveur est verifie avec l'autorite locale, et son nom avec `host`. TLS 1.3 minimum,
+        // comme le serveur (k8s/config/rabbitmq.conf).
+        ...(tlsCaFile ? { ca: [readFileSync(tlsCaFile)], servername: host, minVersion: 'TLSv1.3' as const } : {}),
+      },
     );
     this.connection = connection;
     const forget = () => {

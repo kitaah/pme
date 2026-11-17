@@ -89,6 +89,9 @@ spec:
               value: nats
             - name: RABBITMQ_HOST
               value: rabbitmq
+            # Meme autorite que pour NATS : sa presence active le TLS vers RabbitMQ (port 5671, verification du nom).
+            - name: RABBITMQ_TLS_CA
+              value: /etc/ssl/pme/ca.crt
             - name: RABBITMQ_USER
               valueFrom:
                 secretKeyRef: { name: pme-secrets, key: rabbitmq-username }

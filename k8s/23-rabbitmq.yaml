@@ -3,12 +3,12 @@
 # (k8s/08-api.yaml et k8s/09-moderation.yaml). `make broker-nats` / `make broker-rabbitmq` changent ce choix sans
 # reconstruire d'image.
 #
-# Seul le port 5672 (AMQP, clients) est publie par le Service. L'image `-management` embarque l'interface web de gestion
-# (port 15672 du pod, HTTP) : elle n'est pas publiee, comme le port de supervision 8222 de NATS. On l'ouvre avec
-# `make port-forward` puis `make rabbitmq` (connexion avec RABBITMQ_USER et RABBITMQ_PASSWORD du fichier .env).
+# Deux ports sont publies par le Service : 5671 (AMQP chiffre, clients) et 15672 (interface de gestion). Le port AMQP en
+# clair (5672) est desactive : k8s/config/rabbitmq.conf active TLS 1.3 avec le certificat `rabbitmq-tls`
+# (k8s/00-internal-tls.yaml), en plus du mTLS d'Istio, comme pour NATS.
+# L'image `-management` embarque l'interface web de gestion (port 15672, HTTP) : l'ingress Traefik la sert en HTTPS sur
+# https://rabbitmq.localhost (`make rabbitmq`, connexion avec RABBITMQ_USER et RABBITMQ_PASSWORD du fichier .env).
 # L'etat des files se lit aussi en ligne de commande : `make queues-rabbitmq` (rabbitmqctl, via kubectl exec).
-# Le trafic entre pods est chiffre par le maillage Istio (mTLS, k8s/20-mesh-mtls.yaml) : RabbitMQ n'a pas de TLS propre
-# dans cette branche, contrairement a NATS.
 #
 # RABBITMQ_NODENAME fige le nom du noeud : par defaut il contient le nom d'hote du pod, qui change a chaque recreation.
 # Les donnees du volume (files durables, messages persistants) sont rangees sous ce nom et deviendraient introuvables.
@@ -63,8 +63,8 @@ spec:
         - name: rabbitmq
           image: rabbitmq:4.3-management-alpine
           ports:
-            - name: amqp
-              containerPort: 5672
+            - name: amqps
+              containerPort: 5671
             - name: management
               containerPort: 15672
           env:
@@ -87,6 +87,14 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/rabbitmq
+            - name: tls
+              mountPath: /etc/rabbitmq/tls
+              readOnly: true
+            # Un seul fichier, ajoute a ceux de l'image : les autres fichiers de conf.d sont conserves.
+            - name: config
+              mountPath: /etc/rabbitmq/conf.d/30-tls.conf
+              subPath: rabbitmq.conf
+              readOnly: true
           # L'amorcage d'Erlang prend plusieurs secondes : la startupProbe laisse 3 minutes au premier demarrage et
           # suspend les autres sondes jusqu'a son succes. Les commandes rabbitmq-diagnostics sont lentes (elles
           # demarrent un noeud Erlang), d'ou les delais larges.
@@ -111,6 +119,15 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: rabbitmq-data
+        # 0444 : RabbitMQ lit ses fichiers avec l'utilisateur `rabbitmq`, pas root. Seul ce processus tourne dans le
+        # conteneur : la cle n'est donc lisible que par lui.
+        - name: tls
+          secret:
+            secretName: rabbitmq-tls
+            defaultMode: 0444
+        - name: config
+          configMap:
+            name: rabbitmq-config
 ---
 apiVersion: v1
 kind: Service
@@ -123,6 +140,10 @@ spec:
   selector:
     app: rabbitmq
   ports:
-    - name: amqp
-      port: 5672
-      targetPort: 5672
+    - name: amqps
+      port: 5671
+      targetPort: 5671
+    # Interface de gestion : jointe par l'ingress Traefik (https://rabbitmq.localhost, k8s/14-ingress.yaml).
+    - name: management
+      port: 15672
+      targetPort: 15672

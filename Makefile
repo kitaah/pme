@@ -52,7 +52,7 @@ PROMETHEUS_HOST ?= prometheus.localhost
 ALLOY_HOST ?= alloy.localhost
 GARAGE_HOST ?= garage.localhost
 NATS_MONITOR_PORT ?= 8222
-RABBITMQ_UI_PORT ?= 15672
+RABBITMQ_HOST ?= rabbitmq.localhost
 DOCS_PORT ?= 8005
 DOCS_IMAGE_PORT ?= 8083
 DOCS_URL := http://localhost:$(DOCS_PORT)
@@ -61,12 +61,12 @@ DOCS_IMAGE_URL := http://localhost:$(DOCS_IMAGE_PORT)
 APP_URL := https://$(APP_HOST)
 KEYCLOAK_URL := https://$(KEYCLOAK_HOST)
 NATS_URL := https://localhost:$(NATS_MONITOR_PORT)
-RABBITMQ_URL := http://localhost:$(RABBITMQ_UI_PORT)
+RABBITMQ_URL := https://$(RABBITMQ_HOST)
 ADMINER_URL := https://$(ADMINER_HOST)
 PROMETHEUS_URL := https://$(PROMETHEUS_HOST)
 GRAFANA_URL := https://$(GRAFANA_HOST)
 ALLOY_URL := https://$(ALLOY_HOST)
-HOSTS := $(APP_HOST) $(KEYCLOAK_HOST) $(ADMINER_HOST) $(GRAFANA_HOST) $(PROMETHEUS_HOST) $(ALLOY_HOST) $(GARAGE_HOST)
+HOSTS := $(APP_HOST) $(KEYCLOAK_HOST) $(ADMINER_HOST) $(GRAFANA_HOST) $(PROMETHEUS_HOST) $(ALLOY_HOST) $(RABBITMQ_HOST) $(GARAGE_HOST)
 
 # Charge .env s'il existe (POSTGRES_*, NATS_*, KEYCLOAK_ADMIN*, GRAFANA_ADMIN*), non versionne.
 -include .env
@@ -143,7 +143,7 @@ help:
 	@echo ""
 	@echo "  Developpement local"
 	@echo "    make install                  - npm ci a la racine (api, moderation-service, libs/common) puis dans frontend"
-	@echo "    make port-forward             - Pour developper : NATS :8222 et :4222, RabbitMQ :15672 et :5672, Postgres :5432 -> localhost, et l'ingress sur le port 80 s'il n'y est pas deja"
+	@echo "    make port-forward             - Pour developper : NATS :8222 et :4222, RabbitMQ :5671, Postgres :5432 -> localhost, et l'ingress sur le port 80 s'il n'y est pas deja"
 	@echo "    make api | moderation | frontend"
 	@echo ""
 	@echo "  Tests"
@@ -722,12 +722,10 @@ port-forward:
 	@( while true; do kubectl -n $(NS) port-forward deploy/nats $(NATS_MONITOR_PORT):8222; sleep 2; done ) &
 	@( while true; do kubectl -n $(NS) port-forward svc/postgres 5432:5432; sleep 2; done ) &
 	@( while true; do kubectl -n $(NS) port-forward svc/nats 4222:4222; sleep 2; done ) &
-	@( while true; do kubectl -n $(NS) port-forward svc/rabbitmq 5672:5672; sleep 2; done ) &
-	@( while true; do kubectl -n $(NS) port-forward deploy/rabbitmq $(RABBITMQ_UI_PORT):15672; sleep 2; done ) &
+	@( while true; do kubectl -n $(NS) port-forward svc/rabbitmq 5671:5671; sleep 2; done ) &
 	@sleep 2
 	@echo "NATS          : $(NATS_URL)/jsz?streams=1&consumers=1"
-	@echo "RabbitMQ      : $(RABBITMQ_URL) (identifiants : RABBITMQ_USER / RABBITMQ_PASSWORD du fichier .env)"
-	@echo "NATS (client) : localhost:4222 ; RabbitMQ (client) : localhost:5672 ; PostgreSQL : localhost:5432"
+	@echo "NATS (client) : localhost:4222 ; RabbitMQ (client) : localhost:5671 ; PostgreSQL : localhost:5432"
 	@echo "Application   : $(APP_URL) (ingress sur 127.0.0.1:80 et :443, ligne /etc/hosts de 'make hosts' requise)"
 	@echo "'make stop-forward' pour tout arreter."
 
@@ -751,7 +749,7 @@ DEV_KEYCLOAK_ENV = KEYCLOAK_ISSUER=$(KEYCLOAK_URL)/realms/pme \
 # Broker utilise par `make api` et `make moderation` (nats ou rabbitmq) : make api BROKER=rabbitmq
 BROKER ?= nats
 
-DEV_TLS_ENV = DB_SSL_CA=$(CURDIR)/$(CA_FILE) NATS_TLS_CA=$(CURDIR)/$(CA_FILE)
+DEV_TLS_ENV = DB_SSL_CA=$(CURDIR)/$(CA_FILE) NATS_TLS_CA=$(CURDIR)/$(CA_FILE) RABBITMQ_TLS_CA=$(CURDIR)/$(CA_FILE)
 
 api: ca-cert
 	@cd api && DB_HOST=localhost DB_NAME=pme DB_USER=pme_api DB_PASSWORD='$(DB_API_PASSWORD)' \
@@ -919,7 +917,7 @@ app:
 keycloak:
 	@xdg-open "$(KEYCLOAK_URL)" 2>/dev/null || open "$(KEYCLOAK_URL)" 2>/dev/null || echo "Ouvrir : $(KEYCLOAK_URL)"
 
-# Interface web de RabbitMQ (necessite `make port-forward`). Connexion : RABBITMQ_USER / RABBITMQ_PASSWORD du fichier .env.
+# Interface web de RabbitMQ, servie par l'ingress (ligne `make hosts` requise). Connexion : RABBITMQ_USER / RABBITMQ_PASSWORD du .env.
 rabbitmq:
 	@xdg-open "$(RABBITMQ_URL)" 2>/dev/null || open "$(RABBITMQ_URL)" 2>/dev/null || echo "Ouvrir : $(RABBITMQ_URL)"
 

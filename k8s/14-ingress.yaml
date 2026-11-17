@@ -14,8 +14,9 @@
 #   grafana.localhost    -> grafana
 #   prometheus.localhost -> prometheus
 #   alloy.localhost      -> alloy (interface de suivi de la collecte des logs)
+#   rabbitmq.localhost   -> rabbitmq (interface de gestion, port 15672 ; la connexion se fait avec le compte RabbitMQ)
 #   garage.localhost     -> garage (photos des annonces, lues par URL signee)
-# Loki, NATS, PostgreSQL et MkDocs n'ont pas d'ingress (Loki n'est interroge que par Grafana) : NATS et PostgreSQL restent joints par "make port-forward".
+# Loki, NATS, PostgreSQL et MkDocs n'ont pas d'ingress (Loki n'est interroge que par Grafana) : NATS et PostgreSQL restent joints par "make port-forward". Le port AMQP de RabbitMQ non plus ; seule son interface de gestion passe par l'ingress.
 #
 # Controleur : Traefik, installe par Helm (make ingress). Il remplace ingress-nginx, archive en mars 2026.
 # Les anciennes annotations nginx.ingress.kubernetes.io/* n'existent plus : la redirection vers HTTPS est faite par
@@ -73,6 +74,7 @@ spec:
         - grafana.localhost
         - prometheus.localhost
         - alloy.localhost
+        - rabbitmq.localhost
   rules:
     - host: pme.localhost
       http:
@@ -116,6 +118,13 @@ spec:
             pathType: Prefix
             backend:
               service: { name: alloy, port: { number: 12345 } }
+    - host: rabbitmq.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: rabbitmq, port: { number: 15672 } }
 ---
 # Stockage objet : le navigateur lit les photos ici, par URL signee de courte duree fournie par l'API (relation 13 du C4
 # niveau 2). Pas de validation de jeton a l'ingress : la signature de l'URL EST l'autorisation, et un jeton Keycloak ne

@@ -44,6 +44,9 @@ configMapGenerator:
   - name: postgres-hba
     files:
       - pg_hba.conf=config/postgres-hba.conf
+  - name: rabbitmq-config
+    files:
+      - rabbitmq.conf=config/rabbitmq.conf
   - name: nats-config
     files:
       - nats.conf=config/nats.conf

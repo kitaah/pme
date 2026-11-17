@@ -47,6 +47,8 @@ export interface RabbitMqConfig {
   port: number;
   user: string;
   password: string;
+  /** Autorite qui a signe le certificat du serveur : sa presence active le TLS (port 5671), comme `tlsCaFile` de NATS. */
+  tlsCaFile?: string;
 }
 
 export interface KeycloakConfig {
@@ -112,11 +114,14 @@ export function loadNatsConfig(env: NodeJS.ProcessEnv): NatsConfig {
 }
 
 export function loadRabbitMqConfig(env: NodeJS.ProcessEnv): RabbitMqConfig {
+  const tlsCaFile = env.RABBITMQ_TLS_CA || undefined;
   return {
     host: env.RABBITMQ_HOST ?? 'localhost',
-    port: num(env, 'RABBITMQ_PORT', 5672),
+    // 5671 : port AMQP chiffre ; 5672 : port en clair (tests d'integration, developpement sans TLS).
+    port: num(env, 'RABBITMQ_PORT', tlsCaFile ? 5671 : 5672),
     user: required(env, 'RABBITMQ_USER'),
     password: required(env, 'RABBITMQ_PASSWORD'),
+    tlsCaFile,
   };
 }
 

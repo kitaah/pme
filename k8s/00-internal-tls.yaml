@@ -1,4 +1,4 @@
-# Certificats TLS des services internes du SI (PostgreSQL et NATS).
+# Certificats TLS des services internes du SI (PostgreSQL, NATS et RabbitMQ).
 # Signes par l'autorite locale `pme-ca-issuer` (k8s/cert-manager/issuers.yaml), la meme que les certificats
 # de l'ingress (k8s/12-certificate.yaml) : un seul bundle de confiance pour tout le cluster.
 #
@@ -63,6 +63,35 @@ spec:
     - nats.pme
     - nats.pme.svc
     - nats.pme.svc.cluster.local
+    - localhost
+  issuerRef:
+    name: pme-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rabbitmq-tls
+  labels:
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/component: messaging
+spec:
+  secretName: rabbitmq-tls
+  commonName: rabbitmq
+  duration: 2160h # 90 jours
+  renewBefore: 360h # renouvele 15 jours avant l'expiration
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  usages:
+    - server auth
+  dnsNames:
+    - rabbitmq
+    - rabbitmq.pme
+    - rabbitmq.pme.svc
+    - rabbitmq.pme.svc.cluster.local
     - localhost
   issuerRef:
     name: pme-ca-issuer
