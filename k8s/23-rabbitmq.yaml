@@ -1,10 +1,12 @@
-# RabbitMQ 4.1 : seconde solution de messagerie du POC, comparee a NATS JetStream (k8s/04-nats.yaml).
+# RabbitMQ 4.3 : seconde solution de messagerie du POC, comparee a NATS JetStream (k8s/04-nats.yaml).
 # Les deux brokers tournent en permanence ; l'API et la moderation parlent a celui que designe la variable BROKER
 # (k8s/08-api.yaml et k8s/09-moderation.yaml). `make broker-nats` / `make broker-rabbitmq` changent ce choix sans
 # reconstruire d'image.
 #
-# Un seul port est publie : 5672 (AMQP, clients). Il n'y a pas d'interface de gestion (le plugin `management` n'est
-# pas dans cette image) : l'etat des files se lit avec `make queues-rabbitmq` (rabbitmqctl, via kubectl exec).
+# Seul le port 5672 (AMQP, clients) est publie par le Service. L'image `-management` embarque l'interface web de gestion
+# (port 15672 du pod, HTTP) : elle n'est pas publiee, comme le port de supervision 8222 de NATS. On l'ouvre avec
+# `make port-forward` puis `make rabbitmq` (connexion avec RABBITMQ_USER et RABBITMQ_PASSWORD du fichier .env).
+# L'etat des files se lit aussi en ligne de commande : `make queues-rabbitmq` (rabbitmqctl, via kubectl exec).
 # Le trafic entre pods est chiffre par le maillage Istio (mTLS, k8s/20-mesh-mtls.yaml) : RabbitMQ n'a pas de TLS propre
 # dans cette branche, contrairement a NATS.
 #
@@ -59,10 +61,12 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: rabbitmq
-          image: rabbitmq:4.1-alpine
+          image: rabbitmq:4.3-management-alpine
           ports:
             - name: amqp
               containerPort: 5672
+            - name: management
+              containerPort: 15672
           env:
             - name: RABBITMQ_NODENAME
               value: rabbit@localhost
@@ -79,7 +83,7 @@ spec:
               add: [CHOWN, SETUID, SETGID, DAC_OVERRIDE, FOWNER]
           resources:
             requests: { cpu: 100m, memory: 256Mi }
-            limits: { cpu: "1", memory: 512Mi }
+            limits: { cpu: "1", memory: 768Mi }
           volumeMounts:
             - name: data
               mountPath: /var/lib/rabbitmq
