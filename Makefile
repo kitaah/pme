@@ -631,7 +631,7 @@ logs-rabbitmq:
 	kubectl -n $(NS) logs -l app=rabbitmq --tail=100 -f
 
 logs-nats:
-	kubectl -n $(NS) logs -l app=nats --tail=100 -f
+	kubectl -n $(NS) logs -l app=nats -c nats --tail=100 -f
 
 # Pour la demonstration : la publication cote API, puis la reception cote moderation (les memes lignes pour NATS
 # et pour RabbitMQ ; `make broker` dit lequel est actif).
@@ -647,7 +647,7 @@ logs-receive:
 # utiliser `make port-forward` puis curl --cacert avec la CA locale (le certificat couvre `localhost`).
 # Lecture : messages en attente (`messages`) et consommateurs connectes (`num_waiting`, `ack_floor`).
 queues:
-	@kubectl -n $(NS) exec deploy/nats -- wget --no-check-certificate -qO- 'https://localhost:8222/jsz?streams=1&consumers=1' \
+	@kubectl -n $(NS) exec deploy/nats -c nats -- wget --no-check-certificate -qO- 'https://localhost:8222/jsz?streams=1&consumers=1' \
 		| python3 -m json.tool
 
 # Etat des files RabbitMQ (rabbitmqctl, depuis le pod). `messages_ready` = en attente, `messages_unacknowledged` = recus

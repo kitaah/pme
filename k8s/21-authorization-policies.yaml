@@ -89,6 +89,14 @@ spec:
       to:
         - operation:
             ports: ["4222"]
+    # Metriques : Prometheus lit le conteneur `exporter` du pod.
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/pme/sa/prometheus
+      to:
+        - operation:
+            ports: ["7777"]
 ---
 # RabbitMQ : l'API (publie) et la moderation (lit) sur le port AMQP chiffre, et l'ingress Traefik sur l'interface de
 # gestion (15672).
@@ -117,6 +125,14 @@ spec:
       to:
         - operation:
             ports: ["15672"]
+    # Metriques : Prometheus lit le plugin rabbitmq_prometheus.
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/pme/sa/prometheus
+      to:
+        - operation:
+            ports: ["15692"]
 ---
 # Keycloak : l'ingress (page de connexion, console), l'API et la moderation (cles de verification des jetons), et le Job
 # keycloak-admin (creation de l'administrateur permanent).

@@ -23,3 +23,23 @@ scrape_configs:
       - names: ['pme-moderation-headless.pme.svc.cluster.local']
         type: A
         port: 3001
+  # Releves toutes les 5 s (et non 15 s) : un seul message doit se voir en direct dans le tableau de bord.
+  # Les deux brokers, cote a cote dans le tableau de bord « NATS et RabbitMQ ». NATS n'a pas de format Prometheus :
+  # le conteneur `exporter` de son pod (k8s/04-nats.yaml) relit sa supervision et l'expose sur le port 7777.
+  # RabbitMQ le fait lui-meme (plugin rabbitmq_prometheus, actif dans l'image) sur le port 15692.
+  - job_name: nats
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['nats.pme.svc.cluster.local:7777']
+  - job_name: rabbitmq
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['rabbitmq.pme.svc.cluster.local:15692']
+  # Le point d'entree par defaut agrege toutes les files : cette seconde lecture donne les compteurs file par file
+  # (listing.submitted et sa file des echecs). Ses series portent le prefixe rabbitmq_detailed_.
+  - job_name: rabbitmq-queues
+    metrics_path: /metrics/detailed
+    params:
+      family: [queue_coarse_metrics, queue_consumer_count]
+    static_configs:
+      - targets: ['rabbitmq.pme.svc.cluster.local:15692']

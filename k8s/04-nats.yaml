@@ -3,8 +3,13 @@
 # arrete serait perdu. JetStream apporte le flux durable, l'acquittement manuel et la remise en file.
 #
 # Deux ports : 4222 pour les clients, 8222 pour la supervision en HTTPS (/healthz, /jsz).
-# Seul 4222 est publie par le Service : le port 8222 n'est joignable que depuis le pod lui-meme (`make queues`, via
-# kubectl exec) et par les sondes de Kubernetes, qui s'adressent au pod. Les autres pods du namespace ne peuvent pas le lire.
+# Le Service publie 4222 (clients) et 7777 (metriques pour Prometheus, voir ci-dessous) : le port 8222 n'est joignable que
+# depuis le pod lui-meme (`make queues`, via kubectl exec, et le conteneur `exporter`) et par les sondes de Kubernetes,
+# qui s'adressent au pod. Les autres pods du namespace ne peuvent pas le lire.
+#
+# Metriques : NATS ne parle pas le format de Prometheus. Le conteneur `exporter`, dans le meme pod, relit /varz et /jsz
+# sur https://localhost:8222 et les expose sur le port 7777. Il fait confiance a l'autorite locale (SSL_CERT_FILE) : le
+# certificat de NATS couvre `localhost`.
 # Pour le consulter depuis l'ordinateur : `make port-forward`, qui vise le Deployment et non le Service.
 # NATS n'a pas d'interface web : l'etat des flux se lit sur /jsz (voir `make queues` et `make nats`).
 #
@@ -53,6 +58,9 @@ spec:
         app: nats
         app.kubernetes.io/name: nats
         app.kubernetes.io/component: messaging
+      annotations:
+        # Avec deux conteneurs, `kubectl logs` et `kubectl exec` (make logs-nats, make queues) visent celui-ci par defaut.
+        kubectl.kubernetes.io/default-container: nats
     spec:
       serviceAccountName: nats
       automountServiceAccountToken: false
@@ -108,6 +116,34 @@ spec:
             httpGet: { path: /healthz, port: 8222, scheme: HTTPS }
             initialDelaySeconds: 15
             periodSeconds: 20
+        # Convertit la supervision de NATS au format Prometheus (port 7777). Lecture seule, sans droits, sans acces reseau
+        # sortant : il ne parle qu'a NATS, dans le pod.
+        - name: exporter
+          image: natsio/prometheus-nats-exporter:0.16.0
+          args:
+            - "-varz"
+            - "-jsz=all"
+            - "https://localhost:8222"
+          ports:
+            - name: metrics
+              containerPort: 7777
+          env:
+            # Go lit ce fichier a la place des autorites du systeme : le certificat de NATS est signe par l'autorite locale.
+            - name: SSL_CERT_FILE
+              value: /etc/nats/ca/ca.crt
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 64Mi }
+          volumeMounts:
+            - name: tls-ca
+              mountPath: /etc/nats/ca
+              readOnly: true
       volumes:
         - name: jetstream
           persistentVolumeClaim:
@@ -117,6 +153,14 @@ spec:
           secret:
             secretName: nats-tls
             defaultMode: 0440
+        # Le certificat de l'autorite seul (public), lisible par l'exporter qui ne tourne pas en root.
+        - name: tls-ca
+          secret:
+            secretName: nats-tls
+            defaultMode: 0444
+            items:
+              - key: ca.crt
+                path: ca.crt
         - name: config
           configMap:
             name: nats-config
@@ -136,3 +180,6 @@ spec:
     - name: client
       port: 4222
       targetPort: 4222
+    - name: metrics
+      port: 7777
+      targetPort: 7777
