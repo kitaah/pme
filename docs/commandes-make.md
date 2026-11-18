@@ -31,7 +31,7 @@ Chaque ligne donne la commande et ce qu'elle fait. Les prérequis (Docker, `sudo
 dans la description, et une commande lancée par une autre le précise.
 
 **Ordre habituel.**
-Au premier démarrage, et après un `minikube delete` : `make minikube-up`, import de l'autorité locale dans le
+La première mise en place, pas à pas, est décrite dans [Initialiser le projet](#initialiser-le-projet). Au premier démarrage, et après un `minikube delete` : `make minikube-up`, import de l'autorité locale dans le
 navigateur, `make seal` (nouveau cluster, donc nouvelle clé ; génère aussi les secrets de Garage s'ils manquent), `make image`
 (le nouveau cluster n'a plus les images), puis `make deploy`, qui lance aussi la mise en service du stockage des photos. Après une modification du code :
 `make redeploy`. Pour repartir de zéro dans le même cluster : `make reset`.
@@ -59,6 +59,51 @@ navigateur, `make seal` (nouveau cluster, donc nouvelle clé ; génère aussi le
     `env.example`, et `k8s/01-pme-secrets-sealed.yaml`, généré par `make deploy` s'il manque. Une fois présents, ils ne
     sont jamais réécrits tout seuls : après un changement de mot de passe, c'est `make seal` qui les met à jour. Les
     quatre secrets de Garage et les quatre mots de passe des comptes PostgreSQL de service, eux, sont générés dans `.env` par `make seal` s'ils manquent, puis jamais modifiés.
+
+## Initialiser le projet
+
+### Prérequis
+
+Avant la première commande, ces outils doivent être présents sur l'ordinateur. Les deux derniers sont installés par
+le `Makefile` lui-même.
+
+| Outil | Ce qu'il faut |
+|---|---|
+| **Système** | Linux (le projet est éprouvé sous Debian et Ubuntu). Deux commandes sont réservées à Linux : `make inotify` et l'installation automatique de `kubeseal`. |
+| **Docker** | Installé, démarré et utilisable sans `sudo`. Minikube s'en sert pour créer le cluster, et les trois images sont construites avec. |
+| **Minikube** | Installé. Le cluster demande 5 120 Mo de mémoire et 2 processeurs par défaut (variables `MINIKUBE_MEMORY` et `MINIKUBE_CPUS`). |
+| **`kubectl`** | Installé. Le `Makefile` l'appelle directement pour parler au cluster. |
+| **`make`, `curl`, `openssl` et `sudo`** | `make` lance les commandes. `curl` télécharge Helm et `kubeseal`. `openssl` génère les secrets. `sudo` est demandé par `make minikube-up`, `make inotify`, `make helm` et `make kubeseal`. |
+| **Helm** | Installé par `make helm` s'il est absent. |
+| **`kubeseal`** | Installé par `make kubeseal` s'il est absent. |
+
+Pour lancer les tests, il faut en plus Node.js 24 ou plus, puis `make install`. Les contrôles de la pipeline rejoués en
+local (`make image-test`, `make lint-docker`, `make lint-yaml`, `make secrets-scan`, `make test-perf`) demandent
+chacun leur propre outil et restent facultatifs.
+
+### Les étapes
+
+À suivre une seule fois, depuis la racine du dépôt. Chaque commande attend la fin de la précédente.
+
+| Commande ou action | Ce qu'elle fait |
+|---|---|
+| **`make env`** | Crée `.env` à partir de `env.example`. |
+| **Éditer `.env`** | Remplace chaque `CHANGE_ME` par un vrai mot de passe. `make seal` refuse de continuer s'il en reste. |
+| **`make helm`** | Installe Helm s'il est absent (`sudo` demandé). Requis par l'étape suivante. |
+| **`make kubeseal`** | Installe l'outil `kubeseal` à la bonne version s'il est absent (`sudo` demandé). Requis par `make seal`. |
+| **`make minikube-up`** | Crée le cluster, puis installe l'ingress, Istio, cert-manager et metrics-server. Écrit aussi `pme-ca.crt`. |
+| **`make hosts`** | Affiche la ligne à ajouter dans `/etc/hosts`. Elle n'écrit rien : la coller à la main. |
+| **Importer `pme-ca.crt`** | À faire une fois dans le navigateur, pour que les adresses en `.localhost` soient reconnues comme sûres. |
+| **`make seal`** | Installe Sealed Secrets sur le cluster s'il manque, génère les secrets manquants, puis chiffre `.env` dans `k8s/01-pme-secrets-sealed.yaml`. |
+| **`make image`** | Construit les trois images (API, modération, interface) et les charge dans Minikube. |
+| **`make deploy`** | Applique les manifestes dans le cluster, puis prépare le stockage des photos. |
+| **`make pods`** | Suit le démarrage. Keycloak met environ une minute à être prêt. |
+| **`make app`** | Ouvre l'application sur `https://pme.localhost`. |
+
+!!! warning "Attention"
+    Après un `minikube delete`, le cluster est neuf : il n'a plus ni la clé de chiffrement des secrets, ni les images, ni
+    l'autorité locale. Refaire `make minikube-up`, l'import de `pme-ca.crt`, `make seal`, `make image` et `make deploy`.
+    Le fichier `.env` et les paquets déjà installés restent valables.
 
 ## Toutes les commandes
 
