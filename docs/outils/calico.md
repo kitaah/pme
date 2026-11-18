@@ -106,9 +106,9 @@ La liste des composants et de leurs appelants autorisés figure dans la page [Du
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`../../k8s/22-network-policies.yaml`** | Déclare le refus par défaut et la politique de chaque composant. |
-| **`../../k8s/21-authorization-policies.yaml`** | Déclare les mêmes règles côté Istio, par identité : les deux fichiers se modifient ensemble. |
-| **`Makefile`**<br>(cibles **`minikube-up`**,<br>**`netpol-check`** et **`authz-check`**) | Crée le cluster avec Calico, puis vérifie les politiques réseau et les autorisations d'Istio. |
+| **`k8s/22-network-policies.yaml`** | Déclare le refus par défaut et la politique de chaque composant. |
+| **`k8s/21-authorization-policies.yaml`** | Déclare les mêmes règles côté Istio, par identité : les deux fichiers se modifient ensemble. |
+| **`make minikube-up`**<br>**`make netpol-check`**<br>**`make authz-check`** | Crée le cluster avec Calico, puis vérifie les politiques réseau et les autorisations d'Istio. |
 
 ## Commandes essentielles
 

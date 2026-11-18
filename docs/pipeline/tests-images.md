@@ -1,20 +1,36 @@
 # Tests des images Docker
 
-## Objectif
+## Fiche d'identité
 
-Vérifier que les trois images livrées sont conformes et sûres : elles ne tournent pas en administrateur, ne contiennent
-ni secret ni outil de développement, démarrent comme Kubernetes l'attend, et n'embarquent aucune faille grave déjà
-corrigeable.
+| Information | Détail |
+|---|---|
+| **Rôle** | Vérifie que les trois images livrées sont conformes et sûres |
+| **Job** | `image-tests` |
+| **Outils** | container-structure-test 1.19.3, Trivy 0.71.2 et BuildKit |
+| **Déclencheur** | Chaque pipeline, sur la branche principale |
+| **Durée** | 2 à 3 minutes avec le cache de construction rempli, limite fixée à 6 minutes |
+
+## Description
+
+Les tests des images vérifient que les trois images livrées sont conformes et sûres : elles ne tournent pas en administrateur, ne contiennent ni secret ni outil de développement, démarrent comme Kubernetes l'attend, et n'embarquent aucune faille grave déjà corrigeable.
+
+**Le problème qu'ils résolvent.**
+Un Dockerfile correct peut quand même produire une image dangereuse : compte administrateur, secret copié par erreur, outil de développement embarqué, paquet vulnérable hérité de l'image de base. Ces défauts ne se voient que dans l'image construite.
+
+**Comment ils fonctionnent.**
+Un seul job construit les trois images en parallèle, contrôle leur structure avec container-structure-test, puis cherche leurs failles avec Trivy. Si tout réussit, sur la branche principale, il les publie.
 
 **Définitions**
 
-- **Image Docker** : modèle figé d'une application, à partir duquel Docker crée des conteneurs.
-- **container-structure-test** : outil libre de Google qui contrôle le contenu et la configuration d'une image.
-- **Trivy** : outil libre qui cherche les failles connues dans les paquets d'une image.
-- **Faille (CVE)** : défaut de sécurité public, repéré par un identifiant du type `CVE-2026-00000`.
-- **Gravité** : niveau de risque d'une faille. Le projet bloque les niveaux HIGH (élevé) et CRITICAL (critique).
-- **Faille corrigeable** : faille pour laquelle l'éditeur a déjà publié un correctif.
-- **BuildKit (bake)** : moteur de Docker qui construit plusieurs images en parallèle.
+| Terme | Définition |
+|---|---|
+| **BuildKit (bake)** | moteur de Docker qui construit plusieurs images en parallèle. |
+| **container-structure-test** | outil libre de Google qui contrôle le contenu et la configuration d'une image. |
+| **Faille (CVE)** | défaut de sécurité public, repéré par un identifiant du type `CVE-2026-00000`. |
+| **Faille corrigeable** | faille pour laquelle l'éditeur a déjà publié un correctif. |
+| **Gravité** | niveau de risque d'une faille. Le projet bloque les niveaux HIGH (élevé) et CRITICAL (critique). |
+| **Image Docker** | modèle figé d'une application, à partir duquel Docker crée des conteneurs. |
+| **Trivy** | outil libre qui cherche les failles connues dans les paquets d'une image. |
 
 ## Ce qui est vérifié
 
@@ -115,6 +131,8 @@ Voir [Publication des images](publication-images.md).
 ## Commandes essentielles
 
 À lancer dans un terminal, depuis le dossier du projet, Docker et Minikube démarrés.
+
+**Prérequis de `make image-test`.** Cette commande suppose que container-structure-test et Trivy sont installés sur l'ordinateur. Ce n'est pas obligatoire : le job `image-tests` les télécharge lui-même et passe ces contrôles à chaque commit sur la branche principale.
 
 | Commande | Description |
 |---|---|

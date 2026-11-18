@@ -275,5 +275,4 @@ Lors du premier démarrage, l'enchaînement est le suivant :
 - [Site officiel de Minikube](https://minikube.sigs.k8s.io/)
 - [Documentation de Kubernetes](https://kubernetes.io/fr/docs/home/)
 - [Site officiel de Kustomize](https://kustomize.io/)
-- [Site officiel de Hadolint](https://github.com/hadolint/hadolint)
 - [Liste des règles de Hadolint](https://github.com/hadolint/hadolint#rules)

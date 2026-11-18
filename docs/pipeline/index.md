@@ -5,8 +5,7 @@
 | Information | Détail |
 |---|---|
 | **Rôle** | Vérifie automatiquement la qualité du code et des images à chaque modification de la branche principale, puis publie les images vérifiées dans le registre GitLab |
-| **Plateforme** | GitLab CI/CD, offre gratuite (400 minutes de calcul par mois) |
-| **Configuration** | Le fichier `.gitlab-ci.yml`, à la racine du dépôt |
+| **Plateforme** | GitLab CI/CD, offre gratuite (400 minutes de calcul par mois), configurée par le fichier `.gitlab-ci.yml` à la racine du dépôt |
 | **Déclencheur** | Chaque commit ou fusion sur la branche principale (`main`) |
 | **Durée visée** | Moins de 5 minutes par pipeline (environ 2 à 3 minutes une fois le cache de construction rempli) |
 | **Nombre de jobs** | 16 jobs, répartis en 10 familles de contrôles |
@@ -102,10 +101,10 @@ Tous ces jobs tournent à **chaque** pipeline, quels que soient les fichiers mod
 
 | Job | Ce qu'il contrôle |
 |---|---|
-| **`unit-tests:common`** | Les 67 tests unitaires du module commun et leur couverture. |
+| **`unit-tests:common`** | Les 64 tests unitaires du module commun et leur couverture. |
 | **`unit-tests:api`** | Les 132 tests unitaires de l'API. |
 | **`unit-tests:moderation-service`** | Les 50 tests unitaires du service de modération. |
-| **`unit-tests:frontend`** | Les 141 tests unitaires de l'interface. |
+| **`unit-tests:frontend`** | Les 147 tests unitaires de l'interface. |
 | **`sonar`** | La qualité du code, la couverture et les doublons. |
 | **`lint:code`** | 4 jobs, un par module : ESLint (complexité cyclomatique de 10 au plus, cognitive de 15 au plus), typage `tsc` et mise en forme Prettier. |
 | **`lint:yaml`** | Les fichiers YAML : manifestes Kubernetes, tests d'images et pipeline. |
@@ -135,7 +134,7 @@ Le détail de ces règles se trouve dans la page [Fonctionnement](fonctionnement
 |---|---|
 | **[Exigences qualité](exigences-qualite.md)** | Les exigences du projet et le test qui prouve chacune. |
 | **[Fonctionnement](fonctionnement.md)** | Déclenchement, optimisations, quota et lecture des résultats. |
-| **[Tests unitaires](tests-unitaires.md)** | La liste des 387 tests unitaires. |
+| **[Tests unitaires](tests-unitaires.md)** | La liste des 393 tests unitaires. |
 | **[Tests d'intégration](tests-integration.md)** | La liste des 35 tests d'intégration. |
 | **[Lint du code](lint-code.md)** | ESLint, complexité, typage et mise en forme des 4 modules. |
 | **[Lint YAML](lint-yaml.md)** | Les règles yamllint appliquées aux fichiers YAML. |

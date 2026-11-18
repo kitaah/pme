@@ -1,17 +1,34 @@
 # Tests de performance
 
-## Objectif
+## Fiche d'identité
 
-Vérifier que l'API reste rapide et fiable quand plusieurs utilisateurs s'en servent en même temps. Le test échoue si un
-seuil de temps de réponse ou d'erreurs est dépassé : il peut donc bloquer une pipeline.
+| Information | Détail |
+|---|---|
+| **Rôle** | Vérifie que l'API reste rapide et fiable quand plusieurs utilisateurs s'en servent en même temps |
+| **Job** | `performance-tests` |
+| **Outil** | k6 1.4.0 |
+| **Déclencheur** | Chaque pipeline, sur la branche principale |
+| **Seuil principal** | 95 % des dépôts d'annonce répondent en moins de 500 ms |
+
+## Description
+
+Les tests de performance vérifient que l'API reste rapide et fiable quand plusieurs utilisateurs s'en servent en même temps. Le test échoue si un seuil de temps de réponse ou d'erreurs est dépassé : il peut donc bloquer une pipeline.
+
+**Le problème qu'ils résolvent.**
+Un test fonctionnel vérifie qu'une réponse est correcte, pas qu'elle arrive vite quand plusieurs personnes demandent en même temps. Sans test de charge, une lenteur n'apparaît qu'en situation réelle.
+
+**Comment ils fonctionnent.**
+k6 simule des utilisateurs virtuels qui déposent des annonces et lisent leur liste, puis compare les temps de réponse et le taux d'erreurs à des seuils. Si un seuil est dépassé, le job échoue.
 
 **Définitions**
 
-- **Test de charge** : test qui envoie beaucoup de demandes à une application pour vérifier qu'elle reste rapide.
-- **Utilisateur virtuel** : utilisateur simulé par k6, qui répète un scénario en boucle.
-- **Seuil** : limite à ne pas dépasser. Si elle est dépassée, k6 signale un échec.
-- **Percentile 95** : durée en dessous de laquelle se situent 95 % des réponses.
-- **Faux fournisseur d'identité** : petit serveur local qui signe un jeton de test à la place de Keycloak.
+| Terme | Définition |
+|---|---|
+| **Faux fournisseur d'identité** | petit serveur local qui signe un jeton de test à la place de Keycloak. |
+| **Percentile 95** | durée en dessous de laquelle se situent 95 % des réponses. |
+| **Seuil** | limite à ne pas dépasser. Si elle est dépassée, k6 signale un échec. |
+| **Test de charge** | test qui envoie beaucoup de demandes à une application pour vérifier qu'elle reste rapide. |
+| **Utilisateur virtuel** | utilisateur simulé par k6, qui répète un scénario en boucle. |
 
 ## Ce qui est vérifié
 
@@ -105,6 +122,10 @@ Le job démarre l'API réelle avec les vrais services dont elle dépend, sans Do
 | **`make test-perf`** | Rejoue le job `performance-tests` : PostgreSQL et NATS jetables, API réelle, profil « ci ». |
 
 Les résultats sont écrits dans `perf-results/` (`summary.json`, `api.log`). Les conteneurs sont supprimés à la fin, même si un seuil est dépassé.
+
+!!! tip "Astuce"
+    Avant de pousser un changement qui touche le dépôt d'annonce, `make test-perf` rejoue le job en local : un seuil
+    dépassé se découvre alors sans attendre la pipeline.
 
 ## Pour aller plus loin
 

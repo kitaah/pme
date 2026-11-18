@@ -6,8 +6,7 @@
 |---|---|
 | **Objet** | Enrichir le dépôt d'annonce : titre, description, état, photo, puis confirmation par un message et redirection. Le formulaire propose l'échange, le don et la vente, avec les champs propres à chaque type |
 | **Périmètre** | Celui du POC : connexion, dépôt, prise en charge par le service de modération. La décision du modérateur est hors périmètre |
-| **Conteneur C4 concerné** | « Stockage de fichiers » (stockage objet S3), déjà prévu au C4 niveau 2 : aucun conteneur nouveau |
-| **Stockage retenu** | Garage (S3 compatible) dans Minikube, en remplacement local de l'hébergeur européen |
+| **Conteneur C4 concerné** | « Stockage de fichiers » (stockage objet S3), déjà prévu au C4 niveau 2 : aucun conteneur nouveau. Stockage retenu : Garage (S3 compatible) dans Minikube, en remplacement local de l'hébergeur européen |
 | **Photo** | Une seule par annonce, facultative, 5 Mo maximum, formats JPEG, PNG ou WebP |
 | **Référentiels** | RGAA 4 (accessibilité), C4 niveau 2 (architecture), Keycloak 26.8.1 |
 
@@ -118,7 +117,7 @@ vars: {
   d2-config: {
     layout-engine: elk
     theme-id: 5
-    pad: 16
+    pad: 8
   }
 }
 direction: right
@@ -219,16 +218,16 @@ Table `listings`, base `pme` :
 
 | Colonne | Type | Règle |
 |---|---|---|
-| `title` | texte | 3 à 100 caractères, obligatoire (inchangé) |
-| `description` | texte | 1000 caractères maximum, obligatoire (inchangé) |
-| `category_id` | clé étrangère | Référence `categories.id`, obligatoire. L'API reçoit et renvoie le code (`FIGURINES`…, `OTHER` par défaut) |
-| `condition` | énumération | `NEW`, `VERY_GOOD`, `GOOD`, `FAIR` (`NEW`, `GOOD`, `FAIR` existent déjà) |
-| `kind` | énumération | `EXCHANGE` (valeur par défaut), `GIFT`, `SALE` |
-| `wanted_in_exchange` | texte | Facultatif, 120 caractères maximum, saisi pour un échange |
-| `handover_place_id` | clé étrangère | Référence `handover_places.id`, obligatoire. L'API reçoit le code (`SHOP_LYON`…, `TO_AGREE` par défaut) et renvoie le code avec son libellé |
-| `price_cents` | entier | Obligatoire si `SALE` (1 à 999 999), vide sinon, garanti par une contrainte de base. En centimes, jamais en nombre décimal |
-| `photo_key` | texte | Clé de l'objet dans le bucket (`pending/<identifiant>.webp`), vide si pas de photo |
-| `photo_mime` | texte | Type de l'image stockée, vide si pas de photo |
+| **`title`** | texte | 3 à 100 caractères, obligatoire (inchangé) |
+| **`description`** | texte | 1000 caractères maximum, obligatoire (inchangé) |
+| **`category_id`** | clé étrangère | Référence `categories.id`, obligatoire. L'API reçoit et renvoie le code (`FIGURINES`…, `OTHER` par défaut) |
+| **`condition`** | énumération | `NEW`, `VERY_GOOD`, `GOOD`, `FAIR` (`NEW`, `GOOD`, `FAIR` existent déjà) |
+| **`kind`** | énumération | `EXCHANGE` (valeur par défaut), `GIFT`, `SALE` |
+| **`wanted_in_exchange`** | texte | Facultatif, 120 caractères maximum, saisi pour un échange |
+| **`handover_place_id`** | clé étrangère | Référence `handover_places.id`, obligatoire. L'API reçoit le code (`SHOP_LYON`…, `TO_AGREE` par défaut) et renvoie le code avec son libellé |
+| **`price_cents`** | entier | Obligatoire si `SALE` (1 à 999 999), vide sinon, garanti par une contrainte de base. En centimes, jamais en nombre décimal |
+| **`photo_key`** | texte | Clé de l'objet dans le bucket (`pending/<identifiant>.webp`), vide si pas de photo |
+| **`photo_mime`** | texte | Type de l'image stockée, vide si pas de photo |
 
 Le statut existant (`PENDING_MODERATION`) reste inchangé. Les migrations initiales ne sont pas modifiées : cinq
 nouvelles migrations TypeORM, présentes dans l'API ou dans le service de modération (deux bases séparées), font
@@ -274,33 +273,33 @@ Catégories de départ :
 
 | Code | Libellé affiché |
 |---|---|
-| `FIGURINES` | Figurines et statues |
-| `FILMS` | Films |
-| `BOOKS` | Livres et fanzines |
-| `POSTERS` | Affiches et goodies |
-| `MUSIC` | Musique |
-| `GAMES` | Jeux |
-| `CLOTHING` | Vêtements |
-| `OTHER` | Autres |
+| **`FIGURINES`** | Figurines et statues |
+| **`FILMS`** | Films |
+| **`BOOKS`** | Livres et fanzines |
+| **`POSTERS`** | Affiches et goodies |
+| **`MUSIC`** | Musique |
+| **`GAMES`** | Jeux |
+| **`CLOTHING`** | Vêtements |
+| **`OTHER`** | Autres |
 
 Lieux de remise de départ :
 
 | Code | Libellé affiché |
 |---|---|
-| `SHOP_ANGOULEME` | Magasin d’Angoulême |
-| `SHOP_AIX` | Magasin d’Aix-en-Provence |
-| `SHOP_LYON` | Magasin de Lyon |
-| `SHOP_LONDON` | Magasin de Londres |
-| `TO_AGREE` | À convenir avec le membre |
+| **`SHOP_ANGOULEME`** | Magasin d’Angoulême |
+| **`SHOP_AIX`** | Magasin d’Aix-en-Provence |
+| **`SHOP_LYON`** | Magasin de Lyon |
+| **`SHOP_LONDON`** | Magasin de Londres |
+| **`TO_AGREE`** | À convenir avec le membre |
 
 À l'écran, le front traduit les autres codes par des tables de correspondance (comme `CONDITION_LABELS` dans `api.ts`) :
 
 | Code | Libellé affiché |
 |---|---|
-| `NEW` | Neuf |
-| `VERY_GOOD` | Très bon état |
-| `GOOD` | Bon état |
-| `FAIR` | Satisfaisant |
+| **`NEW`** | Neuf |
+| **`VERY_GOOD`** | Très bon état |
+| **`GOOD`** | Bon état |
+| **`FAIR`** | Satisfaisant |
 
 Les types d'annonce suivent la même logique : `EXCHANGE` « Échange », `GIFT` « Don », `SALE` « Vente ».
 
@@ -320,19 +319,19 @@ Les types d'annonce suivent la même logique : `EXCHANGE` « Échange », `GIFT`
 
 | Paquet | Rôle |
 |---|---|
-| `lucide-react` | Icônes (déjà installée) : convention de shadcn/ui, importées une par une |
-| `react-router` | Routes : formulaire, liste des annonces, redirection après dépôt |
-| `sonner` | Toast : composant de toast de shadcn/ui, positionné en haut à droite, avec un décalage sous l'en-tête (`position="top-right"`, `offset`) |
+| **`lucide-react`** | Icônes (déjà installée) : convention de shadcn/ui, importées une par une |
+| **`react-router`** | Routes : formulaire, liste des annonces, redirection après dépôt |
+| **`sonner`** | Toast : composant de toast de shadcn/ui, positionné en haut à droite, avec un décalage sous l'en-tête (`position="top-right"`, `offset`) |
 
 ### API (`api/`)
 
 | Paquet | Rôle |
 |---|---|
-| `@aws-sdk/client-s3` | Client S3 : envoi, suppression, lecture. Le point d'accès est configurable (Garage en local, hébergeur européen ensuite) |
-| `@aws-sdk/s3-request-presigner` | URL signées de lecture |
-| `@types/multer` | Types pour l'upload multipart, géré par `FileInterceptor` de NestJS |
-| `class-validator`, `class-transformer` | Validation des champs du formulaire |
-| `sharp` | Décode, redimensionne et ré-encode l'image en WebP : un fichier qui n'est pas une image est refusé (415), et les métadonnées EXIF sont retirées |
+| **`@aws-sdk/client-s3`** | Client S3 : envoi, suppression, lecture. Le point d'accès est configurable (Garage en local, hébergeur européen ensuite) |
+| **`@aws-sdk/s3-request-presigner`** | URL signées de lecture |
+| **`@types/multer`** | Types pour l'upload multipart, géré par `FileInterceptor` de NestJS |
+| **`class-validator`**<br>**`class-transformer`** | Validation des champs du formulaire |
+| **`sharp`** | Décode, redimensionne et ré-encode l'image en WebP : un fichier qui n'est pas une image est refusé (415), et les métadonnées EXIF sont retirées |
 
 ### Infrastructure (`k8s/`)
 
@@ -409,32 +408,32 @@ courant et 3:1 pour les composants d'interface.
 
 | Jeton | Code | Usage | Contraste avec le texte principal |
 |---|---|---|---|
-| `page` | `#110c16` | Fond de page | 17,2:1 |
-| `panel` | `#1b1522` | Cartes, en-tête, pied de page | 15,9:1 |
-| `inset` | `#271e30` | Champs de saisie, zones creusées | 14,2:1 |
-| `line` | `#3b2f47` | Séparateurs et bordures de cartes, décoratifs | 1,3:1 à 1,6:1, hors exigence |
-| `control` | `#9a8aa8` | Bordure des champs et des boutons-icônes | 5,0:1 à 6,0:1 (seuil 3:1) |
+| **`page`** | `#110c16` | Fond de page | 17,2:1 |
+| **`panel`** | `#1b1522` | Cartes, en-tête, pied de page | 15,9:1 |
+| **`inset`** | `#271e30` | Champs de saisie, zones creusées | 14,2:1 |
+| **`line`** | `#3b2f47` | Séparateurs et bordures de cartes, décoratifs | 1,3:1 à 1,6:1, hors exigence |
+| **`control`** | `#9a8aa8` | Bordure des champs et des boutons-icônes | 5,0:1 à 6,0:1 (seuil 3:1) |
 
 ### Textes, sur `page`, `panel` et `inset`
 
 | Jeton | Code | Usage | `page` | `panel` | `inset` |
 |---|---|---|---|---|---|
-| `ink` | `#f5f0f7` | Texte courant, titres | 17,2:1 | 15,9:1 | 14,2:1 |
-| `ink-muted` | `#d4c9dc` | Texte secondaire, liens du pied de page | 12,1:1 | 11,2:1 | 10,0:1 |
-| `ink-faint` | `#b8aac5` | Aides de saisie, mentions | 8,8:1 | 8,2:1 | 7,3:1 |
-| `blood-text` | `#ff9aa3` | Liens, statut « Refusée », texte rouge | 9,6:1 | 8,8:1 | 7,9:1 |
-| `gold` | `#e6b450` | Accent : sous-titre, rubrique courante, titres du pied de page | 10,1:1 | 9,4:1 | 8,4:1 |
-| `success` | `#7fdba5` | Statut « Publiée », rôle « Membre », bordure du toast | 11,6:1 | 10,7:1 | 9,6:1 |
-| `warning` | `#f2b866` | Statut « En attente de validation » | 10,9:1 | 10,1:1 | 9,0:1 |
+| **`ink`** | `#f5f0f7` | Texte courant, titres | 17,2:1 | 15,9:1 | 14,2:1 |
+| **`ink-muted`** | `#d4c9dc` | Texte secondaire, liens du pied de page | 12,1:1 | 11,2:1 | 10,0:1 |
+| **`ink-faint`** | `#b8aac5` | Aides de saisie, mentions | 8,8:1 | 8,2:1 | 7,3:1 |
+| **`blood-text`** | `#ff9aa3` | Liens, statut « Refusée », texte rouge | 9,6:1 | 8,8:1 | 7,9:1 |
+| **`gold`** | `#e6b450` | Accent : sous-titre, rubrique courante, titres du pied de page | 10,1:1 | 9,4:1 | 8,4:1 |
+| **`success`** | `#7fdba5` | Statut « Publiée », rôle « Membre », bordure du toast | 11,6:1 | 10,7:1 | 9,6:1 |
+| **`warning`** | `#f2b866` | Statut « En attente de validation » | 10,9:1 | 10,1:1 | 9,0:1 |
 
 ### Actions et focus
 
 | Jeton | Code | Usage | Contraste |
 |---|---|---|---|
-| `blood` | `#c9303f` | Fond du bouton principal et pastille du panier | Texte blanc `#ffffff` dessus : 5,3:1. Forme contre `page` 3,7:1, `panel` 3,4:1, `inset` 3,0:1 (seuil 3:1) |
-| `blood-dark` | `#a82533` | Bouton principal au survol | Texte blanc dessus : 7,1:1 |
-| `focus` | `#ffd479` | Anneau de focus de 2 px, décalé de 2 px | 11,4:1 à 13,7:1 sur les surfaces ; 3,8:1 sur `blood` et 5,0:1 sur `blood-dark` |
-| `on-gold` | `#110c16` | Texte du bouton de recherche, sur fond `gold` | 10,1:1 |
+| **`blood`** | `#c9303f` | Fond du bouton principal et pastille du panier | Texte blanc `#ffffff` dessus : 5,3:1. Forme contre `page` 3,7:1, `panel` 3,4:1, `inset` 3,0:1 (seuil 3:1) |
+| **`blood-dark`** | `#a82533` | Bouton principal au survol | Texte blanc dessus : 7,1:1 |
+| **`focus`** | `#ffd479` | Anneau de focus de 2 px, décalé de 2 px | 11,4:1 à 13,7:1 sur les surfaces ; 3,8:1 sur `blood` et 5,0:1 sur `blood-dark` |
+| **`on-gold`** | `#110c16` | Texte du bouton de recherche, sur fond `gold` | 10,1:1 |
 
 Règles d'usage :
 

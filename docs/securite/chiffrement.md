@@ -92,8 +92,8 @@ chaine: "" {
 | **Autorité de certification** | Entité qui signe des certificats. Un client ne fait confiance à un certificat que s'il fait confiance à son autorité. |
 | **Certificat** | Document qui associe un nom de serveur à une clé publique, et que signe une autorité. |
 | **ECDSA** | Famille d'algorithmes de signature à courbes elliptiques : des clés plus courtes que RSA, pour une sécurité équivalente. |
-| **mTLS** | TLS mutuel : le client et le serveur présentent chacun un certificat. C'est le mode du maillage Istio. |
 | **HSTS** | En-tête de réponse qui demande au navigateur de n'utiliser que HTTPS pour un site pendant une durée donnée. |
+| **mTLS** | TLS mutuel : le client et le serveur présentent chacun un certificat. C'est le mode du maillage Istio. |
 | **SCRAM-SHA-256** | Méthode d'authentification de PostgreSQL qui ne fait jamais circuler le mot de passe, même chiffré. |
 | **Terminaison TLS** | Endroit où le chiffrement s'arrête et où la requête redevient lisible. |
 | **TLS** | Protocole qui chiffre une communication et authentifie le serveur. Le « s » de HTTPS. |
@@ -159,7 +159,7 @@ n'est joignable que depuis le pod lui-même.
   retient la règle. La toute première visite d'un navigateur reste servie par la redirection, faute de liste de
   préchargement. En production, la durée serait portée à un an.
 
-## Commandes de vérification
+## Commandes essentielles
 
 À lancer dans un terminal, depuis le dossier du projet, la plateforme déployée.
 
@@ -191,7 +191,7 @@ depuis un autre pod avec `sslmode=disable` est rejetée par le serveur, avant m�
     Un avertissement du navigateur après un redéploiement signale presque toujours une autorité changée, et non une
     attaque. `make ca-cert`, puis un réimport, suffisent à le faire disparaître.
 
-## Fichiers principaux
+## Fichiers et dossiers principaux
 
 | Fichier ou dossier | Description |
 |---|---|

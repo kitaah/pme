@@ -1,17 +1,34 @@
 # Publication des images Docker
 
-## Objectif
+## Fiche d'identité
 
-Mettre à disposition les trois images de l'application dans un registre privé, uniquement après qu'elles ont réussi
-tous les contrôles. Une image publiée est donc une image vérifiée.
+| Information | Détail |
+|---|---|
+| **Rôle** | Dépose les trois images de l'application dans le registre privé de GitLab, uniquement après tous les contrôles |
+| **Job** | `image-tests`, dont la publication est la dernière étape |
+| **Registre** | `registry.gitlab.com/kitaah/pme` |
+| **Étiquette** | SHA court du commit, sans étiquette `latest` |
+| **Déclencheur** | Chaque pipeline sur la branche principale, si tous les contrôles réussissent |
+
+## Description
+
+La publication met à disposition les trois images de l'application dans un registre privé, uniquement après qu'elles ont réussi tous les contrôles. Une image publiée est donc une image vérifiée.
+
+**Le problème qu'elle résout.**
+Sans publication, les images contrôlées disparaissent à la fin du job, et ce qui serait déployé plus tard serait une reconstruction qui pourrait différer de ce qui a été vérifié. La publication garde l'image exacte qui a passé les contrôles.
+
+**Comment elle fonctionne.**
+La publication est la dernière étape du job `image-tests`. Si un contrôle échoue, rien n'est publié. Sinon, les trois images sont étiquetées avec le SHA court du commit, puis envoyées au registre. Le détail est donné dans la rubrique « Comment ça marche ».
 
 **Définitions**
 
-- **Registre de conteneurs** : entrepôt où l'on dépose et d'où l'on télécharge les images Docker. GitLab en fournit un par projet.
-- **Étiquette (tag)** : nom de version d'une image, par exemple `a1b2c3d4`.
-- **Étiquette immuable** : étiquette qui désigne toujours la même image et n'est jamais réécrite.
-- **SHA court** : les 8 premiers caractères de l'identifiant d'un commit.
-- **Dépôt d'images** : ensemble des versions d'une même image dans le registre.
+| Terme | Définition |
+|---|---|
+| **Dépôt d'images** | ensemble des versions d'une même image dans le registre. |
+| **Étiquette (tag)** | nom de version d'une image, par exemple `a1b2c3d4`. |
+| **Étiquette immuable** | étiquette qui désigne toujours la même image et n'est jamais réécrite. |
+| **Registre de conteneurs** | entrepôt où l'on dépose et d'où l'on télécharge les images Docker. GitLab en fournit un par projet. |
+| **SHA court** | les 8 premiers caractères de l'identifiant d'un commit. |
 
 ## Intérêt
 
@@ -86,6 +103,15 @@ docker pull registry.gitlab.com/kitaah/pme/api:<sha>
   (*Paramètres* > *Paquets et registres* > *Règles de nettoyage*).
 - Le déploiement dans Minikube construit encore ses images en local. Il ne télécharge pas celles du registre.
 - Le job `image-tests` doit rester sous sa limite de 6 minutes, envoi compris.
+
+!!! warning "Attention"
+    Le registre contient aussi les dépôts `cache/api`, `cache/moderation` et `cache/frontend` : ce sont le cache de
+    construction, pas des images à déployer. Les supprimer, par une règle de nettoyage par exemple, vide le cache : le job
+    `image-tests` dépasse alors sa limite de 6 minutes.
+
+!!! tip "Astuce"
+    Pour retrouver l'image d'un commit, copier le SHA court de ce commit (ses 8 premiers caractères) dans la liste des
+    commits de GitLab, puis le coller après les deux-points de l'adresse de l'image.
 
 ## Pour aller plus loin
 

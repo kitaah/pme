@@ -5,10 +5,9 @@
 | Information | Détail |
 |---|---|
 | **Rôle** | Stocke les photos des annonces, en dehors de la base de données |
-| **Version** | Garage 1.1, image `dxflrs/garage` |
+| **Version** | Garage 1.1, image `dxflrs/garage`, licence AGPLv3, projet français (Deuxfleurs) |
 | **Interface** | S3, celle d'Amazon : le même code fonctionne devant Garage en local et devant un hébergeur européen en production |
 | **Bucket** | `pme-photos`, préfixe `pending/` pour les annonces en attente de validation |
-| **Licence** | AGPLv3, projet français (Deuxfleurs) |
 | **Adresse en local** | <https://garage.localhost>, par l'ingress, en lecture seule et par URL signée |
 
 ## Description
@@ -92,8 +91,8 @@ Voici ce que fait l'API avec chaque photo :
 |---|---|
 | **`make garage-init`** | Met Garage en service : disposition, bucket `pme-photos` et clé d'accès de l'API. Lancée par `make deploy`, sans effet si tout est déjà en place. |
 | **`make garage-secrets`** | Génère dans `.env` les secrets de Garage qui manquent ou valent `CHANGE_ME`. Lancée par `make seal`. |
-| **`kubectl -n pme exec deploy/garage -- /garage status`** | Affiche l'état du nœud et sa disposition. |
-| **`kubectl -n pme exec deploy/garage -- /garage bucket info pme-photos`** | Affiche le bucket, sa taille et le nombre d'objets. |
+| **`kubectl -n pme exec deploy/garage`**<br>**`-- /garage status`** | Affiche l'état du nœud et sa disposition. |
+| **`kubectl -n pme exec deploy/garage`**<br>**`-- /garage bucket info pme-photos`** | Affiche le bucket, sa taille et le nombre d'objets. |
 
 Garage démarre sans savoir où ranger ses données : `make garage-init` lui décrit la disposition, crée le bucket, puis
 **importe** la clé d'accès depuis `.env`, où l'API lit la même valeur. Les deux côtés partagent donc le secret sans qu'on
@@ -117,5 +116,5 @@ Après un `minikube delete`, l'enchaînement est le suivant :
 
 ## Pour aller plus loin
 
-- Site du projet : <https://garagehq.deuxfleurs.fr/>
-- Documentation S3 compatible : <https://garagehq.deuxfleurs.fr/documentation/connect/>
+- [Site du projet Garage](https://garagehq.deuxfleurs.fr/)
+- [Documentation S3 compatible](https://garagehq.deuxfleurs.fr/documentation/connect/)

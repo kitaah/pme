@@ -69,9 +69,9 @@ couches: "" {
 | Terme | Définition |
 |---|---|
 | **Défense en profondeur** | Principe qui consiste à empiler des protections indépendantes, pour qu'aucune ne soit un point unique de défaillance. |
+| **Durcissement** | Ensemble des réglages qui réduisent la surface d'attaque d'un composant. |
 | **Moindre privilège** | Principe qui consiste à n'accorder à chaque composant que les droits strictement nécessaires. |
 | **Surface d'attaque** | Ensemble des points par lesquels un système peut être attaqué : routes exposées, ports ouverts, comptes existants. |
-| **Durcissement** | Ensemble des réglages qui réduisent la surface d'attaque d'un composant. |
 
 ## Ce qui est en place
 

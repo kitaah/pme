@@ -131,7 +131,7 @@ du job. Côté images, un contrôle de structure vérifie qu'aucun fichier `.env
 Un gestionnaire comme HashiCorp Vault répondrait à la rotation et à l'audit, au prix d'un service supplémentaire à
 installer, initialiser, desceller et sauvegarder. Pour dix-huit valeurs fixes de démonstration, Sealed Secrets suffit.
 
-## Commandes de vérification
+## Commandes essentielles
 
 À lancer dans un terminal, depuis le dossier du projet.
 
@@ -150,16 +150,16 @@ installer, initialiser, desceller et sauvegarder. Pour dix-huit valeurs fixes de
     Lancer `make secrets-scan` avant chaque envoi de code coûte quelques secondes et évite le seul incident de cette
     page qui ne se rattrape pas.
 
-## Fichiers principaux
+## Fichiers et dossiers principaux
 
 | Fichier ou dossier | Description |
 |---|---|
 | **`env.example`** | Modèle des variables attendues, avec des valeurs de démonstration. |
 | **`.env`** | Les vraies valeurs, sur l'ordinateur, jamais versionnées. |
 | **`k8s/01-pme-secrets-sealed.yaml`** | Les dix-huit secrets chiffrés, versionnés dans Git. |
-| **`Makefile`**<br>(cible **`sealed-secrets`**) | Installe le contrôleur, à une version épinglée. |
+| **`make sealed-secrets`** | Installe le contrôleur, à une version épinglée. |
 | **`.gitleaks.toml`** | Règles de recherche de secrets et exceptions assumées. |
-| **`Makefile`**<br>(cibles **`env`**, **`seal`**<br>et **`secrets-scan`**) | Création de `.env`, scellement et recherche de secrets. |
+| **`make env`**<br>**`make seal`**<br>**`make secrets-scan`** | Création de `.env`, scellement et recherche de secrets. |
 
 ## Pour aller plus loin
 

@@ -125,6 +125,8 @@ Les contrôles sont répartis par image :
 
 À lancer dans un terminal, depuis le dossier du projet, Docker et le cluster démarrés.
 
+**Prérequis de `make image-test`.** Cette commande suppose que container-structure-test et Trivy sont installés sur l'ordinateur. Ce n'est pas obligatoire : la pipeline les télécharge elle-même, dans des versions fixées, et passe ces contrôles à chaque commit sur la branche principale.
+
 | Commande | Description |
 |---|---|
 | **`make image`** | Construit les trois images à contrôler. |

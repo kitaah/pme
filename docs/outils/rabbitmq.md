@@ -97,8 +97,8 @@ fait avec `RABBITMQ_USER` et `RABBITMQ_PASSWORD` du fichier `.env`.
 
 | Terme | Définition |
 |---|---|
-| **AMQP** | Protocole standard de messagerie utilisé par les applications pour parler à RabbitMQ (port 5672). |
 | **Acquittement (`ack`)** | Confirmation envoyée à RabbitMQ une fois le message traité. Le message est alors retiré de la file. |
+| **AMQP** | Protocole standard de messagerie utilisé par les applications pour parler à RabbitMQ (port 5672). |
 | **Broker** | Serveur qui transporte des messages entre applications. |
 | **Clé de routage** | Étiquette portée par un message, que l'échange compare à ses liaisons pour choisir la file, ici `listing.submitted`. |
 | **Consommateur** | Programme qui lit les messages d'une file. |

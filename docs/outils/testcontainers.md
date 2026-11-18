@@ -120,6 +120,5 @@ conteneurs, et les lancer en parallèle saturerait l'ordinateur.
 
 - [Site officiel de Testcontainers pour Node](https://node.testcontainers.org/)
 - [Fiche Supertest du projet](supertest.md)
-- [Fiche PostgreSQL du projet](postgresql.md)
-- [Fiche NATS du projet](nats.md)
+- Fiches [PostgreSQL](postgresql.md) et [NATS](nats.md) du projet
 - [Page des tests d'intégration de la pipeline](../pipeline/tests-integration.md)

@@ -1,18 +1,34 @@
 # Analyse SonarCloud
 
-## Objectif
+## Fiche d'identité
 
-Mesurer la qualité générale du code : bugs, failles de sécurité, secrets oubliés, code dupliqué et couverture des tests.
-SonarCloud compare ces mesures à une Quality Gate et rend un verdict. C'est le tableau de bord de la maintenabilité du
-projet.
+| Information | Détail |
+|---|---|
+| **Rôle** | Mesure la qualité générale du code (bugs, failles, secrets oubliés, duplication, couverture des tests) et rend un verdict |
+| **Job** | `sonar` |
+| **Outil** | SonarCloud, avec SonarScanner CLI 11 |
+| **Déclencheur** | Chaque pipeline, sur la branche principale, après les quatre jobs de tests unitaires |
+| **Verdict** | Quality Gate « Sonar way » : si elle est échouée, la pipeline échoue |
+
+## Description
+
+L'analyse SonarCloud mesure la qualité générale du code : bugs, failles de sécurité, secrets oubliés, code dupliqué et couverture des tests. SonarCloud compare ces mesures à une Quality Gate et rend un verdict. C'est le tableau de bord de la maintenabilité du projet.
+
+**Le problème qu'elle résout.**
+Les tests disent si le code se comporte comme prévu, pas s'il est lisible, sûr et sans copies inutiles. Sans mesure globale, ces défauts s'accumulent sans que personne les voie, et chaque modification devient plus coûteuse.
+
+**Comment elle fonctionne.**
+Le job lit le code des quatre modules et les rapports de couverture des tests unitaires, envoie le tout à SonarCloud, puis attend le verdict de la Quality Gate.
 
 **Définitions**
 
-- **SonarCloud** : service en ligne d'analyse de code, édité par SonarSource.
-- **Quality Gate** : ensemble de conditions que le code doit respecter. Le verdict est « réussi » ou « échoué ».
-- **Nouveau code** : code ajouté ou modifié depuis une date de référence. Les conditions s'appliquent surtout à lui.
-- **Anomalie (issue)** : défaut repéré dans le code : bug, faille ou mauvaise pratique.
-- **Duplication** : portion de code copiée à plusieurs endroits.
+| Terme | Définition |
+|---|---|
+| **Anomalie (issue)** | défaut repéré dans le code : bug, faille ou mauvaise pratique. |
+| **Duplication** | portion de code copiée à plusieurs endroits. |
+| **Nouveau code** | code ajouté ou modifié depuis une date de référence. Les conditions s'appliquent surtout à lui. |
+| **Quality Gate** | ensemble de conditions que le code doit respecter. Le verdict est « réussi » ou « échoué ». |
+| **SonarCloud** | service en ligne d'analyse de code, édité par SonarSource. |
 
 ## Ce qui est vérifié
 
