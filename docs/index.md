@@ -4,19 +4,23 @@ Documentation technique d'une place de marché d'objets d'épouvante entre parti
 annonce ; un service séparé la reçoit par message et la range dans une file que des modérateurs examinent.
 
 Ce POC sert à éprouver une chaîne complète sur un poste de développement : une interface React, deux services NestJS
-qui communiquent par NATS, des identités gérées par Keycloak, le tout déployé dans un cluster Kubernetes local,
+qui communiquent par NATS, des identités gérées par Keycloak, un stockage de photos compatible S3, le tout déployé dans un cluster Kubernetes local,
 chiffré de bout en bout et contrôlé par une pipeline d'intégration continue.
 
 ## Par où commencer
 
+Les pages suivent l'ordre du menu.
+
 | Page | Ce qu'on y trouve |
 |---|---|
 | **[Architecture](architecture.md)** | La vue d'ensemble : les composants, qui parle à qui, et le trajet d'une annonce de bout en bout. À lire en premier. |
-| **[Commandes make](commandes-make.md)** | Toutes les commandes du `Makefile`, par thème, avec leur description et leurs variables. |
+| **[Conception : dépôt d'annonce](conception-depot-annonce.md)** | Le dépôt d'une annonce avec photo : décisions prises, parcours, modèle de données, accessibilité (RGAA) et maquettes. |
+| **[Commandes make](commandes-make.md)** | Les outils à installer, la marche à suivre pour initialiser le projet, puis toutes les commandes du `Makefile`, par thème, avec leur description et leurs variables. |
+| **[Démonstration : NATS et RabbitMQ](demo-brokers.md)** | Comment montrer que le POC fonctionne avec deux solutions de messagerie interchangeables. |
 | **[Outils](outils/mkdocs.md)** | Une fiche par outil du projet, toutes construites sur le même modèle. |
 | **[Pipeline CI/CD](pipeline/index.md)** | Les contrôles automatiques de qualité : tests, images Docker, performance, analyse du code. |
 | **[Sécurité](securite/index.md)** | Les mesures de sécurité de la plateforme, couche par couche, et leurs limites. |
-| **[Modèle de fiche outil](outils/modele-fiche.md)** | Le modèle à suivre pour documenter un nouvel outil. |
+| **[Contribuer](outils/modele-fiche.md)** | Le modèle à suivre pour documenter un nouvel outil. |
 
 ## En bref
 
@@ -25,8 +29,11 @@ chiffré de bout en bout et contrôlé par une pipeline d'intégration continue.
 | **Interface** | React 19, Vite, shadcn/ui |
 | **Services** | NestJS 12 — une API et un service de modération |
 | **Messagerie** | NATS JetStream |
+| **Stockage des photos** | Garage, compatible S3 |
 | **Données** | PostgreSQL 18, accédé par TypeORM |
 | **Identités** | Keycloak 26 |
 | **Plateforme** | Minikube, Traefik, Istio en mode ambient, Calico |
+| **Secrets et certificats** | Sealed Secrets, cert-manager |
 | **Observabilité** | Prometheus, Grafana, Loki, Alloy |
+| **Intégration continue** | GitLab CI/CD, avec un miroir vers GitHub Actions |
 | **Qualité** | 393 tests unitaires, 35 d'intégration, couverture 100 %, Quality Gate SonarCloud |

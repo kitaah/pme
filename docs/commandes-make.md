@@ -91,7 +91,7 @@ chacun leur propre outil et restent facultatifs.
 | **Éditer `.env`** | Remplace chaque `CHANGE_ME` par un vrai mot de passe. `make seal` refuse de continuer s'il en reste. |
 | **`make helm`** | Installe Helm s'il est absent (`sudo` demandé). Requis par l'étape suivante. |
 | **`make kubeseal`** | Installe l'outil `kubeseal` à la bonne version s'il est absent (`sudo` demandé). Requis par `make seal`. |
-| **`make minikube-up`** | Crée le cluster, puis installe l'ingress, Istio, cert-manager et metrics-server. Écrit aussi `pme-ca.crt`. |
+| **`make minikube-up`** | Crée le cluster, puis installe l'ingress, Istio, cert-manager et metrics-server. Écrit aussi `pme-ca.crt`.<br>Avant Istio, relève seul la limite `inotify` de l'ordinateur (voir ci-dessous). |
 | **`make hosts`** | Affiche la ligne à ajouter dans `/etc/hosts`. Elle n'écrit rien : la coller à la main. |
 | **Importer `pme-ca.crt`** | À faire une fois dans le navigateur, pour que les adresses en `.localhost` soient reconnues comme sûres. |
 | **`make seal`** | Installe Sealed Secrets sur le cluster s'il manque, génère les secrets manquants, puis chiffre `.env` dans `k8s/01-pme-secrets-sealed.yaml`. |
@@ -99,6 +99,12 @@ chacun leur propre outil et restent facultatifs.
 | **`make deploy`** | Applique les manifestes dans le cluster, puis prépare le stockage des photos. |
 | **`make pods`** | Suit le démarrage. Keycloak met environ une minute à être prêt. |
 | **`make app`** | Ouvre l'application sur `https://pme.localhost`. |
+
+**Réglage de l'ordinateur pour Istio.** Istio a besoin que l'ordinateur autorise assez d'instances `inotify` (la
+surveillance de fichiers du noyau Linux). Minikube partage ce noyau, et la limite par défaut, 128 instances, est vite
+atteinte : le composant ztunnel plante alors avec l'erreur « Too many open files ». `make minikube-up` lance
+`make inotify`, qui passe la limite à 1024, demande le mot de passe `sudo` et rend le réglage permanent
+(`/etc/sysctl.d/99-inotify.conf`). Il n'y a rien à faire à la main. Pour vérifier : `sysctl fs.inotify.max_user_instances`.
 
 !!! warning "Attention"
     Après un `minikube delete`, le cluster est neuf : il n'a plus ni la clé de chiffrement des secrets, ni les images, ni
