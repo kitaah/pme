@@ -40,11 +40,11 @@ navigateur, `make seal` (nouveau cluster, donc nouvelle clé ; génère aussi le
 
 | Terme | Définition |
 |---|---|
-| **Cible** | Nom d'une opération du `Makefile`, celui qu'on tape après `make`. |
-| **Variable** | Valeur modifiable en ligne de commande, par exemple `make deploy NS=autre`. |
 | **Autorité locale** | Autorité de certification créée par cert-manager, qui signe tous les certificats du cluster. |
-| **Port-forward** | Redirection d'un port du cluster vers l'ordinateur, pour joindre un composant sans ingress. |
+| **Cible** | Nom d'une opération du `Makefile`, celui qu'on tape après `make`. |
 | **Namespace** | Espace de noms Kubernetes. Celui de l'application s'appelle `pme`. |
+| **Port-forward** | Redirection d'un port du cluster vers l'ordinateur, pour joindre un composant sans ingress. |
+| **Variable** | Valeur modifiable en ligne de commande, par exemple `make deploy NS=autre`. |
 
 ## Rôle dans le projet
 
@@ -147,8 +147,8 @@ navigateur, `make seal` (nouveau cluster, donc nouvelle clé ; génère aussi le
 | **`make demo-stop-moderation`** | Arrête le service de modération. Les messages publiés restent dans NATS. |
 | **`make demo-start-moderation`** | Le relance : la file d'attente se vide. |
 | **`make demo-kill-api`** | Supprime le pod de l'API et suit sa recréation par Kubernetes. |
-| **`make seed-listings SEED_USER=<identifiant>`** | Crée des annonces de démonstration **publiées** pour un utilisateur Keycloak (`scripts/seed-listings.sh`) : `COUNT` annonces (6 par défaut), chacune avec une **image aléatoire** générée dans le pod de l'API et envoyée dans Garage. L'API ne sait créer que des annonces en attente (la décision de modération est hors périmètre du POC) : les annonces sont donc insérées directement en base avec le statut `PUBLISHED`. Rien ne les distingue à l'écran : `seed-listings-clean` les retrouve par leur photo, rangée sous `published/` (l'API ne range les photos que sous `pending/`). L'identifiant doit exister dans le realm `pme`, sinon la commande liste les utilisateurs existants. |
-| **`make seed-listings-clean SEED_USER=<identifiant>`** | Supprime les annonces de démonstration de cet utilisateur (les annonces publiées dont la photo est sous `published/`) et leurs images dans Garage. |
+| **`make seed-listings`**<br>**`SEED_USER=<identifiant>`** | Crée des annonces de démonstration **publiées** pour un utilisateur Keycloak (`scripts/seed-listings.sh`) : `COUNT` annonces (6 par défaut), chacune avec une **image aléatoire** générée dans le pod de l'API et envoyée dans Garage. L'API ne sait créer que des annonces en attente (la décision de modération est hors périmètre du POC) : les annonces sont donc insérées directement en base avec le statut `PUBLISHED`. Rien ne les distingue à l'écran : `seed-listings-clean` les retrouve par leur photo, rangée sous `published/` (l'API ne range les photos que sous `pending/`). L'identifiant doit exister dans le realm `pme`, sinon la commande liste les utilisateurs existants. |
+| **`make seed-listings-clean`**<br>**`SEED_USER=<identifiant>`** | Supprime les annonces de démonstration de cet utilisateur (les annonces publiées dont la photo est sous `published/`) et leurs images dans Garage. |
 
 ### Développement local
 
@@ -184,7 +184,7 @@ navigateur, `make seal` (nouveau cluster, donc nouvelle clé ; génère aussi le
 | **`make test`** | Tests unitaires : Jest pour le module commun, l'API et la modération, Vitest pour l'interface. |
 | **`make test-integration`** | Tests d'intégration de l'API et de la modération, avec PostgreSQL et NATS réels dans des conteneurs jetables. Docker requis. |
 | **`make test-perf`** | Test de charge k6, profil « ci » : PostgreSQL et NATS jetables, API réelle, mêmes seuils que la pipeline. Docker et k6 requis. |
-| **`make image-test`** | Teste les trois images : structure avec container-structure-test, puis failles HIGH et CRITICAL avec Trivy. Images construites au préalable (`make image`). |
+| **`make image-test`** | Teste les trois images : structure avec container-structure-test, puis failles HIGH et CRITICAL avec Trivy. Images construites au préalable (`make image`). Nécessite container-structure-test et Trivy installés sur l'ordinateur ; sinon, le job `image-tests` de la pipeline fait le même contrôle. |
 
 ### Documentation
 
@@ -240,12 +240,12 @@ valeurs ci-dessous sont prévues pour cela.
 | **`KUBESEAL_VERSION`** | `0.41.2` | Version de `kubeseal` et du contrôleur Sealed Secrets, qui doivent rester identiques. |
 | **`INOTIFY_INSTANCES`** | `1024` | Limite `inotify` visée par `make inotify`. |
 | **`CA_FILE`** | `pme-ca.crt` | Fichier où `make ca-cert` écrit l'autorité locale. |
-| **`APP_HOST`**, **`KEYCLOAK_HOST`**, **`ADMINER_HOST`**, **`GRAFANA_HOST`**, **`PROMETHEUS_HOST`**, **`ALLOY_HOST`**, **`GARAGE_HOST`** | `pme`, `keycloak`, `adminer`, `grafana`, `prometheus`, `alloy`, `garage`, suivis de `.localhost` | Noms d'hôte des interfaces. Ils sont aussi écrits dans les manifestes : les changer ici ne suffit pas. |
-| **`SEED_USER`**, **`COUNT`** | aucune, `6` | Utilisateur propriétaire et nombre d'annonces pour `make seed-listings`. |
+| **`APP_HOST`**<br>**`KEYCLOAK_HOST`**<br>**`ADMINER_HOST`**<br>**`GRAFANA_HOST`**<br>**`PROMETHEUS_HOST`**<br>**`ALLOY_HOST`**<br>**`GARAGE_HOST`** | `pme`, `keycloak`, `adminer`, `grafana`, `prometheus`, `alloy`, `garage`, suivis de `.localhost` | Noms d'hôte des interfaces. Ils sont aussi écrits dans les manifestes : les changer ici ne suffit pas. |
+| **`SEED_USER`**<br>**`COUNT`** | aucune, `6` | Utilisateur propriétaire et nombre d'annonces pour `make seed-listings`. |
 | **`NATS_MONITOR_PORT`** | `8222` | Port local de la supervision de NATS. |
 | **`DOCS_PORT`** | `8005` | Port de `make docs-serve`. |
 | **`DOCS_IMAGE_PORT`** | `8083` | Port de `make docs-run`. |
-| **`PERF_DB_PORT`**, **`PERF_NATS_PORT`**, **`PERF_API_PORT`**, **`PERF_IDP_PORT`** | `55432`, `54222`, `3100`, `9099` | Ports locaux de `make test-perf` : PostgreSQL, NATS, API et faux Keycloak. |
+| **`PERF_DB_PORT`**<br>**`PERF_NATS_PORT`**<br>**`PERF_API_PORT`**<br>**`PERF_IDP_PORT`** | `55432`, `54222`, `3100`, `9099` | Ports locaux de `make test-perf` : PostgreSQL, NATS, API et faux Keycloak. |
 
 ## Fichiers et dossiers principaux
 
@@ -259,9 +259,7 @@ valeurs ci-dessous sont prévues pour cela.
 
 ## Pour aller plus loin
 
-- [Minikube](outils/minikube.md), pour le cluster et son démarrage
-- [Sealed Secrets](outils/sealed-secrets.md), pour `make seal` et le fichier `.env`
-- [GitLab CI](outils/gitlab-ci.md), pour les jobs que `make quality` et `make test` reproduisent
-- [k6](outils/k6.md), pour `make test-perf`
+- Fiches [Minikube](outils/minikube.md), pour le cluster et son démarrage, et [Sealed Secrets](outils/sealed-secrets.md), pour `make seal` et le fichier `.env`
+- Fiches [GitLab CI](outils/gitlab-ci.md), pour les jobs que `make quality` et `make test` reproduisent, et [k6](outils/k6.md), pour `make test-perf`
 - [MkDocs](outils/mkdocs.md), pour les commandes `docs-*`
 - [Documentation de GNU Make](https://www.gnu.org/software/make/manual/make.html)

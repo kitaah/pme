@@ -5,9 +5,8 @@
 | Information | Détail |
 |---|---|
 | **Rôle** | Chiffre les échanges entre les pods du cluster, donne une identité à chacun et décide qui peut joindre quoi |
-| **Version** | Istio 1.30.0, en mode ambient |
-| **Installation** | Quatre charts Helm, lancés par `make istio` |
-| **Autorisations** | Refus par défaut, puis une politique par composant (`../../k8s/21-authorization-policies.yaml`) |
+| **Version** | Istio 1.30.0, en mode ambient, installé par quatre charts Helm (`make istio`) |
+| **Autorisations** | Refus par défaut, puis une politique par composant (`k8s/21-authorization-policies.yaml`) |
 | **Prérequis** | Limite `inotify` de l'ordinateur d'au moins 1024 instances, relevée par `make inotify` |
 | **Adresse en local** | Aucune interface : il travaille à l'intérieur du cluster |
 
@@ -87,13 +86,13 @@ de cert-manager : istiod les émet et les renouvelle seul, avec une durée de vi
 
 | Terme | Définition |
 |---|---|
+| **Compte de service** | Identité Kubernetes d'un pod. Le maillage s'en sert pour fabriquer l'identité du pod. |
 | **istio-cni** | Agent installé sur chaque nœud, qui redirige le trafic des pods du maillage vers ztunnel. |
 | **istiod** | Plan de contrôle d'Istio. Il émet les certificats d'identité et distribue la configuration. |
 | **Maillage de services** | Couche qui chiffre et contrôle les échanges entre les applications d'un cluster. |
 | **mTLS** | TLS mutuel : le client et le serveur présentent chacun un certificat. |
-| **SPIFFE** | Standard d'identité des programmes. L'identité d'un pod prend la forme `spiffe://cluster.local/ns/pme/sa/pme-api`. |
 | **Politique d'autorisation** | Règle qui liste les identités autorisées à appeler un composant. Tout appel hors de la liste est refusé. |
-| **Compte de service** | Identité Kubernetes d'un pod. Le maillage s'en sert pour fabriquer l'identité du pod. |
+| **SPIFFE** | Standard d'identité des programmes. L'identité d'un pod prend la forme `spiffe://cluster.local/ns/pme/sa/pme-api`. |
 | **ztunnel** | Proxy installé sur chaque nœud, qui chiffre en mTLS les échanges des pods du maillage. |
 
 ## Rôle dans le projet
@@ -120,7 +119,7 @@ vérifient pas l'identité des pods. L'application continue de fonctionner, mais
 | **`k8s/02-service-accounts.yaml`** | Déclare un compte de service par composant, donc une identité par composant. |
 | **`k8s/20-mesh-mtls.yaml`** | Impose le mode strict : toute connexion hors mTLS est refusée. |
 | **`k8s/21-authorization-policies.yaml`** | Refuse tout par défaut, puis autorise chaque composant à n'être appelé que par ses clients prévus. |
-| **`Makefile`**<br>(cibles **`inotify`**, **`istio`**,<br>**`istio-scan`**, **`mesh-check`** et **`authz-check`**) | Relève la limite `inotify`, installe le maillage et enrôle Traefik, analyse ses images, puis vérifie le chiffrement et les autorisations. |
+| **`make inotify`**<br>**`make istio`**<br>**`make istio-scan`**<br>**`make mesh-check`**<br>**`make authz-check`** | Relève la limite `inotify`, installe le maillage et enrôle Traefik, analyse ses images, puis vérifie le chiffrement et les autorisations. |
 
 ## Commandes essentielles
 
@@ -148,8 +147,8 @@ Une connexion chiffrée par le maillage se reconnaît dans ces logs à l'adresse
 ligne affichée par `make mesh-check` ne suffit pas : elle peut ne montrer que l'identité de ztunnel lui-même.
 
 !!! note "À savoir"
-    Un nouveau composant doit être déclaré dans `k8s/15-service-accounts.yaml` et dans
-    `k8s/17-authorization-policies.yaml`. Sans cela, le refus par défaut le rend injoignable. Les connexions refusées se
+    Un nouveau composant doit être déclaré dans `k8s/02-service-accounts.yaml` et dans
+    `k8s/21-authorization-policies.yaml`. Sans cela, le refus par défaut le rend injoignable. Les connexions refusées se
     lisent dans les logs de ztunnel : `kubectl -n istio-system logs ds/ztunnel --tail=300 | grep "policy rejection"`.
 
 !!! note "À savoir"
@@ -165,7 +164,7 @@ ligne affichée par `make mesh-check` ne suffit pas : elle peut ne montrer que l
 
 !!! note "À savoir"
     Les politiques d'autorisation d'Istio cohabitent avec les politiques réseau de Kubernetes
-    (`k8s/18-network-policies.yaml`, appliquées par [Calico](calico.md), tableau dans [Durcissement](../securite/durcissement.md)). Les deux filtres s'ajoutent : un appel doit passer par les
+    (`k8s/22-network-policies.yaml`, appliquées par [Calico](calico.md), tableau dans [Durcissement](../securite/durcissement.md)). Les deux filtres s'ajoutent : un appel doit passer par les
     deux. En mode ambient, les connexions entre pods du maillage transitent par le port **15008** (tunnel HBONE de
     ztunnel) : les politiques réseau l'ouvrent donc aux mêmes appelants que le port de l'application.
 

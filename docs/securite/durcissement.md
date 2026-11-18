@@ -215,7 +215,7 @@ par `make seal`, puis chiffrés dans le fichier de secrets. Le détail est dans 
   pipeline. La montée de version d'Istio (`ISTIO_VERSION` dans le `Makefile`) est le remède.
 - **Pas de signature des images.** Rien ne prouve, au déploiement, que l'image provient bien de la pipeline du projet.
 
-## Commandes de vérification
+## Commandes essentielles
 
 À lancer dans un terminal, depuis le dossier du projet, la plateforme déployée.
 
@@ -241,7 +241,7 @@ sauf dans l'espace temporaire monté à cet effet.
     `kubectl -n pme get pod <nom> -o yaml` affiche les réglages réellement appliqués à un pod, y compris ceux qu'il
     hérite du niveau du pod. C'est la source de vérité, plus fiable que la relecture du manifeste.
 
-## Fichiers principaux
+## Fichiers et dossiers principaux
 
 | Fichier ou dossier | Description |
 |---|---|

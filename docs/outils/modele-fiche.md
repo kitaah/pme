@@ -60,7 +60,7 @@ Tous les tableaux suivent les mêmes règles de forme, pour que la colonne de ga
 | Fichier ou dossier | Description |
 |---|---|
 | **`moderation-service/src/moderation/`**<br>**`moderation.service.spec.ts`** | Une phrase. |
-| **`k8s/04-api.yaml`**<br>**`k8s/05-moderation.yaml`** | Une phrase. |
+| **`k8s/08-api.yaml`**<br>**`k8s/09-moderation.yaml`** | Une phrase. |
 ```
 
 ## Les schémas

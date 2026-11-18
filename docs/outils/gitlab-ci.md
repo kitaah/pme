@@ -74,12 +74,12 @@ serveur d'origine serait détectée.
 |---|---|
 | **Artefact** | Fichier produit par un job et conservé, par exemple un rapport de tests. |
 | **Cache** | Dossier conservé d'un job à l'autre pour éviter de retélécharger les mêmes dépendances. |
+| **Étape (stage)** | Regroupement de jobs. Le projet en utilise cinq : tests, qualité, intégration, images, performance. |
 | **Intégration continue (CI)** | Pratique qui consiste à contrôler automatiquement le code à chaque modification. |
 | **Job** | Tâche de la pipeline, par exemple « lancer les tests de l'API ». |
 | **Pipeline** | Ensemble des jobs lancés pour une même modification. |
 | **Runner** | Machine fournie par GitLab qui exécute les jobs. |
 | **Service** | Conteneur auxiliaire démarré pendant un job, comme PostgreSQL ou NATS. |
-| **Étape (stage)** | Regroupement de jobs. Le projet en utilise cinq : tests, qualité, intégration, images, performance. |
 
 ## Rôle dans le projet
 
@@ -126,7 +126,7 @@ Chaque contrôle de la pipeline a son équivalent sur l'ordinateur, à lancer de
 | **`make format-check`** | Vérifie la mise en forme, comme le job `lint:code`. |
 | **`make lint-yaml`** | Contrôle les fichiers YAML, comme le job `lint:yaml`. |
 | **`make lint-docker`** | Contrôle les Dockerfile, comme le job `hadolint`. |
-| **`make image-test`** | Contrôle les images, comme le job `image-tests`. |
+| **`make image-test`** | Contrôle les images, comme le job `image-tests`. Demande container-structure-test et Trivy installés sur l'ordinateur. |
 | **`make istio-scan`** | Analyse les images d'Istio, comme le job `istio-scan`. |
 | **`make quality`** | Enchaîne les contrôles statiques. |
 

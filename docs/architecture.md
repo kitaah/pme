@@ -4,14 +4,10 @@
 
 | Information | Détail |
 |---|---|
-| **Style** | Deux services applicatifs séparés, qui communiquent par messages plutôt qu'en s'appelant directement |
-| **Périmètre** | Le parcours d'un membre : connexion, dépôt d'une annonce, prise en charge par le service de modération |
-| **Composants déployés** | Douze dans le namespace `pme`, plus Traefik dans son propre namespace, sur un cluster Minikube |
-| **Point d'entrée unique** | Traefik, qui termine le HTTPS, limite le débit et contrôle les jetons sous `/api/v1`, puis répartit selon le nom d'hôte et le chemin |
-| **Bases de données** | Une seule instance PostgreSQL, quatre bases : `pme`, `moderation`, `keycloak`, `grafana` |
-| **Stockage des fichiers** | Garage (compatible S3), bucket `pme-photos` : une photo par annonce, jamais dans la base |
-| **Messagerie** | NATS JetStream, flux `LISTINGS`, sujet `listing.submitted` |
-| **Déploiement** | `kubectl apply -k k8s/` (Kustomize), ordre imposé par les préfixes numériques des manifestes |
+| **Style et périmètre** | Deux services applicatifs séparés, qui communiquent par messages plutôt qu'en s'appelant directement. Le périmètre est le parcours d'un membre : connexion, dépôt d'une annonce, prise en charge par le service de modération |
+| **Composants et point d'entrée** | Douze composants dans le namespace `pme`, plus Traefik dans son propre namespace, sur un cluster Minikube. Traefik est le point d'entrée unique : il termine le HTTPS, limite le débit et contrôle les jetons sous `/api/v1`, puis répartit selon le nom d'hôte et le chemin |
+| **Données et messages** | Une seule instance PostgreSQL, quatre bases (`pme`, `moderation`, `keycloak`, `grafana`) ; Garage (compatible S3), bucket `pme-photos`, une photo par annonce, jamais dans la base ; NATS JetStream, flux `LISTINGS`, sujet `listing.submitted` |
+| **Déploiement** | `kubectl apply -k k8s/` (Kustomize). Les manifestes sont numérotés dans leur ordre de dépendance, mais Kustomize les envoie tous d'un coup : la numérotation sert à la lecture |
 
 ## Description
 
@@ -58,7 +54,7 @@ vars: {
   d2-config: {
     layout-engine: elk
     theme-id: 5
-    pad: 16
+    pad: 8
   }
 }
 direction: down
@@ -194,11 +190,11 @@ consommation -> file
 
 | Terme | Définition |
 |---|---|
-| **Événement** | Message qui signale un fait déjà survenu (« une annonce a été déposée »), sans attendre de réponse. |
-| **Producteur / consommateur** | Le composant qui publie un message, et celui qui le lit. Ils ne se connaissent que par le sujet. |
 | **Compensation** | Action qui défait une écriture déjà validée, lorsqu'une étape suivante échoue. |
-| **Namespace** | Cloison logique d'un cluster Kubernetes, qui regroupe des composants et leur applique des règles communes. |
+| **Événement** | Message qui signale un fait déjà survenu (« une annonce a été déposée »), sans attendre de réponse. |
 | **Idempotence** | Propriété d'un traitement qui, rejoué sur le même message, produit le même résultat sans doublon. |
+| **Namespace** | Cloison logique d'un cluster Kubernetes, qui regroupe des composants et leur applique des règles communes. |
+| **Producteur / consommateur** | Le composant qui publie un message, et celui qui le lit. Ils ne se connaissent que par le sujet. |
 
 ## Les choix structurants
 
@@ -237,10 +233,7 @@ consommation -> file
 
 ## Pour aller plus loin
 
-- [Sécurité de la plateforme](securite/index.md)
-- [Authentification et autorisation](securite/authentification.md)
-- [Traefik, le point d'entrée](outils/traefik.md)
-- [NATS, le flux et ses garanties](outils/nats.md)
-- [NestJS, la structure des deux services](outils/nestjs.md)
-- [Kustomize, l'assemblage des manifestes](outils/kustomize.md)
+- Sécurité : [vue d'ensemble](securite/index.md) et [authentification et autorisation](securite/authentification.md)
+- Échanges : [Traefik, le point d'entrée](outils/traefik.md) et [NATS, le flux et ses garanties](outils/nats.md)
+- Construction : [NestJS, la structure des deux services](outils/nestjs.md) et [Kustomize, l'assemblage des manifestes](outils/kustomize.md)
 - [Les douze facteurs d'une application moderne](https://12factor.net/fr/)

@@ -1,17 +1,33 @@
 # Fonctionnement de la pipeline
 
-## Objectif
+## Fiche d'identité
 
-Expliquer quand la pipeline se lance, comment elle reste rapide et économe, et comment lire ses résultats. Le quota
-gratuit de GitLab est de 400 minutes par mois : chaque règle ci-dessous sert à ne pas le gaspiller.
+| Information | Détail |
+|---|---|
+| **Rôle** | Explique quand la pipeline se lance, comment elle reste rapide et économe, et comment lire ses résultats |
+| **Configuration** | Le fichier `.gitlab-ci.yml`, à la racine du dépôt |
+| **Déclencheur** | Chaque commit ou fusion sur la branche principale |
+| **Quota** | 400 minutes de calcul par mois, dans l'offre gratuite de GitLab |
+
+## Description
+
+Cette page explique quand la pipeline se lance, comment elle reste rapide et économe, et comment lire ses résultats.
+
+**Le problème qu'elle résout.**
+Chaque pipeline consomme du temps de calcul, et le quota gratuit de GitLab est de 400 minutes par mois. Sans règles, ce quota s'épuiserait vite et les résultats arriveraient tard. Chaque règle ci-dessous sert à ne pas gaspiller ce quota.
+
+**Comment elle fonctionne.**
+Les règles de déclenchement, les optimisations (cache, jobs indépendants, annulation automatique) et les limites de durée sont décrites dans les rubriques suivantes, suivies de la façon de lire un résultat et de dépanner une pipeline.
 
 **Définitions**
 
-- **Règle de déclenchement** : condition qui décide si un job se lance.
-- **Cache** : dossier conservé d'un job à l'autre, comme les paquets npm déjà téléchargés.
-- **Job indépendant** : job qui ne dépend d'aucun autre et démarre tout de suite.
-- **Quota** : nombre de minutes de calcul offertes chaque mois par GitLab.
-- **Job interruptible** : job qu'un nouveau commit peut annuler.
+| Terme | Définition |
+|---|---|
+| **Cache** | dossier conservé d'un job à l'autre, comme les paquets npm déjà téléchargés. |
+| **Job indépendant** | job qui ne dépend d'aucun autre et démarre tout de suite. |
+| **Job interruptible** | job qu'un nouveau commit peut annuler. |
+| **Quota** | nombre de minutes de calcul offertes chaque mois par GitLab. |
+| **Règle de déclenchement** | condition qui décide si un job se lance. |
 
 ## Déclenchement
 
@@ -27,6 +43,10 @@ Ce choix a un coût : chaque pipeline consomme le temps de tous les jobs. Il est
 !!! tip "Astuce"
     Ajouter `[skip ci]` dans le message d'un commit empêche toute pipeline pour ce commit. À éviter sur la fusion
     finale dans la branche principale, sinon les contrôles ne se lancent pas.
+
+!!! note "À savoir"
+    Les jobs n'attendent pas les uns les autres, sauf `sonar`, qui attend les rapports de couverture des tests
+    unitaires. La durée d'une pipeline est donc celle de son job le plus long.
 
 ## Optimisations
 

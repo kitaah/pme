@@ -181,7 +181,6 @@ La page se compose des éléments suivants :
 
 ## Pour aller plus loin
 
-- [Site officiel de React](https://react.dev/)
 - [Documentation de React en français](https://fr.react.dev/)
 - [Documentation de Tailwind CSS](https://tailwindcss.com/docs)
 - [Référentiel RGAA](https://accessibilite.numerique.gouv.fr/)

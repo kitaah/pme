@@ -9,7 +9,6 @@
 | **Catégorie** | Déploiement |
 | **Utilisé par** | `make deploy`, `make lint-k8s` |
 | **Alternative écartée** | Helm pour les composants du projet : des gabarits à trous pour un seul environnement |
-| **Documentation** | [kubectl.docs.kubernetes.io/references/kustomize](https://kubectl.docs.kubernetes.io/references/kustomize/) |
 
 ## Description
 
@@ -70,10 +69,10 @@ rendu -> lint: validation hors ligne
 
 | Terme | Définition |
 |---|---|
-| **Kustomization** | Fichier qui décrit l'assemblage : quels manifestes, quel namespace, quelles étiquettes, quels ConfigMaps. |
 | **ConfigMap généré** | ConfigMap que Kustomize construit à partir d'un fichier du dépôt, avec un suffixe calculé sur son contenu. |
-| **Rendu** | Le YAML final produit par Kustomize, avant envoi au cluster. `kustomize build k8s` l'affiche. |
+| **Kustomization** | Fichier qui décrit l'assemblage : quels manifestes, quel namespace, quelles étiquettes, quels ConfigMaps. |
 | **Overlay** | Variante d'un assemblage pour un environnement donné. Le projet n'en a qu'un, il n'en utilise pas. |
+| **Rendu** | Le YAML final produit par Kustomize, avant envoi au cluster. `kustomize build k8s` l'affiche. |
 
 ## Rôle dans le projet
 
@@ -90,7 +89,7 @@ rendu -> lint: validation hors ligne
   vers une image publiée par la pipeline, sans toucher aux manifestes.
 
 !!! note "À savoir"
-    Les manifestes sont numérotés — `01-postgres.yaml`, `03-keycloak.yaml`, `04-api.yaml` — dans leur ordre de
+    Les manifestes sont numérotés — `03-postgres.yaml`, `06-keycloak.yaml`, `08-api.yaml` — dans leur ordre de
     dépendance. Kustomize n'applique pourtant rien dans cet ordre : il envoie tout au cluster d'un coup, et chaque
     composant attend ce dont il a besoin. La numérotation sert à la lecture, pas à l'exécution.
 

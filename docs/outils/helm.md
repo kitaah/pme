@@ -9,7 +9,6 @@
 | **Catégorie** | Déploiement |
 | **Utilisé par** | `make helm`, `make ingress`, `make istio` |
 | **Alternative écartée** | Appliquer à la main les manifestes publiés par chaque projet |
-| **Documentation** | [helm.sh/docs](https://helm.sh/docs/) |
 
 ## Description
 
@@ -67,9 +66,9 @@ helm -> cluster
 | Terme | Définition |
 |---|---|
 | **Chart** | Paquet qui rassemble les manifestes d'un composant sous forme de gabarits, avec la liste de ses réglages. |
-| **Valeurs** | Fichier qui fournit les réglages d'un chart pour une installation précise (`values.yaml`). |
-| **Release** | Une installation nommée d'un chart dans un cluster. `traefik` et `istiod` en sont deux. |
 | **Dépôt de charts** | Serveur qui publie des charts, ajouté par `helm repo add`. |
+| **Release** | Une installation nommée d'un chart dans un cluster. `traefik` et `istiod` en sont deux. |
+| **Valeurs** | Fichier qui fournit les réglages d'un chart pour une installation précise (`values.yaml`). |
 
 ## Rôle dans le projet
 

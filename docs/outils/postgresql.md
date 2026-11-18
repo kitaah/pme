@@ -108,9 +108,9 @@ base, et le passage d'une version à l'autre est reproductible.
 | **Base de données** | Espace qui regroupe les tables d'une même application. |
 | **Connexion** | Canal ouvert entre une application et la base. Leur nombre est limité, car chacune consomme de la mémoire. |
 | **Instance** | Programme PostgreSQL en fonctionnement. Il héberge une ou plusieurs bases. |
-| **Rôle (compte)** | Identité qui se connecte à PostgreSQL, avec ses propres droits. Ici, un rôle par service. |
 | **Migration** | Fichier qui décrit une modification du schéma, par exemple l'ajout d'une table ou d'une colonne. |
 | **`pg_hba.conf`** | Fichier qui décide qui peut se connecter, depuis où et avec quelles exigences. |
+| **Rôle (compte)** | Identité qui se connecte à PostgreSQL, avec ses propres droits. Ici, un rôle par service. |
 | **Schéma** | Description de la structure d'une base : ses tables, leurs colonnes et leurs contraintes. |
 | **SQL** | Langage qui sert à lire et à modifier les données d'une base. |
 | **Table** | Tableau de données : chaque ligne est un enregistrement, chaque colonne une information. |
@@ -148,7 +148,7 @@ sous cette limite même lorsque l'autoscaler ajoute des exemplaires :
 !!! note "À savoir"
     Les 25 connexions restantes servent aux déploiements, pendant lesquels d'anciens et de nouveaux pods coexistent, et
     aux consultations ponctuelles avec [Adminer](adminer.md). Toute modification d'un plafond ou du nombre maximal
-    d'exemplaires impose de refaire ce calcul, détaillé dans `k8s/01-postgres.yaml`.
+    d'exemplaires impose de refaire ce calcul, détaillé dans `k8s/03-postgres.yaml`.
 
 ## Fichiers et dossiers principaux
 

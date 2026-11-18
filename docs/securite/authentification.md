@@ -72,8 +72,8 @@ etapes: "" {
 |---|---|
 | **Authentification** | Vérification de l'identité : « qui êtes-vous ? » |
 | **Autorisation** | Vérification des droits : « avez-vous le droit de faire ceci ? » |
-| **JWKS** | Liste des clés publiques qu'un serveur d'identité publie pour que d'autres vérifient ses signatures. |
 | **Jeton (JWT)** | Document signé contenant l'identité et les rôles d'une personne, joint à chaque requête. |
+| **JWKS** | Liste des clés publiques qu'un serveur d'identité publie pour que d'autres vérifient ses signatures. |
 | **OpenID Connect** | Protocole standard de connexion, construit au-dessus d'OAuth 2. |
 | **PKCE** | Extension d'OAuth 2 qui protège le flux de connexion des applications incapables de garder un secret. |
 | **Politique de mots de passe** | Règles qu'un mot de passe doit respecter pour être accepté : longueur, types de caractères. |
@@ -168,7 +168,7 @@ défaut une fois le déploiement terminé.
   certains contrôles sont assouplis et le serveur reconstruit une partie de son code à chaque démarrage. Le mode de
   production exige un certificat, un nom d'hôte fixe et une base dimensionnée.
 
-## Commandes de vérification
+## Commandes essentielles
 
 À lancer dans un terminal, depuis le dossier du projet, la plateforme déployée.
 
@@ -196,7 +196,7 @@ Pour vérifier le refus par défaut, trois appels suffisent :
     lui-même les clés publiques et valide chaque jeton qu'il reçoit, sans faire confiance à l'autre ni à Traefik, qui
     contrôle déjà le jeton à l'entrée.
 
-## Fichiers principaux
+## Fichiers et dossiers principaux
 
 | Fichier ou dossier | Description |
 |---|---|

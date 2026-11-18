@@ -1,17 +1,34 @@
 # Tests d'intégration
 
-## Objectif
+## Fiche d'identité
 
-Vérifier que les briques fonctionnent ensemble, avec une vraie base PostgreSQL et un vrai broker NATS. Les tests
-unitaires utilisent des doublures. Ces tests-ci prouvent que les vrais composants s'entendent.
+| Information | Détail |
+|---|---|
+| **Rôle** | Vérifie que les briques fonctionnent ensemble, avec une vraie base PostgreSQL et un vrai broker NATS |
+| **Job** | `integration-tests` |
+| **Outils** | Jest et Testcontainers, sur un service Docker-in-Docker |
+| **Déclencheur** | Chaque pipeline, sur la branche principale |
+| **Nombre de tests** | 35 : 25 pour l'API et 10 pour le service de modération |
+
+## Description
+
+Les tests d'intégration vérifient que les briques fonctionnent ensemble, avec une vraie base PostgreSQL et un vrai broker NATS. Les tests unitaires utilisent des doublures. Ces tests-ci prouvent que les vrais composants s'entendent.
+
+**Le problème qu'ils résolvent.**
+Un test unitaire remplace la base et le broker par des doublures : il ne peut pas voir un désaccord entre le code et les vrais composants, comme une contrainte de la base ou le comportement réel du flux NATS.
+
+**Comment ils fonctionnent.**
+Testcontainers démarre un vrai PostgreSQL et un vrai NATS dans des conteneurs jetables, fournis par un Docker-in-Docker propre au job. Un faux Keycloak signe les jetons de test. Les conteneurs sont supprimés à la fin.
 
 **Définitions**
 
-- **Test d'intégration** : test qui fait travailler plusieurs composants réels ensemble.
-- **Testcontainers** : bibliothèque qui démarre des conteneurs Docker jetables pendant les tests, puis les supprime.
-- **Docker-in-Docker** : service qui fournit un Docker au job de la pipeline, détruit à la fin du job.
-- **Faux Keycloak** : petit serveur local qui signe des jetons de test. L'API vérifie leur signature pour de vrai.
-- **Déduplication** : refus par NATS d'un message déjà reçu récemment.
+| Terme | Définition |
+|---|---|
+| **Déduplication** | refus par NATS d'un message déjà reçu récemment. |
+| **Docker-in-Docker** | service qui fournit un Docker au job de la pipeline, détruit à la fin du job. |
+| **Faux Keycloak** | petit serveur local qui signe des jetons de test. L'API vérifie leur signature pour de vrai. |
+| **Test d'intégration** | test qui fait travailler plusieurs composants réels ensemble. |
+| **Testcontainers** | bibliothèque qui démarre des conteneurs Docker jetables pendant les tests, puis les supprime. |
 
 ## Ce qui est vérifié
 
@@ -108,6 +125,10 @@ Ce que ces tests prouvent d'important :
 !!! warning "Attention"
     NATS retient les messages déjà reçus pendant 2 minutes. Chaque test utilise donc un identifiant d'annonce unique,
     sans quoi un rejeu serait ignoré par erreur.
+
+!!! tip "Astuce"
+    Pour un seul module, `cd api && npm run test:integration` évite de démarrer les conteneurs de la modération. Docker
+    doit être démarré dans tous les cas.
 
 ## Pour aller plus loin
 

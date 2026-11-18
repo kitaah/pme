@@ -205,8 +205,8 @@ La configuration est lue dans des variables d'environnement, fournies par Kubern
 | **`KEYCLOAK_JWKS_URI`** | obligatoire | Adresse à laquelle l'API récupère les clés publiques de Keycloak. |
 | **`S3_ENDPOINT`** | `http://localhost:3900` | Adresse du stockage des photos, utilisée par l'API pour écrire (voir [Garage](garage.md)). |
 | **`S3_PUBLIC_ENDPOINT`** | celle de `S3_ENDPOINT` | Adresse que voit le navigateur : l'URL signée est calculée pour elle. |
-| **`S3_BUCKET`**, **`S3_REGION`** | `pme-photos`, `garage` | Bucket et région du stockage. |
-| **`S3_ACCESS_KEY`**, **`S3_SECRET_KEY`** | absentes | Clé d'accès de l'API. Sans elles, le dépôt avec photo répond 503. |
+| **`S3_BUCKET`**<br>**`S3_REGION`** | `pme-photos`, `garage` | Bucket et région du stockage. |
+| **`S3_ACCESS_KEY`**<br>**`S3_SECRET_KEY`** | absentes | Clé d'accès de l'API. Sans elles, le dépôt avec photo répond 503. |
 | **`S3_URL_TTL`** | 300 | Durée de validité d'une URL signée, en secondes. |
 
 !!! note "À savoir"
@@ -270,7 +270,6 @@ Pour travailler sur l'API en local, l'enchaînement est le suivant :
 
 ## Pour aller plus loin
 
-- [Site officiel de NestJS](https://nestjs.com/)
 - [Documentation de NestJS](https://docs.nestjs.com/)
 - [Documentation de TypeORM](https://typeorm.io/)
 - [Norme RFC 9457 sur les réponses d'erreur](https://www.rfc-editor.org/rfc/rfc9457.html)

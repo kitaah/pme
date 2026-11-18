@@ -69,8 +69,8 @@ filtres: "" {
 | **Content-Security-Policy (CSP)** | En-tête qui liste les sources de contenu que le navigateur a le droit de charger et de contacter. |
 | **CORS** | Mécanisme du navigateur qui décide si une page d'un site peut appeler un autre site. |
 | **Cross-Origin-Opener-Policy** | En-tête qui isole une page des fenêtres ouvertes par d'autres sites, pour qu'elles ne puissent pas la manipuler. |
-| **Injection SQL** | Attaque qui glisse des instructions dans une valeur, pour les faire exécuter par la base. |
 | **Injection de script (XSS)** | Attaque qui fait exécuter un script étranger dans la page d'un autre site. |
+| **Injection SQL** | Attaque qui glisse des instructions dans une valeur, pour les faire exécuter par la base. |
 | **Limitation de débit** | Plafond du nombre de requêtes acceptées sur une période donnée. |
 | **Permissions-Policy** | En-tête qui liste les fonctions du navigateur (caméra, micro, géolocalisation) auxquelles la page n'a pas droit. |
 | **Problem Details** | Format normalisé de réponse d'erreur d'une API, décrit par la RFC 9457. |
@@ -182,7 +182,7 @@ dans Keycloak, sans toucher aux données métier.
 - **Pas d'audit d'accessibilité complet.** Les tests contrôlent les contrastes de la palette ; le reste du référentiel
   RGAA relève d'un audit manuel.
 
-## Commandes de vérification
+## Commandes essentielles
 
 À lancer dans un terminal, depuis le dossier du projet, la plateforme déployée.
 
@@ -201,7 +201,7 @@ dans Keycloak, sans toucher aux données métier.
     Pour vérifier la validation sans écrire de test, envoyer un dépôt avec un champ inventé. La réponse doit être un
     400 au format Problem Details, dont le champ `errors` nomme précisément le champ refusé.
 
-## Fichiers principaux
+## Fichiers et dossiers principaux
 
 | Fichier ou dossier | Description |
 |---|---|
@@ -215,7 +215,6 @@ dans Keycloak, sans toucher aux données métier.
 ## Pour aller plus loin
 
 - [Les dix risques applicatifs de l'OWASP](https://owasp.org/www-project-top-ten/)
-- [La norme RFC 9457 sur les réponses d'erreur](https://www.rfc-editor.org/rfc/rfc9457.html)
 - [Documentation de Helmet](https://helmetjs.github.io/)
 - [La politique de contenu (CSP) sur MDN](https://developer.mozilla.org/fr/docs/Web/HTTP/Guides/CSP)
 - [Fiche NestJS du projet](../outils/nestjs.md)

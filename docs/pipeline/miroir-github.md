@@ -1,18 +1,34 @@
 # Miroir GitLab vers GitHub
 
-## Objectif
+## Fiche d'identité
 
-Tenir à jour, automatiquement, une copie du dépôt sur GitHub, et y lancer la pipeline
-[GitHub Actions](../outils/github-actions.md). Le dépôt de référence reste sur GitLab : on y pousse, on y fusionne, et
-GitLab recopie vers GitHub.
+| Information | Détail |
+|---|---|
+| **Rôle** | Tient à jour une copie du dépôt sur GitHub et y lance la pipeline GitHub Actions |
+| **Sens de la copie** | De GitLab (dépôt de référence) vers GitHub, en miroir « push » |
+| **Dépôts** | `gitlab.com/kitaah/pme` vers `github.com/kitaah/pme` |
+| **Fréquence** | À chaque envoi sur GitLab, dans les cinq minutes |
+| **Mise en place** | Une seule fois, en une dizaine de minutes |
+
+## Description
+
+Le miroir GitLab vers GitHub tient à jour, automatiquement, une copie du dépôt sur GitHub, et y lance la pipeline [GitHub Actions](../outils/github-actions.md). Le dépôt de référence reste sur GitLab : on y pousse, on y fusionne, et GitLab recopie vers GitHub.
+
+**Le problème qu'il résout.**
+Sans miroir, il faudrait envoyer le même code à la main vers les deux plateformes, avec le risque qu'elles divergent. Le miroir fait la copie seul, dans un seul sens.
+
+**Comment il fonctionne.**
+GitLab envoie chaque modification à GitHub (miroir en *push*) avec un jeton d'accès GitHub à droits limités. Quand la copie de `main` arrive, le workflow **CI** se lance sur GitHub.
 
 **Définitions**
 
-- **Miroir** : copie d'un dépôt tenue à jour automatiquement à partir d'un autre. Ici, GitLab envoie chaque modification à GitHub (*push mirror*).
-- **Jeton d'accès** : mot de passe à droits limités, créé sur GitHub, que GitLab présente pour écrire dans la copie.
-- **Secret** : valeur sensible, comme un jeton, enregistrée dans les réglages d'un dépôt et masquée dans les logs.
-- **Workflow** : fichier YAML de `.github/workflows/` qui décrit la pipeline de GitHub Actions.
-- **Branche protégée** : branche dont les modifications sont encadrées par des règles, comme `main`.
+| Terme | Définition |
+|---|---|
+| **Branche protégée** | branche dont les modifications sont encadrées par des règles, comme `main`. |
+| **Jeton d'accès** | mot de passe à droits limités, créé sur GitHub, que GitLab présente pour écrire dans la copie. |
+| **Miroir** | copie d'un dépôt tenue à jour automatiquement à partir d'un autre. Ici, GitLab envoie chaque modification à GitHub (*push mirror*). |
+| **Secret** | valeur sensible, comme un jeton, enregistrée dans les réglages d'un dépôt et masquée dans les logs. |
+| **Workflow** | fichier YAML de `.github/workflows/` qui décrit la pipeline de GitHub Actions. |
 
 ## Les étapes, dans l'ordre
 
@@ -154,7 +170,7 @@ L'infobulle de l'étiquette rouge **Error**, dans **Mirroring repositories**, do
 
 | Message | Cause | Correction |
 |---|---|---|
-| **`refusing to allow a Personal Access Token to create or update workflow ... without workflow scope`** | Le jeton n'a pas la permission **Workflows**. | Éditer le jeton sur GitHub, ajouter **Workflows : Read and write**, puis **Update now**. |
+| **`refusing to allow a Personal Access Token`**<br>**`to create or update workflow ...`**<br>**`without workflow scope`** | Le jeton n'a pas la permission **Workflows**. | Éditer le jeton sur GitHub, ajouter **Workflows : Read and write**, puis **Update now**. |
 | **`403`, `401` ou erreur d'authentification** | Jeton expiré, révoqué, ou limité à un autre dépôt. | Créer un jeton selon l'étape 2 et le coller dans **Password** du miroir. |
 | **`non-fast-forward` ou références divergentes** | GitHub contient un commit absent de GitLab (README créé avec le dépôt, ou envoi direct sur GitHub). | Recréer le dépôt GitHub vide, ou supprimer le commit en trop. |
 | **Rien n'est copié, sans erreur** | « Only mirror protected branches » est coché et la branche n'est pas protégée. | Protéger la branche (**Settings**, **Repository**, **Protected branches**) ou décocher l'option. |

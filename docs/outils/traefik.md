@@ -230,7 +230,6 @@ Windows. Sa modification demande les droits d'administrateur.
 ## Pour aller plus loin
 
 - [Documentation de Traefik](https://doc.traefik.io/traefik/)
-- [Installation de Helm](https://helm.sh/docs/intro/install/)
 - [Documentation de Kubernetes sur les ingress](https://kubernetes.io/fr/docs/concepts/services-networking/ingress/)
 - [Annonce du retrait d'ingress-nginx](https://kubernetes.io/blog/2025/11/11/ingress-Nginx-retirement/)
 - [Fiche cert-manager du projet](cert-manager.md)

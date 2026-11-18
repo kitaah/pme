@@ -1,18 +1,34 @@
 # Contrôle des Dockerfile
 
-## Objectif
+## Fiche d'identité
 
-Repérer, avant même de construire une image, les erreurs et les mauvaises pratiques écrites dans un Dockerfile :
-image de base sans version, exécution avec les droits `root`, commande mal formée, installation de paquets non maîtrisée.
+| Information | Détail |
+|---|---|
+| **Rôle** | Repère, avant toute construction, les erreurs et les mauvaises pratiques écrites dans les Dockerfile |
+| **Job** | `hadolint` |
+| **Outil** | Hadolint 2.14.0 |
+| **Déclencheur** | Chaque pipeline, sur la branche principale |
+
+## Description
+
+Le contrôle des Dockerfile repère, avant même de construire une image, les erreurs et les mauvaises pratiques écrites dans un Dockerfile : image de base sans version, exécution avec les droits `root`, commande mal formée, installation de paquets non maîtrisée.
+
+**Le problème qu'il résout.**
+Un Dockerfile mal écrit produit une image fragile ou dangereuse, par exemple une image qui tourne en administrateur. Sans contrôle, on ne s'en aperçoit qu'après une construction complète, plusieurs minutes plus tard.
+
+**Comment il fonctionne.**
+Hadolint lit le texte de chaque Dockerfile sans rien construire, applique ses règles (et celles de ShellCheck pour les commandes `RUN`), puis affiche chaque écart avec sa gravité. Les écarts `error` et `warning` font échouer le job.
 
 **Définitions**
 
-- **Dockerfile** : fichier de recettes qui décrit, étape par étape, comment construire une image Docker.
-- **Linter** : programme qui lit un fichier sans l'exécuter et signale les erreurs et les écarts aux bonnes pratiques.
-- **Hadolint** : linter open source spécialisé dans les Dockerfile. Il s'appuie aussi sur ShellCheck pour les commandes des instructions `RUN`.
-- **Règle** : contrôle identifié par un code, comme `DL3006` (règle Hadolint) ou `SC2086` (règle ShellCheck).
-- **Gravité** : importance d'un écart, parmi `error`, `warning`, `info` et `style`.
-- **Somme de contrôle (SHA-256)** : empreinte d'un fichier. Si elle diffère de celle attendue, le fichier a été modifié.
+| Terme | Définition |
+|---|---|
+| **Dockerfile** | fichier de recettes qui décrit, étape par étape, comment construire une image Docker. |
+| **Gravité** | importance d'un écart, parmi `error`, `warning`, `info` et `style`. |
+| **Hadolint** | linter open source spécialisé dans les Dockerfile. Il s'appuie aussi sur ShellCheck pour les commandes des instructions `RUN`. |
+| **Linter** | programme qui lit un fichier sans l'exécuter et signale les erreurs et les écarts aux bonnes pratiques. |
+| **Règle** | contrôle identifié par un code, comme `DL3006` (règle Hadolint) ou `SC2086` (règle ShellCheck). |
+| **Somme de contrôle (SHA-256)** | empreinte d'un fichier. Si elle diffère de celle attendue, le fichier a été modifié. |
 
 ## Pourquoi en plus des tests des images
 
@@ -34,6 +50,10 @@ les tests des images n'interviennent qu'après une construction complète.
 | **Version de l'outil** | Hadolint 2.14.0, épinglée dans la pipeline. |
 | **Intégrité de l'outil** | Le programme téléchargé est vérifié par sa somme de contrôle avant son utilisation. |
 
+!!! note "À savoir"
+    Le fichier `.hadolint.yaml` est partagé entre la pipeline et la commande locale `make lint-docker` : les deux
+    appliquent exactement les mêmes règles.
+
 ## Quand il se lance
 
 - Sur la branche principale, à chaque pipeline, sans lancement manuel.
@@ -51,6 +71,14 @@ les tests des images n'interviennent qu'après une construction complète.
 
 Si un écart est volontaire, il peut être ignoré pour une instruction précise avec un commentaire
 `# hadolint ignore=DL3008` placé juste au-dessus, accompagné de sa justification.
+
+!!! warning "Attention"
+    Un commentaire `# hadolint ignore=…` masque un écart au lieu de le corriger. Il doit rester rare, viser une
+    instruction précise et être justifié par un commentaire.
+
+!!! tip "Astuce"
+    Avec Hadolint installé, `make lint-docker` donne le même verdict que la pipeline en quelques secondes, avant l'envoi
+    du code.
 
 ## Pour aller plus loin
 

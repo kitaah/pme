@@ -120,7 +120,7 @@ Ces comptes sont conservés tant que la base de Keycloak n'est pas réinitialis�
 | **`/k8s/06-keycloak.yaml`** | Déploie Keycloak dans le cluster et fixe son adresse publique. |
 | **`k8s/07-keycloak-admin-job.yaml`** | Crée le compte administrateur permanent, puis supprime le compte temporaire. |
 | **`k8s/config/realm-pme.json`** | Décrit le realm : rôles, applications autorisées, langue et thème de connexion. |
-| **`k8s/config/keycloak-messages-fr.properties`** | Libellés français de la page de connexion (apostrophe typographique `’`). |
+| **`k8s/config/`**<br>**`keycloak-messages-fr.properties`** | Libellés français de la page de connexion (apostrophe typographique `’`). |
 | **`k8s/config/keycloak-theme.css`** | Feuille de style du thème de connexion `pme`, montée dans le pod par une ConfigMap. |
 | **`libs/common/src/auth/`**<br>**`jwt.strategy.ts`** | Vérifie la signature, l'émetteur et l'application du jeton, dans l'API comme dans la modération. |
 | **`frontend/src/auth.ts`** | Redirige vers la page de connexion et renouvelle le jeton. L'adresse de retour est « Mes annonces » quand la personne arrive sur l'accueil (une fois par onglet), sinon l'adresse ouverte au départ ; elle reste couverte par `https://pme.localhost/*`. |

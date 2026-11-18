@@ -9,7 +9,6 @@
 | **Catégorie** | Accès aux données |
 | **Utilisé par** | L'API (base `pme`) et le service de modération (base `moderation`) |
 | **Alternative écartée** | Requêtes SQL écrites à la main : plus de contrôle, mais aucune protection contre l'injection par construction |
-| **Documentation** | [typeorm.io](https://typeorm.io/) |
 
 ## Description
 
@@ -73,10 +72,10 @@ schema -> base
 
 | Terme | Définition |
 |---|---|
-| **ORM** | Bibliothèque qui fait correspondre des objets du code et des lignes d'une base relationnelle. |
-| **Entité** | Classe annotée qui décrit une table : ses colonnes, leurs types, ses index. |
 | **Dépôt** | Objet fourni par TypeORM pour lire et écrire les lignes d'une entité, sans écrire de SQL. |
+| **Entité** | Classe annotée qui décrit une table : ses colonnes, leurs types, ses index. |
 | **Migration** | Script versionné qui fait passer le schéma d'un état au suivant, avec son inverse. |
+| **ORM** | Bibliothèque qui fait correspondre des objets du code et des lignes d'une base relationnelle. |
 | **Pool de connexions** | Réserve de connexions ouvertes à la base, partagées par les requêtes d'un même service. |
 
 ## Rôle dans le projet
@@ -105,7 +104,7 @@ schema -> base
 | **`api/src/listings/listing.entity.ts`** | L'entité `Listing` : colonnes, index, statut par défaut, et les relations vers la catégorie et le lieu de remise. |
 | **`api/src/listings/category.entity.ts`**<br>**`handover-place.entity.ts`** | Les entités des tables de référence `categories` et `handover_places`. |
 | **`api/src/migrations/`** | Les migrations qui créent la table `listings` et son index, puis la font évoluer, dont les tables de référence `categories` et `handover_places`. |
-| **`moderation-service/src/moderation/moderation-item.entity.ts`** | L'entité de la file de modération. |
+| **`moderation-service/src/moderation/`**<br>**`moderation-item.entity.ts`** | L'entité de la file de modération. |
 | **`moderation-service/src/migrations/`** | La migration qui crée la table de la file. |
 | **`api/src/app.module.ts`** | La configuration : TLS, entités, migrations, pool, tentatives de reconnexion. |
 | **`libs/common/src/config/env.ts`** | La lecture des variables d'environnement, dont `DB_POOL_SIZE`. |
