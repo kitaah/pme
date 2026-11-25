@@ -241,13 +241,9 @@ Le cluster est créé avec les paramètres suivants :
 | **`make undeploy`** | Supprime le namespace `pme`, donc la plateforme et ses données, volumes compris. |
 | **`make minikube-down`** | Arrête le cluster sans le supprimer. |
 
-Lors du premier démarrage, l'enchaînement est le suivant :
-
-1. `make minikube-up` crée le cluster.
-2. Importer dans le navigateur le certificat de l'autorité locale, afin qu'il accepte le HTTPS local (voir [cert-manager](cert-manager.md)).
-3. `make image` construit les images.
-4. `make deploy` déploie la plateforme.
-5. `make pods` permet de suivre le démarrage. Keycloak met environ une minute à devenir disponible.
+La procédure complète du premier démarrage, avec les secrets et les adresses locales, est décrite dans la page
+[Démarrer le projet](../demarrer.md). En résumé : `make minikube-up` crée le cluster, `make seal` chiffre les secrets,
+`make image` construit les images, puis `make deploy` déploie la plateforme.
 
 !!! note "À savoir"
     **Limite `inotify`.** Minikube partage le noyau de l'ordinateur. Avec Istio, la limite d'instances `inotify` par défaut (128) est

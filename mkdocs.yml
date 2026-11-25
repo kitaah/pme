@@ -31,6 +31,7 @@ theme:
 # "Securite" recense les mesures de securite du projet, une page par couche (identite, chiffrement, secrets, conteneurs, application).
 nav:
   - Accueil: index.md
+  - Démarrer le projet: demarrer.md
   - Architecture: architecture.md
   - "Conception : dépôt d'annonce": conception-depot-annonce.md
   - Commandes make: commandes-make.md
