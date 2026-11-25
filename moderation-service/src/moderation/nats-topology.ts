@@ -13,7 +13,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Flux principal, en mode "file de travail" (`WorkQueue`) : un message est supprime du flux des
- * qu'il est acquitte, exactement comme une file RabbitMQ. Ce qui reste dans le flux est donc,
+ * qu'il est acquitte, comme dans une file classique. Ce qui reste dans le flux est donc,
  * a tout moment, ce qui reste a traiter (visible dans `make queues`).
  * La fenetre de deduplication ignore une publication rejouee de la meme annonce (`msgID`).
  */
@@ -27,8 +27,8 @@ const LISTINGS_CONFIG: Partial<StreamConfig> = {
 
 /**
  * Flux des messages en echec : retention par limites (et non file de travail), car personne ne
- * les consomme. Ils sont gardes 7 jours pour inspection, l'equivalent de la file
- * `listing.submitted.dlq` de RabbitMQ.
+ * les consomme. Ils sont gardes 7 jours pour inspection
+ * (sujet `listing.submitted.dlq`).
  */
 const LISTINGS_DLQ_CONFIG: Partial<StreamConfig> = {
   name: LISTINGS_DLQ_STREAM,
@@ -68,7 +68,7 @@ async function declareTopology(nats: NatsConfig, logger: Logger): Promise<void> 
       ack_policy: AckPolicy.Explicit,
       // Delai au-dela duquel un message non acquitte est remis : couvre un traitement lent.
       ack_wait: nanos(30_000),
-      // Equivalent du prefetchCount de RabbitMQ : messages remis sans attendre l'acquittement.
+      // Nombre maximal de messages remis sans attendre l'acquittement.
       max_ack_pending: 10,
       // Remise illimitee : c'est le consommateur qui decide du sort de chaque message
       // (acquittement, remise en file, ou envoi dans le flux d'echec).

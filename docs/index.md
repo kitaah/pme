@@ -13,10 +13,10 @@ Les pages suivent l'ordre du menu.
 
 | Page | Ce qu'on y trouve |
 |---|---|
+| **[Démarrer le projet](demarrer.md)** | Les commandes à lancer, dans l'ordre, pour mettre la plateforme en route : depuis zéro, après un arrêt ou après `make undeploy`. |
 | **[Architecture](architecture.md)** | La vue d'ensemble : les composants, qui parle à qui, et le trajet d'une annonce de bout en bout. À lire en premier. |
 | **[Conception : dépôt d'annonce](conception-depot-annonce.md)** | Le dépôt d'une annonce avec photo : décisions prises, parcours, modèle de données, accessibilité (RGAA) et maquettes. |
 | **[Commandes make](commandes-make.md)** | Les outils à installer, la marche à suivre pour initialiser le projet, puis toutes les commandes du `Makefile`, par thème, avec leur description et leurs variables. |
-| **[Démonstration : NATS et RabbitMQ](demo-brokers.md)** | Comment montrer que le POC fonctionne avec deux solutions de messagerie interchangeables. |
 | **[Outils](outils/mkdocs.md)** | Une fiche par outil du projet, toutes construites sur le même modèle. |
 | **[Pipeline CI/CD](pipeline/index.md)** | Les contrôles automatiques de qualité : tests, images Docker, performance, analyse du code. |
 | **[Sécurité](securite/index.md)** | Les mesures de sécurité de la plateforme, couche par couche, et leurs limites. |

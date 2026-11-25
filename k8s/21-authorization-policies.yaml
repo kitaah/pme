@@ -69,8 +69,9 @@ spec:
         - operation:
             ports: ["3900"]
 ---
-# NATS : l'API (publie) et la moderation (lit). Le port de supervision 8222 n'est ouvert a personne : seules les sondes de
-# Kubernetes (que ztunnel laisse passer) et `make queues` (kubectl exec, dans le pod) le lisent.
+# NATS : l'API (publie) et la moderation (lit), et Prometheus sur les metriques (port 7777). Le port de supervision 8222
+# n'est ouvert a personne : seules les sondes de Kubernetes (que ztunnel laisse passer), `make queues` (kubectl exec, dans
+# le pod) et le conteneur `exporter` (dans le meme pod) le lisent.
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
@@ -89,6 +90,13 @@ spec:
       to:
         - operation:
             ports: ["4222"]
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/pme/sa/prometheus
+      to:
+        - operation:
+            ports: ["7777"]
 ---
 # Keycloak : l'ingress (page de connexion, console), l'API et la moderation (cles de verification des jetons), et le Job
 # keycloak-admin (creation de l'administrateur permanent).

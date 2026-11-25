@@ -17,7 +17,7 @@ export const LISTING_SUBMITTED_SUBJECT = 'listing.submitted';
 export const LISTING_SUBMITTED_DLQ_SUBJECT = 'listing.submitted.dlq';
 
 /**
- * Flux JetStream (l'equivalent durable d'une file RabbitMQ) et consommateur durable.
+ * Flux JetStream (une file durable) et consommateur durable.
  * `LISTINGS` conserve les annonces soumises jusqu'a leur traitement ; `LISTINGS_DLQ` garde les
  * messages definitivement inexploitables, pour inspection. Declares par nats-topology.ts.
  */

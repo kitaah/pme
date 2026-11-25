@@ -86,6 +86,7 @@ relevés de Prometheus passent par le maillage [Istio](istio.md), qui les chiffr
 ## Rôle dans le projet
 
 - Il relève les mesures de l'API et du service de modération toutes les quinze secondes, exemplaire par exemplaire.
+- Il relève celles de NATS, par l'exporter placé dans son pod, toutes les cinq secondes : l'intervalle plus court rend le tableau de bord « NATS » réactif.
 - Il se surveille lui-même : sa propre ligne dans la page des cibles confirme que la collecte fonctionne.
 - Il conserve les mesures pendant six heures, ce qui suffit à analyser un test de charge ou un incident en séance.
 - Il alimente les tableaux de bord de [Grafana](grafana.md).
@@ -102,6 +103,8 @@ Les mesures principales sont les suivantes :
 | **`nodejs_eventloop_lag_seconds`** | Retard de la boucle d'exécution de Node : il révèle un service saturé. |
 | **`process_resident_memory_bytes`** | Mémoire occupée par le service. |
 | **`up`** | Disponibilité de chaque cible, relevée à chaque collecte. |
+| **`gnatsd_varz_connections`** | Nombre de clients connectés à NATS. |
+| **`jetstream_stream_last_seq`** | Numéro du dernier message du flux : sa croissance donne le nombre de messages publiés. |
 
 !!! note "À savoir"
     L'étiquette `route` enregistre le modèle de la route, par exemple `/api/v1/listings`, et jamais l'adresse réelle
@@ -113,7 +116,7 @@ Les mesures principales sont les suivantes :
 | Fichier ou dossier | Description |
 |---|---|
 | **`k8s/15-prometheus.yaml`** | Déploie Prometheus dans le cluster et fixe sa durée de conservation. |
-| **`k8s/config/prometheus.yml`** | Liste les cibles à interroger et la fréquence de collecte. |
+| **`k8s/config/prometheus.yml`** | Liste les cibles à interroger et la fréquence de collecte, dont l'exporter de NATS (port 7777). |
 | **`libs/common/src/metrics/metrics.ts`** | Définit les mesures communes aux deux services et chronomètre chaque requête. |
 | **`api/src/metrics/metrics.controller.ts`** | Publie les mesures de l'API sur le chemin `/api/metrics`. |
 | **`moderation-service/src/metrics/`**<br>**`metrics.controller.ts`** | Publie les mesures du service de modération. |
