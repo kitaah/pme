@@ -42,7 +42,6 @@ nav:
       - cert-manager: outils/cert-manager.md
       - container-structure-test: outils/container-structure-test.md
       - Garage: outils/garage.md
-      - GitHub Actions: outils/github-actions.md
       - GitLab CI: outils/gitlab-ci.md
       - Grafana: outils/grafana.md
       - Helm: outils/helm.md
