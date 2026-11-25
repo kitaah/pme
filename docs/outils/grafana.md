@@ -19,7 +19,7 @@ diagnostiquer un incident suppose de croiser les deux, au même instant : une ha
 écrites à ce moment-là. Grafana réunit ces sources dans une même page, avec la même période affichée, ce qui évite de
 passer d'un outil à l'autre en recopiant des horaires.
 
-**Deux tableaux de bord, chargés au démarrage.**
+**Trois tableaux de bord, chargés au démarrage.**
 Les tableaux de bord ne sont pas construits à la main dans l'interface : ils sont décrits dans des fichiers du dépôt
 et chargés automatiquement au démarrage. Cette pratique, appelée **provisionnement**, garantit que chacun voit les
 mêmes écrans, et qu'un cluster recréé les retrouve à l'identique.
@@ -36,12 +36,23 @@ Le tableau « Services » répond à la question « est-ce que tout va bien ? »
 | **Processeur et mémoire** | Les ressources consommées par chaque service. |
 | **Retard de la boucle d'exécution** | Un retard qui grimpe signale un service saturé. |
 
-Le tableau « Logs » répond à la question suivante, « que s'est-il passé ? » : nombre de lignes écrites, lignes en
+Le tableau « NATS » montre en direct le trafic de la messagerie, sur les deux dernières minutes, rafraîchi toutes les
+cinq secondes :
+
+| Panneau | Ce qu'il montre |
+|---|---|
+| **État** | Si Prometheus parvient à lire l'exporter de NATS (`up`). |
+| **Connexions** | Le nombre de clients connectés au serveur : l'API et le service de modération. |
+| **Messages publiés (2 dernières minutes)** | Le total des annonces déposées sur la fenêtre, ou 0 s'il n'y en a pas. |
+| **Messages publiés par seconde** | Le débit de dépôt, qui monte à chaque annonce déposée. |
+
+Le nombre de messages publiés est celui du flux `LISTINGS` : une lecture ou un acquittement par la modération ne le
+fait pas bouger, seul un dépôt d'annonce le fait. Le tableau « Logs » répond à la question suivante, « que s'est-il passé ? » : nombre de lignes écrites, lignes en
 erreur et en alerte, répartition par service, et les cent dernières lignes, filtrables par service et par mot
 recherché.
 
-**Les deux écrans partagent la même période.**
-Changer l'intervalle affiché sur l'un le change sur l'autre. C'est ce qui permet de passer d'une courbe anormale aux
+**Les écrans « Services » et « Logs » partagent la même période.**
+Changer l'intervalle affiché sur l'un le change sur l'autre. Le tableau « NATS » garde sa propre fenêtre de deux minutes. C'est ce qui permet de passer d'une courbe anormale aux
 logs correspondants sans rien ressaisir.
 
 ```d2
@@ -133,6 +144,7 @@ Ses sources de données sont les suivantes :
 | **`k8s/config/grafana-dashboards.yml`** | Indique à Grafana où lire les tableaux de bord. |
 | **`k8s/config/grafana-dashboard-pme.json`** | Décrit le tableau de bord « Services ». |
 | **`k8s/config/grafana-dashboard-logs.json`** | Décrit le tableau de bord « Logs ». |
+| **`k8s/config/grafana-dashboard-broker.json`** | Décrit le tableau de bord « NATS ». |
 | **`k8s/config/postgres-init.sh`** | Crée à la première initialisation du volume la base de Grafana et son compte `pme_grafana`. |
 | **`.env`** | Contient l'identifiant et le mot de passe de connexion. Ce fichier est exclu de Git. |
 

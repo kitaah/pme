@@ -40,7 +40,7 @@ elle-même, dans le namespace `pme`.
 |---|---|
 | **Premier démarrage**, ou après `minikube delete` | Toute la procédure de la section « Depuis zéro » |
 | **Après `make undeploy`** | `make image` (facultatif), `make deploy`, `make pods` |
-| **Après `make minikube-down` ou <br/> un redémarrage de l'ordinateur** | `minikube start`, puis `make pods` : la plateforme reprend telle qu'elle était |
+| **Après `make minikube-down` ou un redémarrage de l'ordinateur** | `minikube start`, puis `make pods` : la plateforme reprend telle qu'elle était |
 | **Après un changement de code** | `make redeploy` |
 | **Après un changement de branche** | `make image`, puis `make deploy` (voir « Changer de branche » plus bas) |
 | **Repartir d'un namespace vide, cluster conservé** | `make reset` |
@@ -70,7 +70,7 @@ elle-même, dans le namespace `pme`.
 | **5** | `make kubeseal` | Installe `kubeseal` à la bonne version s'il est absent. Requis par l'étape 9. |
 | **6** | `make minikube-up` | Crée le cluster, puis installe Traefik, Istio, cert-manager et metrics-server. Écrit `pme-ca.crt`. |
 | **7** | `make hosts` | Affiche la ligne à ajouter dans `/etc/hosts`. Elle n'écrit rien : la coller à la main. |
-| **8** | Importer `pme-ca.crt` | Dans le navigateur, une seule fois, pour que les adresses en `.localhost` soient reconnues comme sûres. |
+| **8** | Importer `pme-ca.crt` | Dans le navigateur, pour que les adresses en `.localhost` soient reconnues comme sûres. Voir la section « Importer le certificat dans le navigateur » ci-dessous. |
 | **9** | `make seal` | Installe Sealed Secrets, génère les secrets manquants, puis chiffre `.env` dans `k8s/01-pme-secrets-sealed.yaml`. |
 | **10** | `make image` | Construit les trois images (API, modération, interface) et les charge dans Minikube. |
 | **11** | `make deploy` | Applique les manifestes, puis prépare le stockage des photos. |
@@ -88,6 +88,41 @@ Ouvre ensuite <https://pme.localhost>, ou lance `make app`.
     **Pas de redirection de port pour ouvrir le site.** Un cluster créé par `make minikube-up` publie déjà les ports 80
     et 443 de l'ordinateur. `make port-forward` ne sert qu'à joindre PostgreSQL et NATS depuis l'ordinateur (pour
     `make api` ou `make moderation`), ou si le port 80 n'est pas joignable.
+
+## Importer le certificat dans le navigateur
+
+Tous les certificats du cluster sont signés par une autorité locale, créée par cert-manager. Le navigateur ne la connaît
+pas : tant qu'elle n'est pas importée, il affiche un avertissement, et les appels envoyés à Keycloak en arrière-plan
+restent bloqués. Accepter l'avertissement d'un clic ne règle rien : seul l'import de l'autorité permet à la connexion
+d'aboutir. Le fichier à importer est `pme-ca.crt`, à la racine du dépôt (écrit par `make minikube-up` ; `make ca-cert`
+le réécrit au besoin).
+
+**Dans Firefox**
+
+1. Ouvrir les paramètres de Firefox, puis saisir « certificats » dans le champ de recherche.
+2. Cliquer sur **Afficher les certificats**, ouvrir l'onglet **Autorités**, puis cliquer sur **Importer**.
+3. Choisir le fichier `pme-ca.crt`.
+4. Cocher **Confirmer cette AC pour identifier des sites web**, puis valider.
+5. Fermer complètement Firefox, puis le rouvrir.
+
+**Dans Chrome, Chromium ou Brave**
+
+1. Ouvrir **Paramètres**, puis **Confidentialité et sécurité**, puis **Sécurité**.
+2. Cliquer sur **Gérer les certificats**, ouvrir l'onglet **Autorités**, puis cliquer sur **Importer**.
+3. Choisir le fichier `pme-ca.crt`.
+4. Cocher **Faire confiance pour identifier des sites web**, puis valider.
+5. Fermer complètement le navigateur, puis le rouvrir.
+
+Pour vérifier, `make app` ouvre le site : la page doit s'afficher sans avertissement.
+
+!!! note "À savoir"
+    **Un cluster recréé a une nouvelle autorité.** Après `minikube delete`, l'ancienne autorité n'est plus valable :
+    supprimer l'ancienne dans la liste des **Autorités** du navigateur, puis importer le nouveau `pme-ca.crt`. Après un
+    simple `make undeploy`, le fichier et l'import restent valables.
+
+!!! warning "Attention"
+    `pme-ca.crt` ne doit servir qu'à ce projet local : importer l'autorité d'un autre cluster ou d'une autre origine
+    donnerait à son propriétaire le moyen de se faire passer pour n'importe quel site.
 
 ## Après `make undeploy`
 
@@ -130,11 +165,8 @@ make deploy
 ```
 
 `npm ci` et la construction de `libs/common` mettent les dépendances locales à jour, ce qui évite l'erreur TypeScript
-`TS2305` sur `@pme/common`. Les ressources que la nouvelle branche n'a plus (par exemple RabbitMQ) restent dans le
-cluster, car `kubectl apply` ne supprime rien : elles se retirent à la main, ou avec `make reset`.
-
-La procédure propre à la démonstration des deux brokers est décrite dans [Démonstration : NATS et
-RabbitMQ](demo-brokers.md).
+`TS2305` sur `@pme/common`. Les ressources que la nouvelle branche n'a plus restent dans le cluster, car `kubectl apply`
+ne supprime rien : elles se retirent à la main, ou avec `make reset`.
 
 ## Erreurs courantes
 
@@ -149,5 +181,5 @@ RabbitMQ](demo-brokers.md).
 | ztunnel plante avec `Too many open files` | La limite `inotify` de l'ordinateur est trop basse | `make inotify` (lancé aussi par `make istio`) |
 | Keycloak n'est pas prêt après une minute | Démarrage lent, mémoire insuffisante | `make pods` et patienter ; vérifier la mémoire libre de l'ordinateur |
 | Tous les sites répondent `502` | Certificat du maillage expiré | `make ingress-restart` |
-| Le navigateur refuse le certificat | `pme-ca.crt` n'est pas importé | Importer `pme-ca.crt` dans le navigateur (étape 8) |
+| Le navigateur refuse le certificat, ou la connexion à Keycloak échoue | `pme-ca.crt` n'est pas importé, ou c'est l'ancien après un `minikube delete` | Importer le nouveau `pme-ca.crt` (voir « Importer le certificat dans le navigateur ») |
 | PostgreSQL affiche `Skipping initialization` | Un ancien volume a survécu à un `undeploy` | `make undeploy` puis `make deploy` : `undeploy` supprime désormais ces volumes |

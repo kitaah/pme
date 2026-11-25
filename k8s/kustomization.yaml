@@ -86,6 +86,7 @@ configMapGenerator:
     files:
       - pme.json=config/grafana-dashboard-pme.json
       - logs.json=config/grafana-dashboard-logs.json
+      - nats.json=config/grafana-dashboard-broker.json
 # Point d'entree pour la future chaine CI/CD : `kustomize edit set image pme-api=<registre>/pme-api:<sha>`
 images:
   - name: pme-api

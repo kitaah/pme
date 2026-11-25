@@ -150,7 +150,7 @@ n'est pas rassurante, elle est incomplète.
 
 ## Créer une nouvelle fiche
 
-1. Créer le fichier dans `docs/outils/`, par exemple `docs/outils/rabbitmq.md`.
+1. Créer le fichier dans `docs/outils/`, par exemple `docs/outils/redis.md`.
 2. Reprendre les six rubriques ci-dessus, dans l'ordre, sans en changer les titres.
 3. Ajouter la page au menu, dans `mkdocs.yml`, à sa place alphabétique.
 4. Vérifier avec `make docs-check`, qui refuse un lien cassé ou une page absente du menu.

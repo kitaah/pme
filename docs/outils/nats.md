@@ -95,6 +95,16 @@ politique d'autorisation d'[Istio](istio.md), ni politique réseau, n'ouvre ce p
 lui, est chiffré deux fois : par le TLS de NATS, puis par le maillage [Istio](istio.md), qui ne l'ouvre qu'à l'API et au
 service de modération.
 
+**Mesures pour Grafana.**
+Un second conteneur, l'**exporter** (`prometheus-nats-exporter`), tourne dans le même pod que NATS. Il lit l'état du
+serveur et des flux sur le port de supervision, par `localhost` (le certificat du serveur est vérifié avec l'autorité
+du projet), puis le republie au format de [Prometheus](prometheus.md) sur le port 7777. Ce port n'est ouvert, par
+l'autorisation d'[Istio](istio.md) comme par la politique réseau de [Calico](calico.md), qu'à Prometheus. Le tableau de
+bord « NATS » de [Grafana](grafana.md) en tire l'état du serveur, le nombre de connexions et le nombre de messages
+publiés. Comme le pod compte deux conteneurs, `kubectl` ouvre par défaut celui de NATS (annotation
+`kubectl.kubernetes.io/default-container`) ; pour lire le log de l'exporter, il faut le nommer :
+`kubectl -n pme logs deploy/nats -c exporter`.
+
 **Définitions**
 
 | Terme | Définition |
@@ -120,6 +130,7 @@ service de modération.
 - Il permet de faire fonctionner plusieurs exemplaires du service de modération : JetStream répartit les messages, et
   chaque annonce n'est traitée qu'une fois.
 - Il isole les messages inexploitables dans un flux d'échec, consultable pendant sept jours.
+- Il publie ses mesures, par l'exporter, pour le tableau de bord « NATS » de [Grafana](grafana.md).
 - Sans lui, l'API devrait appeler la modération directement : toute panne de ce service bloquerait le dépôt d'annonces.
 
 Le serveur est configuré ainsi :
@@ -150,7 +161,8 @@ Le serveur est configuré ainsi :
 
 | Fichier ou dossier | Description |
 |---|---|
-| **`k8s/04-nats.yaml`** | Déploie le serveur NATS dans le cluster, avec JetStream activé. |
+| **`k8s/04-nats.yaml`** | Déploie le serveur NATS dans le cluster, avec JetStream activé, et l'exporter de mesures qui l'accompagne. |
+| **`k8s/config/grafana-dashboard-broker.json`** | Décrit le tableau de bord « NATS » de Grafana. |
 | **`k8s/config/nats.conf`** | Configure le chiffrement du serveur (applications et supervision) et la limite de stockage des flux. |
 | **`libs/common/src/nats/`**<br>**`nats.client.ts`** | Gère la connexion au broker, pour l'API comme pour la modération. |
 | **`api/src/listings/`**<br>**`listing-events.publisher.ts`** | Publie l'événement « annonce déposée ». |

@@ -1,7 +1,7 @@
 /**
  * Contrat de l'evenement "annonce soumise", partage (par copie) avec le service de moderation.
  *
- * NATS JetStream remplace RabbitMQ : le sujet (`subject`) joue le role du nom de file, et le flux
+ * Avec NATS JetStream, le sujet (`subject`) joue le role du nom de file, et le flux
  * (`stream`) celui du stockage durable. Flux et consommateur durable sont declares par le service
  * de moderation (moderation-service/src/moderation/nats-topology.ts) : l'API ne fait que publier.
  */
