@@ -42,7 +42,6 @@ nav:
       - cert-manager: outils/cert-manager.md
       - container-structure-test: outils/container-structure-test.md
       - Garage: outils/garage.md
-      - GitHub Actions: outils/github-actions.md
       - GitLab CI: outils/gitlab-ci.md
       - Grafana: outils/grafana.md
       - Helm: outils/helm.md
@@ -77,7 +76,6 @@ nav:
       - Vue d'ensemble: pipeline/index.md
       - Exigences qualité: pipeline/exigences-qualite.md
       - Fonctionnement: pipeline/fonctionnement.md
-      - Miroir GitLab vers GitHub: pipeline/miroir-github.md
       - Contrôles:
           - Tests unitaires: pipeline/tests-unitaires.md
           - Tests d'intégration: pipeline/tests-integration.md
