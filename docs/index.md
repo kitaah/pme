@@ -35,5 +35,5 @@ Les pages suivent l'ordre du menu.
 | **Plateforme** | Minikube, Traefik, Istio en mode ambient, Calico |
 | **Secrets et certificats** | Sealed Secrets, cert-manager |
 | **Observabilité** | Prometheus, Grafana, Loki, Alloy |
-| **Intégration continue** | GitLab CI/CD, avec un miroir vers GitHub Actions |
+| **Intégration continue** | GitLab CI/CD|
 | **Qualité** | 393 tests unitaires, 35 d'intégration, couverture 100 %, Quality Gate SonarCloud |
